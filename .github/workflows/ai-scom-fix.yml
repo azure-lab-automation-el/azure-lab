@@ -39,6 +39,8 @@ jobs:
           grep -rhoE '\besther-[a-z0-9][a-z0-9-]*' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
       - name: Run
         env:
+          INPUT_RUN_ID: "${{ inputs.run_id }}"
+          INPUT_MODE: "${{ inputs.mode }}"
           WR_RUN_ID: "${{ github.event.workflow_run.id }}"
           LAB_AGENT_PAT: "${{ secrets.LAB_AGENT_PAT }}"
           GROQ_API_KEY: "${{ secrets.GROQ_API_KEY }}"

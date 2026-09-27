@@ -37,6 +37,7 @@ jobs:
           grep -rhoE '\besther-[a-z0-9][a-z0-9-]*' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
       - name: Run
         env:
+          INPUT_MODE: "${{ inputs.mode }}"
           AZURE_CLIENT_ID: "${{ vars.AZURE_CLIENT_ID }}"
         run: |
           set +e

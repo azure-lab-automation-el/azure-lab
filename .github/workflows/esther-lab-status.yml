@@ -37,6 +37,7 @@ jobs:
           grep -rhoE '\besther-[a-z0-9][a-z0-9-]*' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
       - name: Run
         env:
+          INPUT_MEDIA_ACCOUNT: "${{ inputs.media_account }}"
           RG: "rg-learning-monitoring"
           GH_TOKEN: "${{ github.token }}"
           A: "${{ inputs.media_account }}"

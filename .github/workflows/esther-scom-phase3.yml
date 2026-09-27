@@ -40,6 +40,8 @@ jobs:
           grep -rhoE '\besther-[a-z0-9][a-z0-9-]*' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
       - name: Run
         env:
+          INPUT_STAGES: "${{ inputs.stages }}"
+          INPUT_MEDIA_ACCOUNT: "${{ inputs.media_account }}"
           AZURE_SUBSCRIPTION_ID: "${{ vars.AZURE_SUBSCRIPTION_ID }}"
           ESTHER_SCOM_SVC_PASSWORD: "${{ secrets.ESTHER_SCOM_SVC_PASSWORD }}"
           MEDIA_ACCOUNT: "${{ inputs.media_account }}"

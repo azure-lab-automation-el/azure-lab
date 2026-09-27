@@ -36,6 +36,8 @@ jobs:
           grep -rhoE '\besther-[a-z0-9][a-z0-9-]*' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
       - name: Run
         env:
+          INPUT_PUBLISH: "${{ inputs.publish }}"
+          INPUT_WHISPER_MODEL: "${{ inputs.whisper_model }}"
           GH_TOKEN: "${{ github.token }}"
           WHISPER_MODEL: "${{ inputs.whisper_model }}"
           MEGA_EMAIL: "${{ secrets.MEGA_EMAIL }}"

@@ -1,0 +1,26 @@
+name: tofu-validate
+on:
+  workflow_dispatch: {}
+  push:
+    paths: ['tofu/**', '.github/workflows/tofu-validate.yml']
+permissions: { contents: read }
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        stack: [azure, aws, gcp]
+    steps:
+      - uses: actions/checkout@v4
+      - name: התקנת OpenTofu
+        run: |
+          curl -fsSL -o /tmp/tofu.tgz https://github.com/opentofu/opentofu/releases/download/v1.12.6/tofu_1.12.6_linux_amd64.tar.gz
+          tar xzf /tmp/tofu.tgz -C /tmp && sudo install -m755 /tmp/tofu /usr/local/bin/tofu
+          tofu version
+      - name: בדיקת פורמט
+        run: tofu -chdir=tofu fmt -check -recursive
+      - name: תקינות תצורה (${{ matrix.stack }})
+        run: |
+          tofu -chdir=tofu/stacks/${{ matrix.stack }} init -backend=false -input=false
+          tofu -chdir=tofu/stacks/${{ matrix.stack }} validate

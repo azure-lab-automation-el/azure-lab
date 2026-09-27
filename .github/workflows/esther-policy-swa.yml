@@ -1,0 +1,10 @@
+name: esther-policy-swa
+on: {workflow_dispatch: {}}
+permissions: {id-token: write, contents: read}
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: esther-policy-swa__patch
+      timeout: 8

@@ -1,0 +1,14 @@
+name: lab-table-read
+on:
+  workflow_dispatch:
+    inputs:
+      media_account: { description: 'Storage account holding labstate table', required: true, default: 'esthermdbg' }
+permissions: { id-token: write, contents: read }
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: lab-table-read__read
+      timeout: 5
+      media_account: ${{ inputs.media_account }}

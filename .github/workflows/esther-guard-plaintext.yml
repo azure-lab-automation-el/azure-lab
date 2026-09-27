@@ -1,0 +1,13 @@
+name: esther-guard-plaintext
+on: [push, workflow_dispatch]
+permissions: {contents: read}
+jobs:
+  guard:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: בדיקת קבצים גלויים
+        run: |
+          bad=$(git ls-files | grep -v '^\.github/workflows/[^/]*\.yml$' | grep -v '^payload\.tar\.gz\.age$' | grep -v '^\.gitignore$' || true)
+          if [ -n "$bad" ]; then echo "נמצאו קבצים גלויים מחוץ ל-workflows:"; echo "$bad"; exit 1; fi
+          echo "תקין: רק workflows דקים + payload מוצפן"

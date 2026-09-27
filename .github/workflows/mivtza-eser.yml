@@ -42,6 +42,7 @@ jobs:
     with:
       entry: mivtza-eser__teardown
       timeout: 20
+      media_account: estherm${{ github.run_number }}
       extra_env: |
         TARGET=${{ inputs.target }}
   create:

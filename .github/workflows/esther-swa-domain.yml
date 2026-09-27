@@ -1,0 +1,64 @@
+name: esther-swa-domain
+on:
+  workflow_dispatch:
+    inputs:
+      hostname: { description: 'Custom hostname', required: true, default: 'www.estherdaxes.cloud-ip.cc' }
+      remove: { description: 'Hostname to remove first (optional)', required: false, default: '' }
+permissions: { id-token: write, contents: read }
+jobs:
+  bind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        id:
+        - AZURE_CLIENT_ID
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: |
+          curl -fsSL -o /tmp/age.tgz https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz
+          tar xzf /tmp/age.tgz -C /tmp && sudo install -m755 /tmp/age/age /usr/local/bin/age
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars[matrix.id] }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: True
+      - name: Decrypt payload
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          printf '%s' "$LAB_AGE_KEY" > /tmp/age.key && chmod 600 /tmp/age.key
+          age -d -i /tmp/age.key payload.tar.gz.age | tar xz
+          shred -u /tmp/age.key 2>/dev/null || rm -f /tmp/age.key
+      - name: Mask sensitive values
+        shell: bash
+        run: |
+          set +x
+          mask() { [ -n "$1" ] && echo "::add-mask::$1" || true; }
+          for v in "${{ vars.AZURE_CLIENT_ID }}" "${{ vars.AZURE_SUBSCRIPTION_ID }}" "${{ vars.AZURE_TENANT_ID }}" "${{ vars.ESTHER_PASSWORD_CLIENT_ID }}" "${{ vars.ESTHER_PORTAL_CLIENT_ID }}" "${{ vars.ESTHER_READ_CLIENT_ID }}" "${{ vars.ESTHER_WRITE_CLIENT_ID }}"; do mask "$v"; done
+          grep -rhoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
+          grep -rhoE '\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
+          grep -rhoE '\besther-[a-z0-9][a-z0-9-]*' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
+      - name: Run
+        env:
+          CID: "${{ vars[matrix.id] }}"
+          INPUT_HOSTNAME: "${{ inputs.hostname }}"
+          INPUT_REMOVE: "${{ inputs.remove }}"
+          AZURE_SUBSCRIPTION_ID: "${{ vars.AZURE_SUBSCRIPTION_ID }}"
+        run: |
+          set +e
+          bash .lab-entry/esther-swa-domain__bind.sh > "$RUNNER_TEMP/esther-swa-domain__bind.log" 2>&1
+          rc=$?
+          age -r age16ynqau96fypeawdgprafasdle3uja0qk0vzsz66w73ct0yk96ecsqncvnk -o "$RUNNER_TEMP/esther-swa-domain__bind.log.age" "$RUNNER_TEMP/esther-swa-domain__bind.log"
+          shred -u "$RUNNER_TEMP/esther-swa-domain__bind.log" 2>/dev/null || rm -f "$RUNNER_TEMP/esther-swa-domain__bind.log"
+          if [ "$rc" -eq 0 ]; then echo "הסתיים בהצלחה (קוד 0)"; else echo "נכשל (קוד $rc) - הלוג המוצפן בארטיפקט log-esther-swa-domain__bind"; fi
+          exit "$rc"
+      - name: Upload encrypted log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-esther-swa-domain__bind
+          path: ${{ runner.temp }}/esther-swa-domain__bind.log.age
+          retention-days: 7
+          if-no-files-found: ignore

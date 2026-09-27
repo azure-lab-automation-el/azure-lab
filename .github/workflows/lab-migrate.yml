@@ -1,0 +1,17 @@
+name: lab-migrate
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        type: choice
+        options: [snapshot, delete-vms, rollback-test, restore, cleanup]
+        default: snapshot
+        description: 'שלב המיגרציה (snapshot=גיבוי, delete-vms=מחיקת מכונות, rollback-test=מבחן שחזור, restore=שחזור חירום, cleanup=ניקוי אחרי ירוק)'
+permissions: { id-token: write, contents: write }
+jobs:
+  migrate:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: migrate__${{ inputs.stage }}
+      timeout: 35

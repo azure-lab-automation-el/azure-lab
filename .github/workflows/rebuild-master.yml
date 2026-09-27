@@ -20,6 +20,23 @@ on:
         options: [swedencentral, israelcentral]
         default: swedencentral
         description: 'linux spoke region (policy-approved only)'
+      from:
+        type: choice
+        options: [all, dc, join, sql, prereq, scom, linux, verify]
+        default: all
+        description: 'resume: skip stages before this one (checkpoint resume after a fixed failure)'
+      lab_prefix:
+        default: esther
+        description: 'name prefix for VMs/vnets/nsgs (test copies use another prefix)'
+      lab_net_base:
+        default: '10.77'
+        description: 'hub IPv4 base (first two octets)'
+      lab_se_net_base:
+        default: '10.78'
+        description: 'linux spoke IPv4 base'
+      lab_name_suffix:
+        default: ''
+        description: 'suffix for NEW disk/NIC names so they never collide with kept backups'
 permissions: { id-token: write, contents: write }
 env:
   LAB_LOCATION: ${{ inputs.lab_location || 'israelcentral' }}
@@ -33,6 +50,12 @@ jobs:
       timeout: 40
       media_account: ${{ inputs.media_account }}
       extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
         INPUT_UNTIL=${{ inputs.until }}
         INPUT_MEDIA_ACCOUNT=${{ inputs.media_account }}
   network:
@@ -40,6 +63,13 @@ jobs:
     secrets: inherit
     with:
       entry: rebuild-master__network
+      extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
       timeout: 25
   base:
     uses: ./.github/workflows/_lab-job.yml
@@ -47,22 +77,43 @@ jobs:
     needs: [network]
     with:
       entry: rebuild-master__base
+      extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
       timeout: 25
   dc:
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     needs: [network]
-    if: contains(fromJSON('["all","dc","join","sql","prereq","scom","linux"]'), inputs.until)
+    if: always() && needs.network.result != 'failure' && needs.network.result != 'cancelled' && contains(fromJSON('["all","dc","join","sql","prereq","scom","linux"]'), inputs.until) && contains(fromJSON('["all","dc"]'), inputs.from)
     with:
       entry: rebuild-master__dc
+      extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
       timeout: 25
   join:
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     needs: [dc]
-    if: contains(fromJSON('["all","join","sql","prereq","scom","linux"]'), inputs.until)
+    if: always() && needs.dc.result != 'failure' && needs.dc.result != 'cancelled' && contains(fromJSON('["all","join","sql","prereq","scom","linux"]'), inputs.until) && contains(fromJSON('["all","dc","join"]'), inputs.from)
     with:
       entry: rebuild-master__join
+      extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
       timeout: 20
   preload:
     uses: ./.github/workflows/_lab-job.yml
@@ -70,63 +121,109 @@ jobs:
     needs: [base, media]
     with:
       entry: rebuild-master__preload
+      extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
       timeout: 25
       media_account: ${{ inputs.media_account }}
   sql:
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     needs: [join, media]
-    if: contains(fromJSON('["all","sql","prereq","scom","linux"]'), inputs.until)
+    if: always() && needs.join.result != 'failure' && needs.join.result != 'cancelled' && needs.media.result != 'failure' && needs.media.result != 'cancelled' && contains(fromJSON('["all","sql","prereq","scom","linux"]'), inputs.until) && contains(fromJSON('["all","dc","join","sql"]'), inputs.from)
     with:
       entry: rebuild-master__sql
+      extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
       timeout: 50
       media_account: ${{ inputs.media_account }}
   prereq:
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     needs: [sql]
-    if: contains(fromJSON('["all","prereq","scom","linux"]'), inputs.until)
+    if: always() && needs.sql.result != 'failure' && needs.sql.result != 'cancelled' && contains(fromJSON('["all","prereq","scom","linux"]'), inputs.until) && contains(fromJSON('["all","dc","join","sql","prereq"]'), inputs.from)
     with:
       entry: rebuild-master__prereq
+      extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
       timeout: 40
       media_account: ${{ inputs.media_account }}
   scom:
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     needs: [prereq]
-    if: contains(fromJSON('["all","scom","linux"]'), inputs.until)
+    if: always() && needs.prereq.result != 'failure' && needs.prereq.result != 'cancelled' && contains(fromJSON('["all","scom","linux"]'), inputs.until) && contains(fromJSON('["all","dc","join","sql","prereq","scom"]'), inputs.from)
     with:
       entry: rebuild-master__scom
       timeout: 50
       media_account: ${{ inputs.media_account }}
       extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
         STAGES=hb-on install autologon-on restart shot autologon-off dc-fixes mps agent-manual
   linux-infra:
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     needs: [dc]
-    if: contains(fromJSON('["all","dc","join","sql","prereq","scom","linux"]'), inputs.until)
+    if: always() && needs.dc.result != 'failure' && needs.dc.result != 'cancelled' && contains(fromJSON('["all","dc","join","sql","prereq","scom","linux"]'), inputs.until) && contains(fromJSON('["all","dc","join","sql","prereq","scom","linux"]'), inputs.from)
     with:
       entry: rebuild-master__linux-infra
       timeout: 30
       extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
         GH_REPO=${{ github.repository }}
         ROTATE_KEY=true
   linux-agent:
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     needs: [scom, linux-infra]
-    if: contains(fromJSON('["all","linux"]'), inputs.until)
+    if: always() && needs.scom.result != 'failure' && needs.scom.result != 'cancelled' && needs.linux-infra.result != 'failure' && needs.linux-infra.result != 'cancelled' && contains(fromJSON('["all","linux"]'), inputs.until) && contains(fromJSON('["all","dc","join","sql","prereq","scom","linux"]'), inputs.from)
     with:
       entry: rebuild-master__linux-agent
       timeout: 35
       extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
         GH_REPO=${{ github.repository }}
         ROTATE_KEY=true
   verify:
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     needs: [scom, linux-agent]
-    if: inputs.until == 'all'
+    if: always() && needs.scom.result != 'failure' && needs.scom.result != 'cancelled' && needs['linux-agent'].result != 'failure' && needs['linux-agent'].result != 'cancelled' && inputs.until == 'all'
     with:
       entry: rebuild-master__verify
+      extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_LOCATION_LINUX=${{ inputs.lab_location_linux }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+        LAB_NET_BASE=${{ inputs.lab_net_base }}
+        LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
+        LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}

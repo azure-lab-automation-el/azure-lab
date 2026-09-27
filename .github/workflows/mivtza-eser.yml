@@ -18,6 +18,11 @@ on:
         default: israelcentral
       lab_prefix:
         default: esther
+      target:
+        type: choice
+        options: [all, dc]
+        default: all
+        description: 'dc = בניית DC בלבד (ללא מכונת SCOM)'
       mon_timeout:
         type: number
         default: 60
@@ -50,6 +55,7 @@ jobs:
         BUILD_SKU=${{ inputs.build_sku }}
         LAB_LOCATION=${{ inputs.lab_location }}
         LAB_PREFIX=${{ inputs.lab_prefix }}
+        TARGET=${{ inputs.target }}
   media:
     if: inputs.dryrun == false
     uses: ./.github/workflows/_lab-job.yml
@@ -71,6 +77,7 @@ jobs:
       media_account: estherm${{ github.run_number }}
       extra_env: |
         LAB_PREFIX=${{ inputs.lab_prefix }}
+        TARGET=${{ inputs.target }}
   monitor:
     if: inputs.dryrun == false
     needs: [secrets]
@@ -82,6 +89,7 @@ jobs:
       media_account: estherm${{ github.run_number }}
       extra_env: |
         MON_TIMEOUT_MIN=${{ inputs.mon_timeout }}
+        TARGET=${{ inputs.target }}
   finalize:
     if: always() && inputs.dryrun == false && needs.create.result != 'cancelled'
     needs: [create, secrets, monitor]

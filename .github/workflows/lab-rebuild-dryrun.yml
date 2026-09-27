@@ -1,9 +1,23 @@
 name: lab-rebuild-dryrun
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      lab_location:
+        type: choice
+        options: [israelcentral, swedencentral]
+        default: israelcentral
+        description: 'hub region to validate (policy-approved only)'
+      lab_location_linux:
+        type: choice
+        options: [swedencentral, israelcentral]
+        default: swedencentral
+        description: 'linux spoke region to validate (policy-approved only)' 
 permissions:
   contents: read
   id-token: write
+env:
+  LAB_LOCATION: ${{ inputs.lab_location || 'israelcentral' }}
+  LAB_LOCATION_LINUX: ${{ inputs.lab_location_linux || 'swedencentral' }}
 jobs:
   dryrun:
     runs-on: ubuntu-latest
@@ -102,10 +116,10 @@ jobs:
           az group show -n rg-learning-monitoring --query '{rg:name,location:location}' -o json 2>&1 | head -5
           echo "-- allowed locations policy --"
           az policy assignment list -g rg-learning-monitoring --query '[].{name:displayName,locations:parameters.listOfAllowedLocations.value}' -o json 2>/dev/null | head -20
-          echo "-- vCPU quota israelcentral (B families) --"
-          az vm list-usage -l israelcentral --query "[?contains(name.value,'standardB')||name.value=='cores'].{family:name.value,used:currentValue,limit:limit}" -o json 2>/dev/null
-          echo "-- vCPU quota swedencentral --"
-          az vm list-usage -l swedencentral --query "[?contains(name.value,'standardB')||name.value=='cores'].{family:name.value,used:currentValue,limit:limit}" -o json 2>/dev/null
+          echo "-- vCPU quota $LAB_LOCATION (B families) --"
+          az vm list-usage -l "$LAB_LOCATION" --query "[?contains(name.value,'standardB')||name.value=='cores'].{family:name.value,used:currentValue,limit:limit}" -o json 2>/dev/null
+          echo "-- vCPU quota $LAB_LOCATION_LINUX --"
+          az vm list-usage -l "$LAB_LOCATION_LINUX" --query "[?contains(name.value,'standardB')||name.value=='cores'].{family:name.value,used:currentValue,limit:limit}" -o json 2>/dev/null
           echo "== 4. Stage: base (esther-vm-create native plan mode) =="
           MODE=plan bash scripts/esther-vm-create.sh 2>&1 | tail -15
           echo "== 5. Stage targets existence (create would skip existing) =="

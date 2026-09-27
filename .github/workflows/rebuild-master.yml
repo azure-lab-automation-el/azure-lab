@@ -10,7 +10,20 @@ on:
       media_account:
         default: estherlabmedia8c8c3c92
         description: 'storage account for install media (created if missing)'
+      lab_location:
+        type: choice
+        options: [israelcentral, swedencentral]
+        default: israelcentral
+        description: 'hub region (policy-approved only; a new region needs his policy approval first)'
+      lab_location_linux:
+        type: choice
+        options: [swedencentral, israelcentral]
+        default: swedencentral
+        description: 'linux spoke region (policy-approved only)'
 permissions: { id-token: write, contents: write }
+env:
+  LAB_LOCATION: ${{ inputs.lab_location || 'israelcentral' }}
+  LAB_LOCATION_LINUX: ${{ inputs.lab_location_linux || 'swedencentral' }}
 jobs:
   media:
     runs-on: ubuntu-24.04

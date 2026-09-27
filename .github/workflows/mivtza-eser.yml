@@ -24,7 +24,23 @@ on:
         default: 60
 permissions: { id-token: write, contents: read }
 jobs:
+  prestatus:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: mivtza-eser__prestatus
+      timeout: 5
+  teardown:
+    if: inputs.dryrun == false
+    needs: [prestatus]
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: mivtza-eser__teardown
+      timeout: 20
   create:
+    needs: [prestatus, teardown]
+    if: inputs.dryrun == true || needs.teardown.result == 'success'
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     with:

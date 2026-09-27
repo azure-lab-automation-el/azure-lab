@@ -27,6 +27,10 @@ on:
         type: number
         default: 60
 permissions: { id-token: write, contents: read }
+# כלל קבוע: לעולם לא לבטל ריצה באמצע teardown/מחיקה (מניעת הקצאות רפאים במכסה)
+concurrency:
+  group: mivtza-eser
+  cancel-in-progress: false
 jobs:
   prestatus:
     uses: ./.github/workflows/_lab-job.yml

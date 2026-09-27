@@ -91,7 +91,52 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  network:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: |
+          curl -fsSL -o /tmp/age.tgz https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz
+          tar xzf /tmp/age.tgz -C /tmp && sudo install -m755 /tmp/age/age /usr/local/bin/age
+      - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Decrypt payload
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          printf '%s' "$LAB_AGE_KEY" > /tmp/age.key && chmod 600 /tmp/age.key
+          age -d -i /tmp/age.key payload.tar.gz.age | tar xz
+          shred -u /tmp/age.key 2>/dev/null || rm -f /tmp/age.key
+      - name: Run
+        env:
+          AZURE_SUBSCRIPTION_ID: "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          ESTHER_VM_ADMIN_PASSWORD: "${{ secrets.ESTHER_VM_ADMIN_PASSWORD }}"
+          ESTHER_DSRM_PASSWORD: "${{ secrets.ESTHER_DSRM_PASSWORD }}"
+          ESTHER_SCOM_SVC_PASSWORD: "${{ secrets.ESTHER_SCOM_SVC_PASSWORD }}"
+          GH_TOKEN: "${{ github.token }}"
+        run: |
+          set +e
+          bash .lab-entry/rebuild-master__network.sh > "$RUNNER_TEMP/rebuild-master__network.log" 2>&1
+          rc=$?
+          age -r age16ynqau96fypeawdgprafasdle3uja0qk0vzsz66w73ct0yk96ecsqncvnk -o "$RUNNER_TEMP/rebuild-master__network.log.age" "$RUNNER_TEMP/rebuild-master__network.log"
+          shred -u "$RUNNER_TEMP/rebuild-master__network.log" 2>/dev/null || rm -f "$RUNNER_TEMP/rebuild-master__network.log"
+          if [ "$rc" -eq 0 ]; then echo "הסתיים בהצלחה (קוד 0)"; else echo "נכשל (קוד $rc) - הלוג המוצפן בארטיפקט log-rebuild-master__network"; fi
+          exit "$rc"
+      - name: Upload encrypted log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-rebuild-master__network
+          path: ${{ runner.temp }}/rebuild-master__network.log.age
+          retention-days: 7
+          if-no-files-found: ignore
   base:
+    needs: [network]
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -139,7 +184,7 @@ jobs:
   dc:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
-    needs: [base]
+    needs: [network]
     if: contains(fromJSON('["all","dc","join","sql","prereq","scom","linux"]'), inputs.until)
     steps:
       - uses: actions/checkout@v4
@@ -230,6 +275,52 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  preload:
+    needs: [base, media]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: |
+          curl -fsSL -o /tmp/age.tgz https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz
+          tar xzf /tmp/age.tgz -C /tmp && sudo install -m755 /tmp/age/age /usr/local/bin/age
+      - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Decrypt payload
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          printf '%s' "$LAB_AGE_KEY" > /tmp/age.key && chmod 600 /tmp/age.key
+          age -d -i /tmp/age.key payload.tar.gz.age | tar xz
+          shred -u /tmp/age.key 2>/dev/null || rm -f /tmp/age.key
+      - name: Run
+        env:
+          AZURE_SUBSCRIPTION_ID: "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          ESTHER_VM_ADMIN_PASSWORD: "${{ secrets.ESTHER_VM_ADMIN_PASSWORD }}"
+          ESTHER_DSRM_PASSWORD: "${{ secrets.ESTHER_DSRM_PASSWORD }}"
+          ESTHER_SCOM_SVC_PASSWORD: "${{ secrets.ESTHER_SCOM_SVC_PASSWORD }}"
+          GH_TOKEN: "${{ github.token }}"
+          MEDIA_ACCOUNT: "${{ inputs.media_account }}"
+        run: |
+          set +e
+          bash .lab-entry/rebuild-master__preload.sh > "$RUNNER_TEMP/rebuild-master__preload.log" 2>&1
+          rc=$?
+          age -r age16ynqau96fypeawdgprafasdle3uja0qk0vzsz66w73ct0yk96ecsqncvnk -o "$RUNNER_TEMP/rebuild-master__preload.log.age" "$RUNNER_TEMP/rebuild-master__preload.log"
+          shred -u "$RUNNER_TEMP/rebuild-master__preload.log" 2>/dev/null || rm -f "$RUNNER_TEMP/rebuild-master__preload.log"
+          if [ "$rc" -eq 0 ]; then echo "הסתיים בהצלחה (קוד 0)"; else echo "נכשל (קוד $rc) - הלוג המוצפן בארטיפקט log-rebuild-master__preload"; fi
+          exit "$rc"
+      - name: Upload encrypted log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-rebuild-master__preload
+          path: ${{ runner.temp }}/rebuild-master__preload.log.age
+          retention-days: 7
+          if-no-files-found: ignore
   sql:
     runs-on: ubuntu-24.04
     timeout-minutes: 50

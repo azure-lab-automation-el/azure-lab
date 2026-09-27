@@ -1,0 +1,1 @@
+{"run":"36303858176","workflow":"rebuild-master","step":1,"total":7,"label":"אתחול אסתר","command":"az vm restart -g rg-learning-monitoring -n esther-adaxes-01","explain":"מאתחל את השרת כדי לסיים את התקנת SSRS","at":"2026-09-27T07:45:19Z"}

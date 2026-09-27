@@ -30,7 +30,7 @@ jobs:
         run: |
           set +e
           {
-            tofu -chdir=tofu/stacks/azure init -backend=false -input=false -no-color
+            tofu -chdir=tofu/stacks/azure init -input=false -no-color
             bash tofu/import-azure.sh
             tofu -chdir=tofu/stacks/azure plan -input=false -no-color -detailed-exitcode -out=/dev/null
             echo "PLAN_EXIT=$?"

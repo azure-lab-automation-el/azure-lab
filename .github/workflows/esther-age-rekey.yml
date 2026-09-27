@@ -1,0 +1,38 @@
+name: esther-age-rekey
+on:
+  workflow_dispatch:
+    inputs:
+      new_pubkey:
+        required: true
+        description: 'מפתח ציבורי חדש (age1...) להצפנה מחדש'
+permissions: { contents: write }
+jobs:
+  rekey:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: |
+          curl -fsSL -o /tmp/age.tgz https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz
+          tar xzf /tmp/age.tgz -C /tmp && sudo install -m755 /tmp/age/age /usr/local/bin/age
+      - name: פענוח והצפנה מחדש
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          NEW_PUB: ${{ inputs.new_pubkey }}
+        run: |
+          set -euo pipefail
+          case "$NEW_PUB" in age1*) ;; *) echo "bad pubkey"; exit 1;; esac
+          printf '%s' "$LAB_AGE_KEY" > /tmp/age.key && chmod 600 /tmp/age.key
+          mkdir -p /tmp/rekey && age -d -i /tmp/age.key payload.tar.gz.age > /tmp/rekey/payload.tar.gz
+          shred -u /tmp/age.key 2>/dev/null || rm -f /tmp/age.key
+          age -r "$NEW_PUB" -o payload.tar.gz.age /tmp/rekey/payload.tar.gz
+          shred -u /tmp/rekey/payload.tar.gz 2>/dev/null || rm -f /tmp/rekey/payload.tar.gz
+      - name: commit
+        run: |
+          set -e
+          git config user.name lab-agent
+          git config user.email lab-agent@users.noreply.github.com
+          git add payload.tar.gz.age .github/workflows/esther-age-rekey.yml
+          git commit -m "החלפת מפתח הצפנה (rekey) אחרי איבוד מפתח מקומי"
+          git push

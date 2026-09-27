@@ -1,0 +1,18 @@
+name: esther-policy-disks
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        type: choice
+        options: ['no', 'yes-he-approved']
+        default: 'no'
+        description: 'מוחל רק עם אישור מפורש שלו'
+permissions: { id-token: write, contents: read }
+jobs:
+  patch:
+    if: inputs.confirm == 'yes-he-approved'
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: esther-policy-disks__patch
+      timeout: 15

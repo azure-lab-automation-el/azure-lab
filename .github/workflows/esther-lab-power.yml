@@ -24,11 +24,19 @@ jobs:
           curl -fsSL -o /tmp/age.tgz https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz
           tar xzf /tmp/age.tgz -C /tmp && sudo install -m755 /tmp/age/age /usr/local/bin/age
       - name: מיסוך מזהים
+        env:
+          M1: "${{ vars.AZURE_CLIENT_ID }}"
+          M2: "${{ vars.AZURE_SUBSCRIPTION_ID }}"
+          M3: "${{ vars.AZURE_TENANT_ID }}"
+          M4: "${{ vars.ESTHER_PASSWORD_CLIENT_ID }}"
+          M5: "${{ vars.ESTHER_PORTAL_CLIENT_ID }}"
+          M6: "${{ vars.ESTHER_READ_CLIENT_ID }}"
+          M7: "${{ vars.ESTHER_WRITE_CLIENT_ID }}"
         shell: bash
         run: |
           set +x
           mask() { [ -n "$1" ] && echo "::add-mask::$1" || true; }
-          for v in "${{ vars.AZURE_CLIENT_ID }}" "${{ vars.AZURE_SUBSCRIPTION_ID }}" "${{ vars.AZURE_TENANT_ID }}" "${{ vars.ESTHER_PASSWORD_CLIENT_ID }}" "${{ vars.ESTHER_PORTAL_CLIENT_ID }}" "${{ vars.ESTHER_READ_CLIENT_ID }}" "${{ vars.ESTHER_WRITE_CLIENT_ID }}"; do mask "$v"; done
+          for v in "$M1" "$M2" "$M3" "$M4" "$M5" "$M6" "$M7"; do mask "$v"; done
       - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
@@ -42,11 +50,19 @@ jobs:
           age -d -i /tmp/age.key payload.tar.gz.age | tar xz
           shred -u /tmp/age.key 2>/dev/null || rm -f /tmp/age.key
       - name: Mask sensitive values
+        env:
+          M1: "${{ vars.AZURE_CLIENT_ID }}"
+          M2: "${{ vars.AZURE_SUBSCRIPTION_ID }}"
+          M3: "${{ vars.AZURE_TENANT_ID }}"
+          M4: "${{ vars.ESTHER_PASSWORD_CLIENT_ID }}"
+          M5: "${{ vars.ESTHER_PORTAL_CLIENT_ID }}"
+          M6: "${{ vars.ESTHER_READ_CLIENT_ID }}"
+          M7: "${{ vars.ESTHER_WRITE_CLIENT_ID }}"
         shell: bash
         run: |
           set +x
           mask() { [ -n "$1" ] && echo "::add-mask::$1" || true; }
-          for v in "${{ vars.AZURE_CLIENT_ID }}" "${{ vars.AZURE_SUBSCRIPTION_ID }}" "${{ vars.AZURE_TENANT_ID }}" "${{ vars.ESTHER_PASSWORD_CLIENT_ID }}" "${{ vars.ESTHER_PORTAL_CLIENT_ID }}" "${{ vars.ESTHER_READ_CLIENT_ID }}" "${{ vars.ESTHER_WRITE_CLIENT_ID }}"; do mask "$v"; done
+          for v in "$M1" "$M2" "$M3" "$M4" "$M5" "$M6" "$M7"; do mask "$v"; done
           grep -rhoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
           grep -rhoE '\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
           grep -rhoE '\besther-[a-z0-9][a-z0-9-]*' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done

@@ -1,0 +1,11 @@
+name: lab-vm-probe
+on: { workflow_dispatch: {} }
+permissions: { id-token: write, contents: read }
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: lab-vm-probe__probe
+      timeout: 15
+      media_account: esthermdbg

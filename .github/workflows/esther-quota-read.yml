@@ -1,0 +1,10 @@
+name: esther-quota-read
+on: {workflow_dispatch: {}}
+permissions: {id-token: write, contents: read}
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: esther-quota-read__read
+      timeout: 5

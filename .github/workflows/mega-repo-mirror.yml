@@ -1,0 +1,11 @@
+name: mega-repo-mirror
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: mega-repo-mirror__run
+      azure_login: false
+      timeout: 15

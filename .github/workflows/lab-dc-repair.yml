@@ -1,0 +1,11 @@
+name: lab-dc-repair
+on: { workflow_dispatch: {} }
+permissions: { id-token: write, contents: read }
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: lab-dc-repair__repair
+      timeout: 20
+      media_account: esthermdbg

@@ -10,7 +10,7 @@ env:
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   ARM_USE_OIDC: 'true'
   TF_VAR_admin_password: 'PLAN-ONLY-not-used-1!'
-  TF_VAR_linux_ssh_public_key: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINotARealKeyForPlanOnly0000000000000000000000 plan-only'
+  TF_VAR_linux_ssh_public_key: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJOWebEQVYCGnjP+9YUfVvqteUy8OiADXZ+KfYdhiBQX scom-linux-lab'
 jobs:
   plan:
     runs-on: ubuntu-24.04

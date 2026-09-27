@@ -16,8 +16,6 @@ on:
         type: choice
         options: [israelcentral, swedencentral]
         default: israelcentral
-      media_account:
-        default: estherlabmedia8c8c3c92
       lab_prefix:
         default: esther
       mon_timeout:
@@ -59,7 +57,7 @@ jobs:
     with:
       entry: mivtza-eser__media
       timeout: 50
-      media_account: ${{ inputs.media_account }}
+      media_account: estherm${{ github.run_number }}
       extra_env: |
         LAB_LOCATION=${{ inputs.lab_location }}
   secrets:
@@ -70,7 +68,7 @@ jobs:
     with:
       entry: mivtza-eser__secrets
       timeout: 15
-      media_account: ${{ inputs.media_account }}
+      media_account: estherm${{ github.run_number }}
       extra_env: |
         LAB_PREFIX=${{ inputs.lab_prefix }}
   monitor:
@@ -81,7 +79,7 @@ jobs:
     with:
       entry: mivtza-eser__monitor
       timeout: 65
-      media_account: ${{ inputs.media_account }}
+      media_account: estherm${{ github.run_number }}
       extra_env: |
         MON_TIMEOUT_MIN=${{ inputs.mon_timeout }}
   finalize:
@@ -92,7 +90,7 @@ jobs:
     with:
       entry: mivtza-eser__finalize
       timeout: 25
-      media_account: ${{ inputs.media_account }}
+      media_account: estherm${{ github.run_number }}
       extra_env: |
         MODE=${{ needs.monitor.result == 'success' && 'success' || 'abort' }}
         LAB_PREFIX=${{ inputs.lab_prefix }}

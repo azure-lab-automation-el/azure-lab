@@ -3,6 +3,9 @@ on: workflow_dispatch
 permissions: { id-token: write, contents: read }
 jobs:
   run:
+    strategy:
+      matrix:
+        id: [AZURE_CLIENT_ID, ESTHER_WRITE_CLIENT_ID, ESTHER_PASSWORD_CLIENT_ID, ESTHER_READ_CLIENT_ID]
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     with:

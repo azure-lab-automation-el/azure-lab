@@ -1,0 +1,81 @@
+name: mivtza-eser
+on:
+  workflow_dispatch:
+    inputs:
+      dryrun:
+        type: boolean
+        default: true
+        description: 'אמת בלבד (ברירת מחדל) - לא יוצר כלום'
+      build_sku:
+        type: choice
+        options: [standard_b2as_v2, standard_b4as_v2]
+        default: standard_b2as_v2
+        description: 'מידת בנייה (מכווצת ל-B2 בסגירה)'
+      lab_location:
+        type: choice
+        options: [israelcentral, swedencentral]
+        default: israelcentral
+      media_account:
+        default: estherlabmedia8c8c3c92
+      lab_prefix:
+        default: esther
+      mon_timeout:
+        type: number
+        default: 60
+permissions: { id-token: write, contents: read }
+jobs:
+  create:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: mivtza-eser__create
+      timeout: 25
+      extra_env: |
+        DRYRUN=${{ inputs.dryrun }}
+        BUILD_SKU=${{ inputs.build_sku }}
+        LAB_LOCATION=${{ inputs.lab_location }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+  media:
+    if: inputs.dryrun == false
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: mivtza-eser__media
+      timeout: 50
+      media_account: ${{ inputs.media_account }}
+      extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
+  secrets:
+    if: inputs.dryrun == false
+    needs: [create, media]
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: mivtza-eser__secrets
+      timeout: 15
+      media_account: ${{ inputs.media_account }}
+      extra_env: |
+        LAB_PREFIX=${{ inputs.lab_prefix }}
+  monitor:
+    if: inputs.dryrun == false
+    needs: [secrets]
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: mivtza-eser__monitor
+      timeout: 65
+      media_account: ${{ inputs.media_account }}
+      extra_env: |
+        MON_TIMEOUT_MIN=${{ inputs.mon_timeout }}
+  finalize:
+    if: always() && inputs.dryrun == false && needs.create.result != 'cancelled'
+    needs: [create, secrets, monitor]
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: mivtza-eser__finalize
+      timeout: 25
+      media_account: ${{ inputs.media_account }}
+      extra_env: |
+        MODE=${{ needs.monitor.result == 'success' && 'success' || 'abort' }}
+        LAB_PREFIX=${{ inputs.lab_prefix }}

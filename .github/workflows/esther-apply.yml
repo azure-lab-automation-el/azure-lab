@@ -65,7 +65,7 @@ jobs:
           set +e
           bash .lab-entry/esther-apply__apply.sh > "$RUNNER_TEMP/esther-apply__apply.log" 2>&1
           rc=$?
-          age -r age16ynqau96fypeawdgprafasdle3uja0qk0vzsz66w73ct0yk96ecsqncvnk -o "$RUNNER_TEMP/esther-apply__apply.log.age" "$RUNNER_TEMP/esther-apply__apply.log"
+          age -r age1rz0qqpdtzwhl667jmxvwn000gcwj3zel38n8x30smvmddf9jxpjsr25m2x -o "$RUNNER_TEMP/esther-apply__apply.log.age" "$RUNNER_TEMP/esther-apply__apply.log"
           shred -u "$RUNNER_TEMP/esther-apply__apply.log" 2>/dev/null || rm -f "$RUNNER_TEMP/esther-apply__apply.log"
           if [ "$rc" -eq 0 ]; then echo "הסתיים בהצלחה (קוד 0)"; else echo "נכשל (קוד $rc) - הלוג המוצפן בארטיפקט log-esther-apply__apply"; fi
           exit "$rc"

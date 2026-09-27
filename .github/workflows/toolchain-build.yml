@@ -18,8 +18,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: azure-lab-automation-el
+          password: ${{ secrets.LAB_AGENT_PAT }}
       - name: בניית אימג׳ הכלים
         uses: docker/build-push-action@v6
         with:

@@ -1,0 +1,119 @@
+name: lab-rebuild-dryrun
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  dryrun:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AZURE_CLIENT_ID: "${{ vars.AZURE_CLIENT_ID }}"
+      AZURE_SUBSCRIPTION_ID: "${{ vars.AZURE_SUBSCRIPTION_ID }}"
+      AZURE_TENANT_ID: "${{ vars.AZURE_TENANT_ID }}"
+      ESTHER_VM_ADMIN_PASSWORD: "${{ secrets.ESTHER_VM_ADMIN_PASSWORD }}"
+      ESTHER_DSRM_PASSWORD: "${{ secrets.ESTHER_DSRM_PASSWORD }}"
+      ESTHER_SCOM_SVC_PASSWORD: "${{ secrets.ESTHER_SCOM_SVC_PASSWORD }}"
+      ESTHER_INIT_PW: "${{ secrets.ESTHER_INIT_PW }}"
+      ESTHER_REQUEST_TOKEN: "${{ secrets.ESTHER_REQUEST_TOKEN }}"
+      ESTHER_METRICS_KEY: "${{ secrets.ESTHER_METRICS_KEY }}"
+      LINUX_SCX_PASSWORD: "${{ secrets.LINUX_SCX_PASSWORD }}"
+      LINUX_SCX_SSH_KEY: "${{ secrets.LINUX_SCX_SSH_KEY }}"
+      MEGA_EMAIL: "${{ secrets.MEGA_EMAIL }}"
+      MEGA_PASSWORD: "${{ secrets.MEGA_PASSWORD }}"
+      CF_API_TOKEN: "${{ secrets.CF_API_TOKEN }}"
+      CF_ACCOUNT_ID: "${{ secrets.CF_ACCOUNT_ID }}"
+      GROQ_API_KEY: "${{ secrets.GROQ_API_KEY }}"
+      COPILOT_GITHUB_TOKEN: "${{ secrets.COPILOT_GITHUB_TOKEN }}"
+      AZURE_STATIC_WEB_APPS_API_TOKEN: "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}"
+    steps:
+      - uses: actions/checkout@v4
+      - name: התקנת age
+        run: |
+          curl -fsSL -o /tmp/age.tgz https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz
+          tar xzf /tmp/age.tgz -C /tmp && sudo install -m755 /tmp/age/age /usr/local/bin/age
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: פענוח payload
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          printf '%s' "$LAB_AGE_KEY" > /tmp/age.key && chmod 600 /tmp/age.key
+          age -d -i /tmp/age.key payload.tar.gz.age | tar xz
+          shred -u /tmp/age.key 2>/dev/null || rm -f /tmp/age.key
+      - name: מיסוך ערכים רגישים
+        shell: bash
+        run: |
+          set +x
+          mask() { [ -n "$1" ] && echo "::add-mask::$1" || true; }
+          for v in "${{ vars.AZURE_CLIENT_ID }}" "${{ vars.AZURE_SUBSCRIPTION_ID }}" "${{ vars.AZURE_TENANT_ID }}"; do mask "$v"; done
+          grep -rhoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
+          grep -rhoE '\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b' --exclude-dir=.git . 2>/dev/null | sort -u | while IFS= read -r m; do mask "$m"; done
+      - name: הרצה
+        shell: bash
+        run: |
+          set +e
+          bash -s > "$RUNNER_TEMP/lab-rebuild-dryrun.log" 2>&1 <<'DRYRUN'
+          set +e
+          echo "=== REBUILD DRY-RUN (read-only, creates nothing) ==="
+          echo "== 1. Secret/var presence (names only) =="
+          MISSING=0
+          for v in AZURE_CLIENT_ID AZURE_SUBSCRIPTION_ID AZURE_TENANT_ID ESTHER_VM_ADMIN_PASSWORD ESTHER_DSRM_PASSWORD ESTHER_SCOM_SVC_PASSWORD ESTHER_INIT_PW ESTHER_REQUEST_TOKEN ESTHER_METRICS_KEY LINUX_SCX_PASSWORD LINUX_SCX_SSH_KEY MEGA_EMAIL MEGA_PASSWORD CF_API_TOKEN CF_ACCOUNT_ID GROQ_API_KEY COPILOT_GITHUB_TOKEN; do
+            if [ -z "${!v:-}" ]; then echo "MISSING: $v"; MISSING=1; fi
+          done
+          [ "$MISSING" = 0 ] && echo "all 17 required secrets/vars present"
+          [ -z "${AZURE_STATIC_WEB_APPS_API_TOKEN:-}" ] && echo "NOTE: AZURE_STATIC_WEB_APPS_API_TOKEN unset (SWA deploy stays blocked - policy)"
+          [ -z "${LINUX_SCX_PPK_B64:-}" ] && echo "NOTE: LINUX_SCX_PPK_B64 unset by design (esther-sweden.sh self-heals on first run)"
+          echo "== 2. Syntax check (bash -n) =="
+          SYNTAX_FAIL=0
+          for f in .lab-entry/*.sh scripts/*.sh scripts/ai/*.sh scripts/scom/*.sh scripts/automation/*.sh scripts/lib/*.sh; do
+            [ -f "$f" ] || continue
+            bash -n "$f" 2>/tmp/synerr || { echo "SYNTAX FAIL: $f"; cat /tmp/synerr; SYNTAX_FAIL=1; }
+          done
+          [ "$SYNTAX_FAIL" = 0 ] && echo "all scripts pass bash -n"
+          echo "== 3. Azure state =="
+          az account show --query '{sub:id,tenant:tenantId}' -o json
+          az group show -n rg-learning-monitoring --query '{rg:name,location:location}' -o json 2>&1 | head -5
+          echo "-- allowed locations policy --"
+          az policy assignment list -g rg-learning-monitoring --query '[].{name:displayName,locations:parameters.listOfAllowedLocations.value}' -o json 2>/dev/null | head -20
+          echo "-- vCPU quota israelcentral (B families) --"
+          az vm list-usage -l israelcentral --query "[?contains(name.value,'standardB')||name.value=='cores'].{family:name.value,used:currentValue,limit:limit}" -o json 2>/dev/null
+          echo "-- vCPU quota swedencentral --"
+          az vm list-usage -l swedencentral --query "[?contains(name.value,'standardB')||name.value=='cores'].{family:name.value,used:currentValue,limit:limit}" -o json 2>/dev/null
+          echo "== 4. Stage: base (esther-vm-create native plan mode) =="
+          MODE=plan bash scripts/esther-vm-create.sh 2>&1 | tail -15
+          echo "== 5. Stage targets existence (create would skip existing) =="
+          for vm in esther-adaxes-01 esther-dc-01 esther-linux-01; do
+            az vm show -g rg-learning-monitoring -n $vm --query '{name:name,state:provisioningState}' -o json 2>/dev/null || echo "$vm: absent (would be created)"
+          done
+          az network vnet show -g rg-learning-monitoring -n esther-lab-vnet --query name -o tsv 2>/dev/null || echo "esther-lab-vnet: absent (would be created)"
+          az network vnet show -g rg-learning-monitoring -n esther-se-vnet --query name -o tsv 2>/dev/null || echo "esther-se-vnet: absent (would be created)"
+          echo "== 6. SCOM media stages (3/4/5) static check =="
+          grep -l 'run-command' scripts/esther-scom-phase3.sh scripts/esther-scom-phase4.sh scripts/esther-scom-phase5.sh 2>/dev/null | wc -l
+          echo "== 7. SWA stage (Esther portal deploy path) =="
+          echo "-- exact policy parameters that govern creation in rg-learning-monitoring --"
+          az policy assignment list -g rg-learning-monitoring --query '[].{name:displayName,params:parameters}' -o json 2>/dev/null
+          echo "-- SWA resource presence --"
+          az staticwebapp show -n esther-cloud-admin -g rg-learning-monitoring --query '{name:name,sku:sku.name}' -o json 2>/dev/null || echo "esther-cloud-admin: absent"
+          echo "-- recorded denial (live attempt 2026-09-27, runs 36290167627/36290279759) --"
+          echo "RequestDisallowedByPolicy: 'Only Israel Central is approved for this learning lab.' + 'Only the approved free-lab resource types may be created or updated here.'"
+          echo "CONCLUSION: esther-swa-free create + esther-swa-deploy stay blocked until a policy exemption covers Microsoft.Web/staticSites in israelcentral; AZURE_STATIC_WEB_APPS_API_TOKEN cannot be fetched while the SWA does not exist"
+          echo "=== DRY-RUN DONE ==="
+          DRYRUN
+          rc=$?
+          age -r age16ynqau96fypeawdgprafasdle3uja0qk0vzsz66w73ct0yk96ecsqncvnk -o "$RUNNER_TEMP/lab-rebuild-dryrun.log.age" "$RUNNER_TEMP/lab-rebuild-dryrun.log"
+          shred -u "$RUNNER_TEMP/lab-rebuild-dryrun.log" 2>/dev/null || rm -f "$RUNNER_TEMP/lab-rebuild-dryrun.log"
+          if [ "$rc" -eq 0 ]; then echo "הסתיים בהצלחה (קוד 0)"; else echo "נכשל (קוד $rc) - הלוג המוצפן בארטיפקט log-lab-rebuild-dryrun"; fi
+          exit "$rc"
+      - name: העלאת לוג מוצפן
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-lab-rebuild-dryrun
+          path: ${{ runner.temp }}/lab-rebuild-dryrun.log.age
+          retention-days: 7
+          if-no-files-found: ignore

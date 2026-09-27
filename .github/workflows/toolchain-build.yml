@@ -1,0 +1,29 @@
+name: toolchain-build
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        default: latest
+        description: 'image tag'
+permissions: { contents: read, packages: write }
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: התחברות ל-GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: בניית אימג׳ הכלים
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.toolchain
+          push: true
+          tags: ghcr.io/${{ github.repository }}-toolchain:${{ inputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

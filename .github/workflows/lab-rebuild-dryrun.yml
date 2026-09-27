@@ -141,7 +141,7 @@ jobs:
           echo "=== DRY-RUN DONE ==="
           DRYRUN
           rc=$?
-          age -r age1rz0qqpdtzwhl667jmxvwn000gcwj3zel38n8x30smvmddf9jxpjsr25m2x -o "$RUNNER_TEMP/lab-rebuild-dryrun.log.age" "$RUNNER_TEMP/lab-rebuild-dryrun.log"
+          age -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -o "$RUNNER_TEMP/lab-rebuild-dryrun.log.age" "$RUNNER_TEMP/lab-rebuild-dryrun.log"
           shred -u "$RUNNER_TEMP/lab-rebuild-dryrun.log" 2>/dev/null || rm -f "$RUNNER_TEMP/lab-rebuild-dryrun.log"
           if [ "$rc" -eq 0 ]; then echo "הסתיים בהצלחה (קוד 0)"; else echo "נכשל (קוד $rc) - הלוג המוצפן בארטיפקט log-lab-rebuild-dryrun"; fi
           exit "$rc"

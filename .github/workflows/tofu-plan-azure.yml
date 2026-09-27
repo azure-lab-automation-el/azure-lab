@@ -39,7 +39,7 @@ jobs:
           adds=$(grep -c 'will be created' "$RUNNER_TEMP/plan.log")
           chg=$(grep -c 'will be updated in-place' "$RUNNER_TEMP/plan.log")
           ok=$(grep -c 'No changes' "$RUNNER_TEMP/plan.log")
-          age -r age1rz0qqpdtzwhl667jmxvwn000gcwj3zel38n8x30smvmddf9jxpjsr25m2x -o "$RUNNER_TEMP/plan.log.age" "$RUNNER_TEMP/plan.log"
+          age -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -o "$RUNNER_TEMP/plan.log.age" "$RUNNER_TEMP/plan.log"
           shred -u "$RUNNER_TEMP/plan.log" 2>/dev/null || rm -f "$RUNNER_TEMP/plan.log"
           echo "== סיכום סטייה (drift): חדשים=$adds שינויים=$chg תואם=$([ "$ok" -gt 0 ] && echo כן || echo לא) =="
           if [ "$rc" = 0 ]; then echo "המודול תואם את המעבדה החיה (0 שינויים)"

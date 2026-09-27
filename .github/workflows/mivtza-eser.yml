@@ -42,6 +42,8 @@ jobs:
     with:
       entry: mivtza-eser__teardown
       timeout: 20
+      extra_env: |
+        TARGET=${{ inputs.target }}
   create:
     needs: [prestatus, teardown]
     if: inputs.dryrun == true || needs.teardown.result == 'success'

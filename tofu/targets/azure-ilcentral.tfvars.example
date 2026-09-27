@@ -1,0 +1,5 @@
+# Azure hub in israelcentral, linux spoke in swedencentral (policy-approved defaults).
+location        = "israelcentral"
+location_linux  = "swedencentral"
+# admin_password and linux_ssh_public_key come from the vault / CI secrets - never committed.
+media_account_name = "estherlabmedia8c8c3c92"

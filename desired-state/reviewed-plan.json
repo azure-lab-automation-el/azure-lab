@@ -1,0 +1,9 @@
+{
+  "basedOn": "state after stage 1 (read back 0 ops)",
+  "summary": {
+    "renameUser": 100
+  },
+  "opCount": 100,
+  "applied": true,
+  "appliedBy": "esther-apply run 35812524103"
+}

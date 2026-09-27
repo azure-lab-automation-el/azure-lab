@@ -1,0 +1,14 @@
+{
+  "id": "2026-09-23T03-41-52-961Z-e2epw",
+  "requestedBy": "azure-lab-operator@lessonarchivecloudtutamail.onmicrosoft.com",
+  "requestedAt": "2026-09-23T03:41:52.961Z",
+  "kind": "special",
+  "action": "resetPassword",
+  "userPrincipalName": "tal.naveh@lessonarchivecloudtutamail.onmicrosoft.com",
+  "reason": "E2E test of password reset",
+  "publicKey": {
+    "kty": "RSA",
+    "n": "tHIRL7_Z0n5OT7eNRRZUEqtUhzgoYz3Lu_-OpK9X9LSFNx54W2QbviASsnnKbduJIUT1rSoZYgZPRtZY7qsffgR6IVLchsxjQ1imgXQO5oAtL2z7Rtf6dpXs9IZ_L0s7DcvuWgJQtbKZYkqEeFO7ApEUZWYwZ3B8bzTP24Ui3z80WeYuR-6VUWEDqPxOQW-IjqoCJNwtNm1B6vp7YeM3RgmecyboQHWdLUSH0PqrZdtBV3hnc8PIz4MnbxuN_cTEfsrhByMVHTGq0SEmypJb3q6psZdmOJ5r7nh9I938RF8MCcJRWyH59fdnXvrb5t4vkvM8wxstChLCBOQ4m4RXMw",
+    "e": "AQAB"
+  }
+}

@@ -1,0 +1,16 @@
+# azure-lab-toolchain: identical lab deploy tooling anywhere - no runner/region dependence.
+# Contains: az CLI, OpenTofu, age, jq, python3, git. The payload scripts mount/copy in at runtime.
+FROM ubuntu:24.04
+ARG AGE_VERSION=1.2.1
+ARG TOFU_VERSION=1.9.0
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      curl ca-certificates gnupg jq python3 python3-pip git unzip bash \
+ && curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
+ && curl -fsSL -o /tmp/age.tgz https://github.com/FiloSottile/age/releases/download/v${AGE_VERSION}/age-v${AGE_VERSION}-linux-amd64.tar.gz \
+ && tar xzf /tmp/age.tgz -C /tmp && install -m755 /tmp/age/age /usr/local/bin/age \
+ && curl -fsSL -o /tmp/tofu.tar.gz https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/tofu_${TOFU_VERSION}_linux_amd64.tar.gz \
+ && tar xzf /tmp/tofu.tar.gz -C /tmp && install -m755 /tmp/tofu /usr/local/bin/tofu \
+ && rm -rf /tmp/age* /tmp/tofu* /var/lib/apt/lists/* \
+ && az version -o json | python3 -c 'import sys,json;print("az", json.load(sys.stdin)["azure-cli"])' && tofu version -json | python3 -c 'import sys,json;print("tofu", json.load(sys.stdin)["terraform_version"])' && age --version
+WORKDIR /lab
+ENTRYPOINT ["/bin/bash"]

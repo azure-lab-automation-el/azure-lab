@@ -1,0 +1,10 @@
+{
+  "id": "2026-09-23T03-24-02-846Z-093r12",
+  "requestedBy": "azure-lab-operator@lessonarchivecloudtutamail.onmicrosoft.com",
+  "requestedAt": "2026-09-23T03:24:02.846Z",
+  "kind": "standard",
+  "action": "setManager",
+  "userPrincipalName": "yael.gefen@lessonarchivecloudtutamail.onmicrosoft.com",
+  "manager": "or.shalev@lessonarchivecloudtutamail.onmicrosoft.com",
+  "reason": "E2E test (no-op: same manager)"
+}

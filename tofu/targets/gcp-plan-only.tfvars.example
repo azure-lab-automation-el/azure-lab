@@ -1,0 +1,4 @@
+# PLAN-ONLY: no GCP project yet. Values are placeholders for tofu validate/plan shape checks.
+project           = "CHANGE-ME"
+region            = "europe-west1"
+media_bucket_name = "esther-lab-media-CHANGE-ME"

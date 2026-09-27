@@ -1,0 +1,29 @@
+You are fixing a Playwright (Node.js) script that records a tour of the JFrog Artifactory OSS 7.x web UI (Angular). In the Artifacts tree, each node is a [role="treeitem"] row with a div.expander arrow; children load lazily and the app can be slow.
+Goal: expand demo-generic-local -> app -> 1.0.0 so hello-1.0.0.txt becomes visible, with no page reloads.
+Observed log from the latest run:
+  expand demo-generic-local: expander
+  expand app: failed
+  expand 1.0.0: not visible
+Earlier run: app expanded via expander, but 1.0.0 failed. So expanding a nested node is unreliable.
+`p` is the Playwright page, `pause(ms)` sleeps, `log(s)` logs.
+Current function:
+---
+  const expand = async (label) => {
+    const el = p.getByText(label, { exact: true }).filter({ visible: true }).first();
+    if (!(await el.count())) { log(`expand ${label}: not visible`); return false; }
+    const kids = async () => p.getByText(label === 'demo-generic-local' ? 'app' : label === 'app' ? '1.0.0' : 'hello-1.0.0.txt', { exact: true }).filter({ visible: true }).count();
+    const waitKids = async (ms) => { for (let t = 0; t < ms; t += 500) { if (await kids()) return true; await pause(500); } return false; };
+    await el.click({ timeout: 5000, force: true }).catch(()=>{});
+    if (await waitKids(3000)) { log(`expand ${label}: already open`); return true; }
+    // (label selected above)
+    // Artifactory tree: role=treeitem rows with a div.expander arrow.
+    await p.locator('[role="treeitem"]').filter({ has: p.getByText(label, { exact: true }) }).last().locator('.expander').first().click({ timeout: 5000, force: true }).catch((e) => log(`expand ${label} expander: ${e.message.split('\n')[0]}`)); 
+    if (await waitKids(10000)) { log(`expand ${label}: expander`); return true; }
+    await el.dblclick({ timeout: 5000, force: true }).catch(()=>{}); if (await waitKids(8000)) { log(`expand ${label}: dblclick`); return true; }
+    const row = el.locator('xpath=ancestor::*[self::li or @role="treeitem" or contains(@class,"node")][1]');
+    await row.locator('[class*="arrow"],[class*="caret"],[class*="toggle"],[class*="expand"]').first().click({ timeout: 4000, force: true }).catch(()=>{}); await pause(1500); if (await kids()) { log(`expand ${label}: caret`); return true; }
+    await p.keyboard.press('ArrowRight').catch(()=>{}); await pause(1500); if (await kids()) { log(`expand ${label}: key`); return true; }
+    log(`expand ${label}: failed`); return false;
+  };
+---
+Reply with ONLY a complete replacement for this function, starting with `const expand = async (label) => {` and ending with `};`. Keep the same signature and log format. No explanation, no markdown fences.

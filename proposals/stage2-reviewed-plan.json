@@ -1,0 +1,7 @@
+{
+  "basedOn": "simulated state after stage 1",
+  "summary": {
+    "renameUser": 100
+  },
+  "opCount": 100
+}

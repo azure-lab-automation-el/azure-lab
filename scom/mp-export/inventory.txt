@@ -1,0 +1,18 @@
+﻿mg=ESTHER-MG version=10.25.10132.0
+mps_total=108 sealed=102 unsealed=6
+unsealed Microsoft.SystemCenter.OperationsManager.DefaultUser | Default Management Pack | overrides=2 monitors=0 rules=0 classes=0 views=5 | modified=2026-09-23
+unsealed Microsoft.SystemCenter.NetworkDiscovery.Internal | Network Discovery Internal | overrides=0 monitors=0 rules=0 classes=0 views=0 | modified=2026-09-23
+unsealed Microsoft.SystemCenter.SecureReferenceOverride |  | overrides=9 monitors=0 rules=0 classes=0 views=0 | modified=2026-09-24
+unsealed Microsoft.SystemCenter.ClientMonitoring.Overrides | Client Monitoring Overrides Management Pack | overrides=36 monitors=0 rules=0 classes=0 views=0 | modified=2026-09-23
+unsealed Microsoft.SystemCenter.ApplicationMonitoring.360.SLA | Microsoft System Center Application Monitoring 360 SLA | overrides=0 monitors=0 rules=0 classes=0 views=0 | modified=2026-09-23
+unsealed Microsoft.SystemCenter.Notifications.Internal | Notifications Internal Library | overrides=0 monitors=0 rules=0 classes=0 views=0 | modified=2026-09-23
+sealed_by_family: Microsoft.SystemCenter=61, Microsoft.Windows=14, Microsoft.Unix=7, Microsoft.Linux=5, System.NetworkManagement=3, System.Health=2, System.BaseliningTasks=1, System.Image=1, System.AdminItem=1, System.Software=1, System.Library=1, System.ApplicationLog=1
+sealed_imported: Microsoft.Windows.DNSServer.Generic.Presentation 10.1.0.1, Microsoft.Windows.Server.NetworkDiscovery 10.25.10132.0, Microsoft.Windows.DNSServer.2016 10.1.0.1, Microsoft.Windows.DNSServer.Generic.Dashboard 10.1.0.1
+agents_windows: ESTHERDC01.esther.lab[Success]
+agents_unix: esther-linux-01.esther.lab[Error]
+runas: Linux scxmon monitoring[BasicCredentialSecureData], Linux scxmon maintenance[BasicCredentialSecureData], Network Service Windows Account[WindowsCredentialSecureData], ESTHER\svc-scom-action[ActionAccountSecureData], Linux scxmon privileged[BasicCredentialSecureData]
+module loaded
+subscriptions: 
+channels: 
+alerts_open=2: APM Data Transfer Health @ Operations Manager APM Data Transfer Service [Warning] ; SSH daemon is not running @ Linux Distribution [Error]
+setting agent_approval=AutoReject

@@ -1,0 +1,44 @@
+{
+  "_note": "Checked nightly by esther-scheduled and on demand. severity: error | warn.",
+  "rules": [
+    {
+      "id": "manager-required",
+      "severity": "warn",
+      "text": "Everyone except the CEO has a manager",
+      "exempt": [
+        "or.shalev@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "manager-exists",
+      "severity": "error",
+      "text": "A manager must be an existing, enabled user"
+    },
+    {
+      "id": "department-group",
+      "severity": "error",
+      "text": "Each user is in the Esther Hospital group of their department"
+    },
+    {
+      "id": "single-department-group",
+      "severity": "warn",
+      "text": "Nobody sits in two department groups"
+    },
+    {
+      "id": "disabled-no-groups",
+      "severity": "warn",
+      "text": "Disabled users are removed from groups"
+    },
+    {
+      "id": "title-in-template",
+      "severity": "warn",
+      "text": "Job title is one of the department template titles"
+    },
+    {
+      "id": "no-drift",
+      "severity": "error",
+      "text": "Entra matches desired-state/state.json (plan has 0 changes)"
+    }
+  ],
+  "staffOnly": "Rules apply to Esther staff: users with a department. Admin/owner accounts without a department are skipped."
+}

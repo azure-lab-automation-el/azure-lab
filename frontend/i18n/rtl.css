@@ -1,0 +1,7 @@
+/* RTL + Hebrew typography layer */
+html[dir="rtl"] body{font-family:Heebo,Inter,system-ui,sans-serif}
+html[dir="rtl"] code,html[dir="rtl"] pre,html[dir="rtl"] .upn,html[dir="rtl"] input[type="email"]{direction:ltr;unicode-bidi:isolate}
+html[dir="rtl"] th,html[dir="rtl"] td{text-align:right}
+html[dir="rtl"] .kpi .spark{right:auto;left:0}
+html[dir="rtl"] .kpi .kl,html[dir="rtl"] .kpi .kt,html[dir="rtl"] th,html[dir="rtl"] .opst th{text-transform:none;letter-spacing:0}
+html[dir="rtl"] .nowcard{border-left:1px solid rgba(37,99,235,.35);border-right:5px solid var(--sc)}

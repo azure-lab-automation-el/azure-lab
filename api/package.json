@@ -1,0 +1,2 @@
+{ "name": "esther-cloud-admin-api", "version": "0.1.0", "main": "src/functions/*.js", "type": "commonjs",
+  "dependencies": { "@azure/functions": "^4.5.0" } }

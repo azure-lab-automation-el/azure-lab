@@ -1,0 +1,991 @@
+{
+  "upnSuffix": "@estherh.v6.rocks",
+  "users": [
+    {
+      "id": "26672866-8e3b-46af-b368-c035a01244ff",
+      "userPrincipalName": "or.shalev@estherh.v6.rocks",
+      "displayName": "Or Shalev",
+      "department": "Administration",
+      "jobTitle": "Chief Executive Officer",
+      "manager": null
+    },
+    {
+      "id": "88fc619c-0cc8-4d79-9308-3c23ccff925f",
+      "userPrincipalName": "yael.gefen@estherh.v6.rocks",
+      "displayName": "Yael Gefen",
+      "department": "Administration",
+      "jobTitle": "Chief Operating Officer",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "c1bd2286-679f-444c-9746-b6ed7663234d",
+      "userPrincipalName": "adi.kedem@estherh.v6.rocks",
+      "displayName": "Adi Kedem",
+      "department": "Administration",
+      "jobTitle": "Human Resources Manager",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "8caeea1b-2365-46a3-aaf0-a2b74ab8b459",
+      "userPrincipalName": "adi.gefen@estherh.v6.rocks",
+      "displayName": "Adi Gefen",
+      "department": "Administration",
+      "jobTitle": "Executive Assistant",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "cf4da1d7-96b0-42bc-8af7-bb4879543133",
+      "userPrincipalName": "yuval.barak@estherh.v6.rocks",
+      "displayName": "Yuval Barak",
+      "department": "Administration",
+      "jobTitle": "Office Manager",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "0a186dce-9f2e-40d1-8ad2-daa58312f758",
+      "userPrincipalName": "shahar.kedem@estherh.v6.rocks",
+      "displayName": "Shahar Kedem",
+      "department": "Administration",
+      "jobTitle": "Quality Assurance Coordinator",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "e09b631a-2810-440d-9a1f-a26ee2218810",
+      "userPrincipalName": "gal.talmon@estherh.v6.rocks",
+      "displayName": "Gal Talmon",
+      "department": "Administration",
+      "jobTitle": "Patient Relations Officer",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "bd3bbe25-9906-4791-875a-8608fe582494",
+      "userPrincipalName": "neta.talmon@estherh.v6.rocks",
+      "displayName": "Neta Talmon",
+      "department": "Emergency",
+      "jobTitle": "Head of Emergency Medicine",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "b5b424a6-8b08-4833-81a2-a259742f5091",
+      "userPrincipalName": "adi.carmel@estherh.v6.rocks",
+      "displayName": "Adi Carmel",
+      "department": "Emergency",
+      "jobTitle": "Senior Emergency Physician",
+      "manager": "neta.talmon@estherh.v6.rocks"
+    },
+    {
+      "id": "0941d4e9-9cda-44d4-b024-60ab8e4cb173",
+      "userPrincipalName": "noam.shavit@estherh.v6.rocks",
+      "displayName": "Noam Shavit",
+      "department": "Emergency",
+      "jobTitle": "Emergency Physician",
+      "manager": "neta.talmon@estherh.v6.rocks"
+    },
+    {
+      "id": "862eea7c-ce7c-49ac-b311-eb63fa7ceba2",
+      "userPrincipalName": "amit.halperin@estherh.v6.rocks",
+      "displayName": "Amit Halperin",
+      "department": "Emergency",
+      "jobTitle": "Emergency Nurse",
+      "manager": "neta.talmon@estherh.v6.rocks"
+    },
+    {
+      "id": "2deea665-8397-4d5d-80d2-51a8c43dc696",
+      "userPrincipalName": "yael.raz@estherh.v6.rocks",
+      "displayName": "Yael Raz",
+      "department": "Emergency",
+      "jobTitle": "Triage Nurse",
+      "manager": "neta.talmon@estherh.v6.rocks"
+    },
+    {
+      "id": "81b56e60-50d8-4c8f-bb83-2edd3d904c5e",
+      "userPrincipalName": "hila.talmon@estherh.v6.rocks",
+      "displayName": "Hila Talmon",
+      "department": "Emergency",
+      "jobTitle": "Paramedic",
+      "manager": "neta.talmon@estherh.v6.rocks"
+    },
+    {
+      "id": "554ca0c3-234d-4297-8df9-f583af2b9208",
+      "userPrincipalName": "tamar.naveh@estherh.v6.rocks",
+      "displayName": "Tamar Naveh",
+      "department": "Emergency",
+      "jobTitle": "Emergency Resident",
+      "manager": "neta.talmon@estherh.v6.rocks"
+    },
+    {
+      "id": "fe517bc3-3fc4-4849-a5ed-0db4014c3bb7",
+      "userPrincipalName": "omer.barak@estherh.v6.rocks",
+      "displayName": "Omer Barak",
+      "department": "Emergency",
+      "jobTitle": "Emergency Department Clerk",
+      "manager": "neta.talmon@estherh.v6.rocks"
+    },
+    {
+      "id": "c30c1f07-e2ac-44cb-99ce-d496e27ac1f0",
+      "userPrincipalName": "yael.kedem@estherh.v6.rocks",
+      "displayName": "Yael Kedem",
+      "department": "Emergency",
+      "jobTitle": "Senior Emergency Physician",
+      "manager": "neta.talmon@estherh.v6.rocks"
+    },
+    {
+      "id": "13df6343-5522-4801-9cac-c747ae02102b",
+      "userPrincipalName": "rotem.avni@estherh.v6.rocks",
+      "displayName": "Rotem Avni",
+      "department": "Emergency",
+      "jobTitle": "Emergency Physician",
+      "manager": "neta.talmon@estherh.v6.rocks"
+    },
+    {
+      "id": "ae3b31c7-6a3f-4b1b-b711-1830cfd50ed1",
+      "userPrincipalName": "noam.avni@estherh.v6.rocks",
+      "displayName": "Noam Avni",
+      "department": "Cardiology",
+      "jobTitle": "Head of Cardiology",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "3f8fe368-c5a2-4c30-92e0-296cd402669b",
+      "userPrincipalName": "gal.paz@estherh.v6.rocks",
+      "displayName": "Gal Paz",
+      "department": "Cardiology",
+      "jobTitle": "Senior Cardiologist",
+      "manager": "noam.avni@estherh.v6.rocks"
+    },
+    {
+      "id": "742d9797-be04-47a3-964b-2283cb929dec",
+      "userPrincipalName": "yarden.carmel@estherh.v6.rocks",
+      "displayName": "Yarden Carmel",
+      "department": "Cardiology",
+      "jobTitle": "Cardiologist",
+      "manager": "noam.avni@estherh.v6.rocks"
+    },
+    {
+      "id": "edd331aa-9281-4534-a7db-343bf22aebc6",
+      "userPrincipalName": "tal.shavit@estherh.v6.rocks",
+      "displayName": "Tal Shavit",
+      "department": "Cardiology",
+      "jobTitle": "Cardiac Nurse",
+      "manager": "noam.avni@estherh.v6.rocks"
+    },
+    {
+      "id": "1ce7abed-af98-45cd-a18c-61fb976d3328",
+      "userPrincipalName": "dana.barak@estherh.v6.rocks",
+      "displayName": "Dana Barak",
+      "department": "Cardiology",
+      "jobTitle": "Echocardiography Technician",
+      "manager": "noam.avni@estherh.v6.rocks"
+    },
+    {
+      "id": "0cd253be-eb7b-41d0-a1e9-bdcaf8c764b4",
+      "userPrincipalName": "roni.dror@estherh.v6.rocks",
+      "displayName": "Roni Dror",
+      "department": "Cardiology",
+      "jobTitle": "Cardiology Resident",
+      "manager": "noam.avni@estherh.v6.rocks"
+    },
+    {
+      "id": "36b1492e-ebe0-4172-9766-6f87bc451096",
+      "userPrincipalName": "neta.paz@estherh.v6.rocks",
+      "displayName": "Neta Paz",
+      "department": "Cardiology",
+      "jobTitle": "Cath Lab Technician",
+      "manager": "noam.avni@estherh.v6.rocks"
+    },
+    {
+      "id": "2416bb9b-5bfb-4c8f-946f-412f6fb00252",
+      "userPrincipalName": "lior.paz@estherh.v6.rocks",
+      "displayName": "Lior Paz",
+      "department": "Cardiology",
+      "jobTitle": "Senior Cardiologist",
+      "manager": "noam.avni@estherh.v6.rocks"
+    },
+    {
+      "id": "a1785074-76d6-4055-9aac-a1d19432cd4a",
+      "userPrincipalName": "yuval.doron@estherh.v6.rocks",
+      "displayName": "Yuval Doron",
+      "department": "Neurology",
+      "jobTitle": "Head of Neurology",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "ba668c67-5bd6-4fc9-8d06-d97692536b44",
+      "userPrincipalName": "or.shavit@estherh.v6.rocks",
+      "displayName": "Or Shavit",
+      "department": "Neurology",
+      "jobTitle": "Senior Neurologist",
+      "manager": "yuval.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "10bebfb8-a96c-45b0-83f5-eca6a536c6d9",
+      "userPrincipalName": "tal.avni@estherh.v6.rocks",
+      "displayName": "Tal Avni",
+      "department": "Neurology",
+      "jobTitle": "Neurologist",
+      "manager": "yuval.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "9d903037-7cbb-4006-989b-5ae982a7ddcc",
+      "userPrincipalName": "neta.ilan@estherh.v6.rocks",
+      "displayName": "Neta Ilan",
+      "department": "Neurology",
+      "jobTitle": "Neurology Nurse",
+      "manager": "yuval.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "1f432864-6810-432f-9c61-76610f5f1886",
+      "userPrincipalName": "erez.talmon@estherh.v6.rocks",
+      "displayName": "Erez Talmon",
+      "department": "Neurology",
+      "jobTitle": "EEG Technician",
+      "manager": "yuval.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "a1bd3977-091a-4a8d-864f-224c5415c97a",
+      "userPrincipalName": "yarden.raz@estherh.v6.rocks",
+      "displayName": "Yarden Raz",
+      "department": "Neurology",
+      "jobTitle": "Neurology Resident",
+      "manager": "yuval.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "8235fd52-9db0-4622-af1a-25cb0ba9aca6",
+      "userPrincipalName": "amit.shavit@estherh.v6.rocks",
+      "displayName": "Amit Shavit",
+      "department": "Neurology",
+      "jobTitle": "Senior Neurologist",
+      "manager": "yuval.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "b9ffc5a0-ebc8-496b-af25-b0e8e83d4fdb",
+      "userPrincipalName": "neta.doron@estherh.v6.rocks",
+      "displayName": "Neta Doron",
+      "department": "Oncology",
+      "jobTitle": "Head of Oncology",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "ea80ac18-21b4-4672-8426-e79e4d48c8fc",
+      "userPrincipalName": "tamar.halperin@estherh.v6.rocks",
+      "displayName": "Tamar Halperin",
+      "department": "Oncology",
+      "jobTitle": "Senior Oncologist",
+      "manager": "neta.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "18b4a148-70b2-48d3-8a62-a5bd0e5a538b",
+      "userPrincipalName": "gal.ilan@estherh.v6.rocks",
+      "displayName": "Gal Ilan",
+      "department": "Oncology",
+      "jobTitle": "Oncologist",
+      "manager": "neta.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "ec74b09d-636b-484e-bc6f-35aff4df6641",
+      "userPrincipalName": "noam.naveh@estherh.v6.rocks",
+      "displayName": "Noam Naveh",
+      "department": "Oncology",
+      "jobTitle": "Oncology Nurse",
+      "manager": "neta.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "ae76b369-e27f-45c8-b368-cf4d094a504f",
+      "userPrincipalName": "roni.naveh@estherh.v6.rocks",
+      "displayName": "Roni Naveh",
+      "department": "Oncology",
+      "jobTitle": "Radiation Therapist",
+      "manager": "neta.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "1b57ec5d-2628-4083-9a85-65f6635a1448",
+      "userPrincipalName": "amit.dror@estherh.v6.rocks",
+      "displayName": "Amit Dror",
+      "department": "Oncology",
+      "jobTitle": "Oncology Social Worker",
+      "manager": "neta.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "14979b6f-e979-4b45-9e8b-e25a6fef69ec",
+      "userPrincipalName": "dana.harari@estherh.v6.rocks",
+      "displayName": "Dana Harari",
+      "department": "Oncology",
+      "jobTitle": "Senior Oncologist",
+      "manager": "neta.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "9b9378da-561a-4e04-826d-82cf097664be",
+      "userPrincipalName": "rotem.dror@estherh.v6.rocks",
+      "displayName": "Rotem Dror",
+      "department": "Nursing",
+      "jobTitle": "Director of Nursing",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "ae2af9e6-cff9-4d99-91d0-0ab440ac3252",
+      "userPrincipalName": "neta.harari@estherh.v6.rocks",
+      "displayName": "Neta Harari",
+      "department": "Nursing",
+      "jobTitle": "Head Nurse",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "8352b583-11a9-4887-a95d-84f2511fbca9",
+      "userPrincipalName": "rotem.shavit@estherh.v6.rocks",
+      "displayName": "Rotem Shavit",
+      "department": "Nursing",
+      "jobTitle": "Charge Nurse",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "3cb5b3c8-8450-4b84-a483-cffc203f20af",
+      "userPrincipalName": "maya.dror@estherh.v6.rocks",
+      "displayName": "Maya Dror",
+      "department": "Nursing",
+      "jobTitle": "Registered Nurse",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "26389230-60a6-455c-a5ee-11dd56b59f77",
+      "userPrincipalName": "gal.harari@estherh.v6.rocks",
+      "displayName": "Gal Harari",
+      "department": "Nursing",
+      "jobTitle": "Registered Nurse",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "7e6af71b-b49d-4dc4-99ec-52051b776bb9",
+      "userPrincipalName": "tal.dror@estherh.v6.rocks",
+      "displayName": "Tal Dror",
+      "department": "Nursing",
+      "jobTitle": "Practical Nurse",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "01c66a8a-ccfa-42bc-9b56-bb08d80f656d",
+      "userPrincipalName": "maya.shalev@estherh.v6.rocks",
+      "displayName": "Maya Shalev",
+      "department": "Nursing",
+      "jobTitle": "Nursing Assistant",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "b5b690a4-0eff-4e36-9c4b-939343464442",
+      "userPrincipalName": "roni.shavit@estherh.v6.rocks",
+      "displayName": "Roni Shavit",
+      "department": "Nursing",
+      "jobTitle": "Nurse Educator",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "d592d96b-c2c7-432a-8cf7-7ee66b91d327",
+      "userPrincipalName": "roni.halperin@estherh.v6.rocks",
+      "displayName": "Roni Halperin",
+      "department": "Nursing",
+      "jobTitle": "Clinical Nurse Specialist",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "ac781a94-63e6-4162-99f8-938ce5042814",
+      "userPrincipalName": "or.avni@estherh.v6.rocks",
+      "displayName": "Or Avni",
+      "department": "Nursing",
+      "jobTitle": "Head Nurse",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "b5f0ee60-6b8a-435f-9ac8-8b42fa589be0",
+      "userPrincipalName": "shahar.carmel@estherh.v6.rocks",
+      "displayName": "Shahar Carmel",
+      "department": "Nursing",
+      "jobTitle": "Charge Nurse",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "a13dc943-20b7-4c06-b5df-0936ee920dff",
+      "userPrincipalName": "yarden.gefen@estherh.v6.rocks",
+      "displayName": "Yarden Gefen",
+      "department": "Nursing",
+      "jobTitle": "Registered Nurse",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "7aa172e0-9503-4ca3-8be6-e4913011492e",
+      "userPrincipalName": "roni.avni@estherh.v6.rocks",
+      "displayName": "Roni Avni",
+      "department": "Nursing",
+      "jobTitle": "Registered Nurse",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "2df4f9d0-7afc-4d95-8186-29ffdb31a134",
+      "userPrincipalName": "tamar.avni@estherh.v6.rocks",
+      "displayName": "Tamar Avni",
+      "department": "Nursing",
+      "jobTitle": "Practical Nurse",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "b98670e7-1300-4d40-9670-f4fe675f6998",
+      "userPrincipalName": "tal.halperin@estherh.v6.rocks",
+      "displayName": "Tal Halperin",
+      "department": "Nursing",
+      "jobTitle": "Nursing Assistant",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "a28b94a7-a02f-4b23-b1e9-397e504d0431",
+      "userPrincipalName": "omer.harari@estherh.v6.rocks",
+      "displayName": "Omer Harari",
+      "department": "Nursing",
+      "jobTitle": "Nurse Educator",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "85ebd7b9-ccd7-48e7-a8da-b0ccce2c151e",
+      "userPrincipalName": "maya.avni@estherh.v6.rocks",
+      "displayName": "Maya Avni",
+      "department": "Nursing",
+      "jobTitle": "Clinical Nurse Specialist",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "4a782ff8-fb49-45bd-b8b1-1783c439bc7a",
+      "userPrincipalName": "amit.naveh@estherh.v6.rocks",
+      "displayName": "Amit Naveh",
+      "department": "Nursing",
+      "jobTitle": "Head Nurse",
+      "manager": "rotem.dror@estherh.v6.rocks"
+    },
+    {
+      "id": "bf5b8c06-83ab-4cdd-9498-76d9605e7d56",
+      "userPrincipalName": "hila.paz@estherh.v6.rocks",
+      "displayName": "Hila Paz",
+      "department": "Laboratory",
+      "jobTitle": "Laboratory Manager",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "d48f4590-5089-4956-a2c1-8500daf56922",
+      "userPrincipalName": "dana.talmon@estherh.v6.rocks",
+      "displayName": "Dana Talmon",
+      "department": "Laboratory",
+      "jobTitle": "Senior Lab Scientist",
+      "manager": "hila.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "96c23df1-7b81-4407-8ffa-d865bff66342",
+      "userPrincipalName": "erez.harari@estherh.v6.rocks",
+      "displayName": "Erez Harari",
+      "department": "Laboratory",
+      "jobTitle": "Medical Lab Scientist",
+      "manager": "hila.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "b8db5924-fb67-405a-b8c3-434a5e4b14af",
+      "userPrincipalName": "shahar.gefen@estherh.v6.rocks",
+      "displayName": "Shahar Gefen",
+      "department": "Laboratory",
+      "jobTitle": "Lab Technician",
+      "manager": "hila.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "fa7f23a0-8486-44db-8a18-bd3beabad214",
+      "userPrincipalName": "lior.harari@estherh.v6.rocks",
+      "displayName": "Lior Harari",
+      "department": "Laboratory",
+      "jobTitle": "Phlebotomist",
+      "manager": "hila.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "273614ec-4089-42c7-af47-b48d331e10cb",
+      "userPrincipalName": "omer.doron@estherh.v6.rocks",
+      "displayName": "Omer Doron",
+      "department": "Laboratory",
+      "jobTitle": "Pathology Assistant",
+      "manager": "hila.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "55c4154a-0c44-4af0-87c5-7df08a44c596",
+      "userPrincipalName": "yuval.talmon@estherh.v6.rocks",
+      "displayName": "Yuval Talmon",
+      "department": "Laboratory",
+      "jobTitle": "Senior Lab Scientist",
+      "manager": "hila.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "55cde48e-577c-4ca6-859b-f6b032d1a94a",
+      "userPrincipalName": "yarden.zohar@estherh.v6.rocks",
+      "displayName": "Yarden Zohar",
+      "department": "Laboratory",
+      "jobTitle": "Medical Lab Scientist",
+      "manager": "hila.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "3a388503-5381-42ef-a2b7-2223c50be3c0",
+      "userPrincipalName": "shahar.zohar@estherh.v6.rocks",
+      "displayName": "Shahar Zohar",
+      "department": "Imaging",
+      "jobTitle": "Head of Imaging",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "7e83d77b-7c1d-42cf-bf15-feee9e29a2f8",
+      "userPrincipalName": "dana.paz@estherh.v6.rocks",
+      "displayName": "Dana Paz",
+      "department": "Imaging",
+      "jobTitle": "Senior Radiologist",
+      "manager": "shahar.zohar@estherh.v6.rocks"
+    },
+    {
+      "id": "6b9bfc90-1423-462d-bb33-769293a69e35",
+      "userPrincipalName": "tamar.shavit@estherh.v6.rocks",
+      "displayName": "Tamar Shavit",
+      "department": "Imaging",
+      "jobTitle": "Radiologist",
+      "manager": "shahar.zohar@estherh.v6.rocks"
+    },
+    {
+      "id": "514f7b94-178d-43ca-9467-b08fbeb54524",
+      "userPrincipalName": "maya.naveh@estherh.v6.rocks",
+      "displayName": "Maya Naveh",
+      "department": "Imaging",
+      "jobTitle": "Radiographer",
+      "manager": "shahar.zohar@estherh.v6.rocks"
+    },
+    {
+      "id": "5707aa07-a786-4caf-b886-e38c1b019587",
+      "userPrincipalName": "omer.talmon@estherh.v6.rocks",
+      "displayName": "Omer Talmon",
+      "department": "Imaging",
+      "jobTitle": "MRI Technologist",
+      "manager": "shahar.zohar@estherh.v6.rocks"
+    },
+    {
+      "id": "45e841e8-40dd-461b-863a-1560b4b6646e",
+      "userPrincipalName": "erez.ilan@estherh.v6.rocks",
+      "displayName": "Erez Ilan",
+      "department": "Imaging",
+      "jobTitle": "CT Technologist",
+      "manager": "shahar.zohar@estherh.v6.rocks"
+    },
+    {
+      "id": "dcc1e6ce-c334-437a-8e52-9b65bd9e7b24",
+      "userPrincipalName": "adi.zohar@estherh.v6.rocks",
+      "displayName": "Adi Zohar",
+      "department": "Imaging",
+      "jobTitle": "Ultrasound Technician",
+      "manager": "shahar.zohar@estherh.v6.rocks"
+    },
+    {
+      "id": "375fb869-2abc-4d5c-963e-f4f211630de1",
+      "userPrincipalName": "yuval.harari@estherh.v6.rocks",
+      "displayName": "Yuval Harari",
+      "department": "Imaging",
+      "jobTitle": "Senior Radiologist",
+      "manager": "shahar.zohar@estherh.v6.rocks"
+    },
+    {
+      "id": "855dd764-1d5f-4003-8473-2a9fae32ae08",
+      "userPrincipalName": "lior.doron@estherh.v6.rocks",
+      "displayName": "Lior Doron",
+      "department": "Admissions",
+      "jobTitle": "Admissions Manager",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "5b18374c-465b-40a6-8185-f285a4025bcc",
+      "userPrincipalName": "hila.doron@estherh.v6.rocks",
+      "displayName": "Hila Doron",
+      "department": "Admissions",
+      "jobTitle": "Admissions Supervisor",
+      "manager": "lior.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "c953fb82-b3e4-47dc-aa1f-d636c32fd57b",
+      "userPrincipalName": "dana.doron@estherh.v6.rocks",
+      "displayName": "Dana Doron",
+      "department": "Admissions",
+      "jobTitle": "Admissions Clerk",
+      "manager": "lior.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "d9052008-f172-4224-9a8c-3eab8a29bede",
+      "userPrincipalName": "maya.shavit@estherh.v6.rocks",
+      "displayName": "Maya Shavit",
+      "department": "Admissions",
+      "jobTitle": "Patient Registration Clerk",
+      "manager": "lior.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "6dfbe170-efc8-4262-b7d9-ba5618108d39",
+      "userPrincipalName": "or.naveh@estherh.v6.rocks",
+      "displayName": "Or Naveh",
+      "department": "Admissions",
+      "jobTitle": "Bed Management Coordinator",
+      "manager": "lior.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "e4b295fb-1083-4bae-8846-db8bcb00f834",
+      "userPrincipalName": "hila.ilan@estherh.v6.rocks",
+      "displayName": "Hila Ilan",
+      "department": "Admissions",
+      "jobTitle": "Front Desk Representative",
+      "manager": "lior.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "fb6b93f0-89c8-4af2-90ac-c40813d4994b",
+      "userPrincipalName": "yuval.paz@estherh.v6.rocks",
+      "displayName": "Yuval Paz",
+      "department": "Admissions",
+      "jobTitle": "Admissions Supervisor",
+      "manager": "lior.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "7fb968d6-8733-4723-bed0-5e6751a95f41",
+      "userPrincipalName": "amit.avni@estherh.v6.rocks",
+      "displayName": "Amit Avni",
+      "department": "Admissions",
+      "jobTitle": "Admissions Clerk",
+      "manager": "lior.doron@estherh.v6.rocks"
+    },
+    {
+      "id": "b44220a1-3465-4c64-984a-4405148e29ff",
+      "userPrincipalName": "omer.paz@estherh.v6.rocks",
+      "displayName": "Omer Paz",
+      "department": "Finance",
+      "jobTitle": "Finance Manager",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "648b8b78-797d-40be-88f2-6991b1ebd349",
+      "userPrincipalName": "noam.shalev@estherh.v6.rocks",
+      "displayName": "Noam Shalev",
+      "department": "Finance",
+      "jobTitle": "Senior Accountant",
+      "manager": "omer.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "05f7237f-4562-4014-aea5-b71197d2a92f",
+      "userPrincipalName": "adi.raz@estherh.v6.rocks",
+      "displayName": "Adi Raz",
+      "department": "Finance",
+      "jobTitle": "Accountant",
+      "manager": "omer.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "80c4432f-07b4-4018-afb6-0a52c2004ad5",
+      "userPrincipalName": "shahar.raz@estherh.v6.rocks",
+      "displayName": "Shahar Raz",
+      "department": "Finance",
+      "jobTitle": "Billing Specialist",
+      "manager": "omer.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "eb3edaed-dda7-40b8-88d7-34270a5b5a2a",
+      "userPrincipalName": "lior.talmon@estherh.v6.rocks",
+      "displayName": "Lior Talmon",
+      "department": "Finance",
+      "jobTitle": "Payroll Specialist",
+      "manager": "omer.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "203107fe-de79-49d4-a59f-4345565c8742",
+      "userPrincipalName": "rotem.naveh@estherh.v6.rocks",
+      "displayName": "Rotem Naveh",
+      "department": "Finance",
+      "jobTitle": "Procurement Officer",
+      "manager": "omer.paz@estherh.v6.rocks"
+    },
+    {
+      "id": "b4e336b0-ed26-493a-aa05-b4ac63a95e5b",
+      "userPrincipalName": "rotem.shalev@estherh.v6.rocks",
+      "displayName": "Rotem Shalev",
+      "department": "IT",
+      "jobTitle": "IT Manager",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "10e92046-c12a-471d-95bd-eed9c912ed7e",
+      "userPrincipalName": "noam.dror@estherh.v6.rocks",
+      "displayName": "Noam Dror",
+      "department": "IT",
+      "jobTitle": "Systems Administrator",
+      "manager": "rotem.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "aba58365-1233-45c3-862b-3452221df10c",
+      "userPrincipalName": "or.dror@estherh.v6.rocks",
+      "displayName": "Or Dror",
+      "department": "IT",
+      "jobTitle": "Network Engineer",
+      "manager": "rotem.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "2fbf925d-d519-444c-be94-6dd047f1002a",
+      "userPrincipalName": "yael.carmel@estherh.v6.rocks",
+      "displayName": "Yael Carmel",
+      "department": "IT",
+      "jobTitle": "Help Desk Technician",
+      "manager": "rotem.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "5c021a0a-2f0b-465a-8d96-94c3a43d86e7",
+      "userPrincipalName": "erez.paz@estherh.v6.rocks",
+      "displayName": "Erez Paz",
+      "department": "IT",
+      "jobTitle": "Clinical Applications Analyst",
+      "manager": "rotem.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "9ab3fa41-f39a-4c3d-9d81-1dec85a6c0a2",
+      "userPrincipalName": "yael.zohar@estherh.v6.rocks",
+      "displayName": "Yael Zohar",
+      "department": "IT",
+      "jobTitle": "Security Analyst",
+      "manager": "rotem.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "ac874073-4c0c-4955-bcc0-4fc9b7b18c5b",
+      "userPrincipalName": "yarden.kedem@estherh.v6.rocks",
+      "displayName": "Yarden Kedem",
+      "department": "IT",
+      "jobTitle": "Systems Administrator",
+      "manager": "rotem.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "82d95ba4-beeb-49ec-80c1-b6170f34385a",
+      "userPrincipalName": "hila.harari@estherh.v6.rocks",
+      "displayName": "Hila Harari",
+      "department": "Facilities",
+      "jobTitle": "Facilities Manager",
+      "manager": "or.shalev@estherh.v6.rocks"
+    },
+    {
+      "id": "4835bdcc-2085-411b-ac34-af4ae0acdd4e",
+      "userPrincipalName": "erez.doron@estherh.v6.rocks",
+      "displayName": "Erez Doron",
+      "department": "Facilities",
+      "jobTitle": "Maintenance Supervisor",
+      "manager": "hila.harari@estherh.v6.rocks"
+    },
+    {
+      "id": "1dd1fe91-9919-4c08-972b-749106e64c8f",
+      "userPrincipalName": "tamar.dror@estherh.v6.rocks",
+      "displayName": "Tamar Dror",
+      "department": "Facilities",
+      "jobTitle": "Electrician",
+      "manager": "hila.harari@estherh.v6.rocks"
+    },
+    {
+      "id": "48dc1b31-3f12-4fee-a2b9-bef7411c5b32",
+      "userPrincipalName": "gal.doron@estherh.v6.rocks",
+      "displayName": "Gal Doron",
+      "department": "Facilities",
+      "jobTitle": "HVAC Technician",
+      "manager": "hila.harari@estherh.v6.rocks"
+    },
+    {
+      "id": "fde220a2-2c5b-445c-b5b0-6882c6f1c7d6",
+      "userPrincipalName": "lior.barak@estherh.v6.rocks",
+      "displayName": "Lior Barak",
+      "department": "Facilities",
+      "jobTitle": "Maintenance Technician",
+      "manager": "hila.harari@estherh.v6.rocks"
+    },
+    {
+      "id": "228d05a4-e804-4894-8ab9-55178351089d",
+      "userPrincipalName": "tal.naveh@estherh.v6.rocks",
+      "displayName": "Tal Naveh",
+      "department": "Facilities",
+      "jobTitle": "Housekeeping Supervisor",
+      "manager": "hila.harari@estherh.v6.rocks"
+    }
+  ],
+  "groups": [
+    {
+      "id": "44d2d534-50df-401a-a185-a1e4c68d3bd3",
+      "displayName": "Esther Hospital - Administration",
+      "exclusive": true,
+      "members": [
+        "or.shalev@estherh.v6.rocks",
+        "yael.gefen@estherh.v6.rocks",
+        "adi.kedem@estherh.v6.rocks",
+        "adi.gefen@estherh.v6.rocks",
+        "yuval.barak@estherh.v6.rocks",
+        "shahar.kedem@estherh.v6.rocks",
+        "gal.talmon@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "cd85ef5a-4a29-4f63-8571-5f042b9b2b69",
+      "displayName": "Esther Hospital - Emergency",
+      "exclusive": true,
+      "members": [
+        "neta.talmon@estherh.v6.rocks",
+        "adi.carmel@estherh.v6.rocks",
+        "noam.shavit@estherh.v6.rocks",
+        "amit.halperin@estherh.v6.rocks",
+        "yael.raz@estherh.v6.rocks",
+        "hila.talmon@estherh.v6.rocks",
+        "tamar.naveh@estherh.v6.rocks",
+        "omer.barak@estherh.v6.rocks",
+        "yael.kedem@estherh.v6.rocks",
+        "rotem.avni@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "47ab55c1-5926-4244-b9f2-dcc5434a82c7",
+      "displayName": "Esther Hospital - Cardiology",
+      "exclusive": true,
+      "members": [
+        "noam.avni@estherh.v6.rocks",
+        "gal.paz@estherh.v6.rocks",
+        "yarden.carmel@estherh.v6.rocks",
+        "tal.shavit@estherh.v6.rocks",
+        "dana.barak@estherh.v6.rocks",
+        "roni.dror@estherh.v6.rocks",
+        "neta.paz@estherh.v6.rocks",
+        "lior.paz@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "512b479d-1e0e-4a73-8bb1-06a280397b5e",
+      "displayName": "Esther Hospital - Neurology",
+      "exclusive": true,
+      "members": [
+        "yuval.doron@estherh.v6.rocks",
+        "or.shavit@estherh.v6.rocks",
+        "tal.avni@estherh.v6.rocks",
+        "neta.ilan@estherh.v6.rocks",
+        "erez.talmon@estherh.v6.rocks",
+        "yarden.raz@estherh.v6.rocks",
+        "amit.shavit@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "4b7022af-5e17-40c1-83d4-532c531358be",
+      "displayName": "Esther Hospital - Oncology",
+      "exclusive": true,
+      "members": [
+        "neta.doron@estherh.v6.rocks",
+        "tamar.halperin@estherh.v6.rocks",
+        "gal.ilan@estherh.v6.rocks",
+        "noam.naveh@estherh.v6.rocks",
+        "roni.naveh@estherh.v6.rocks",
+        "amit.dror@estherh.v6.rocks",
+        "dana.harari@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "fe5fb272-c335-4e69-b689-de06e17ffd12",
+      "displayName": "Esther Hospital - Nursing",
+      "exclusive": true,
+      "members": [
+        "rotem.dror@estherh.v6.rocks",
+        "neta.harari@estherh.v6.rocks",
+        "rotem.shavit@estherh.v6.rocks",
+        "maya.dror@estherh.v6.rocks",
+        "gal.harari@estherh.v6.rocks",
+        "tal.dror@estherh.v6.rocks",
+        "maya.shalev@estherh.v6.rocks",
+        "roni.shavit@estherh.v6.rocks",
+        "roni.halperin@estherh.v6.rocks",
+        "or.avni@estherh.v6.rocks",
+        "shahar.carmel@estherh.v6.rocks",
+        "yarden.gefen@estherh.v6.rocks",
+        "roni.avni@estherh.v6.rocks",
+        "tamar.avni@estherh.v6.rocks",
+        "tal.halperin@estherh.v6.rocks",
+        "omer.harari@estherh.v6.rocks",
+        "maya.avni@estherh.v6.rocks",
+        "amit.naveh@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "85a059b4-ac04-4c8b-ba18-53a284940e9c",
+      "displayName": "Esther Hospital - Laboratory",
+      "exclusive": true,
+      "members": [
+        "hila.paz@estherh.v6.rocks",
+        "dana.talmon@estherh.v6.rocks",
+        "erez.harari@estherh.v6.rocks",
+        "shahar.gefen@estherh.v6.rocks",
+        "lior.harari@estherh.v6.rocks",
+        "omer.doron@estherh.v6.rocks",
+        "yuval.talmon@estherh.v6.rocks",
+        "yarden.zohar@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "80acd626-9d0e-4f07-bed4-c02e863bd5e5",
+      "displayName": "Esther Hospital - Imaging",
+      "exclusive": true,
+      "members": [
+        "shahar.zohar@estherh.v6.rocks",
+        "dana.paz@estherh.v6.rocks",
+        "tamar.shavit@estherh.v6.rocks",
+        "maya.naveh@estherh.v6.rocks",
+        "omer.talmon@estherh.v6.rocks",
+        "erez.ilan@estherh.v6.rocks",
+        "adi.zohar@estherh.v6.rocks",
+        "yuval.harari@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "c21d4ed0-1cd3-4ccd-bc1a-1b4618b899e3",
+      "displayName": "Esther Hospital - Admissions",
+      "exclusive": true,
+      "members": [
+        "lior.doron@estherh.v6.rocks",
+        "hila.doron@estherh.v6.rocks",
+        "dana.doron@estherh.v6.rocks",
+        "maya.shavit@estherh.v6.rocks",
+        "or.naveh@estherh.v6.rocks",
+        "hila.ilan@estherh.v6.rocks",
+        "yuval.paz@estherh.v6.rocks",
+        "amit.avni@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "3b157b58-dd7e-4ddb-9563-e2a51d6c5ddc",
+      "displayName": "Esther Hospital - Finance",
+      "exclusive": true,
+      "members": [
+        "omer.paz@estherh.v6.rocks",
+        "noam.shalev@estherh.v6.rocks",
+        "adi.raz@estherh.v6.rocks",
+        "shahar.raz@estherh.v6.rocks",
+        "lior.talmon@estherh.v6.rocks",
+        "rotem.naveh@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "cec8f506-8d54-4ba9-bc98-79053eb91263",
+      "displayName": "Esther Hospital - IT",
+      "exclusive": true,
+      "members": [
+        "rotem.shalev@estherh.v6.rocks",
+        "noam.dror@estherh.v6.rocks",
+        "or.dror@estherh.v6.rocks",
+        "yael.carmel@estherh.v6.rocks",
+        "erez.paz@estherh.v6.rocks",
+        "yael.zohar@estherh.v6.rocks",
+        "yarden.kedem@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "b817fcc6-cff7-4bfe-b865-d4aa6992bb77",
+      "displayName": "Esther Hospital - Facilities",
+      "exclusive": true,
+      "members": [
+        "hila.harari@estherh.v6.rocks",
+        "erez.doron@estherh.v6.rocks",
+        "tamar.dror@estherh.v6.rocks",
+        "gal.doron@estherh.v6.rocks",
+        "lior.barak@estherh.v6.rocks",
+        "tal.naveh@estherh.v6.rocks"
+      ]
+    }
+  ]
+}

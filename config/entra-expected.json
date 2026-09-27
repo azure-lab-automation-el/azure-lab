@@ -1,0 +1,7 @@
+{
+  "baseline": {"syntheticUsers": 100, "groups": 12, "consumedLicenses": 0},
+  "rename": {"Pediatrics":"Admissions","Surgery":"Finance","Radiology":"Imaging","Pharmacy":"IT"},
+  "allocation": {"Administration":7,"Emergency":10,"Cardiology":8,"Neurology":7,"Oncology":7,"Nursing":18,"Laboratory":8,"Imaging":8,"Admissions":8,"Finance":6,"IT":7,"Facilities":6},
+  "expectedManagerLinks": 99,
+  "note": "Baseline observed by Entra track; persistence of remap/manager links must be verified live by script precheck and post-readback."
+}

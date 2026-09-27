@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Estherdaxes</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/pro.css"><link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="/i18n/he.js"></script><script src="/i18n/i18n.js"></script><link rel="stylesheet" href="/i18n/rtl.css"></head>
+<body>
+<aside class="side"><div class="brand"><span class="logo mark"><img src="/logo.svg" alt="" width="100%" height="100%"></span><span>Estherdaxes<br><small>Esther Hospital</small></span></div>
+<nav>
+  <button data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button><button data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1"/><circle cx="9" cy="7" r="4"/><path d="M22 19v-1a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>Users</button><button data-view="create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-1a5 5 0 0 1 5-5h2M19 14v6M16 17h6"/></svg>New user</button>
+  <button data-view="groups"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Groups</button><button data-view="org"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="2" y="17" width="6" height="5" rx="1"/><rect x="16" y="17" width="6" height="5" rx="1"/><path d="M12 7v5M5 17v-5h14v5"/></svg>Org chart</button>
+  <button data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Reports</button><button data-view="bulk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4zM4 10h16v4H4zM4 16h16v4H4z"/></svg>Bulk</button>
+  <button data-view="helpdesk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 16a2 2 0 0 1-2 2h-1v-6h3zM3 16a2 2 0 0 0 2 2h1v-6H3z"/></svg>Help desk</button>
+  <button data-view="lifecycle" class="adminOnly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.3L3 16M3 21v-5h5"/></svg>Lifecycle</button><button data-view="grules" class="adminOnly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 9v3a3 3 0 0 0 3 3h6M15 12l3 3-3 3"/></svg>Group rules</button><button data-view="deleg" class="adminOnly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4"/><path d="M16 11l2 2 4-4"/></svg>Delegation</button><button data-view="self" class="adminOnly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Self-service</button><button data-view="scheduled" class="adminOnly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Scheduled</button><button data-view="ops" class="adminOnly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Ops / GitHub</button><button data-view="audit" class="adminOnly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M9 13h6M9 17h4"/></svg>Audit log</button><button data-view="admin" class="adminOnly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg>Admin console</button>
+  <button data-view="requests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Requests <span id="pendingCount" class="badge"></span></button>
+</nav>
+<div class="me"><span id="meAvatar" class="avatar sm"></span><span id="who"></span><button id="theme" title="Light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></button><a href="/.auth/logout?post_logout_redirect_uri=/login.html" title="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></a></div>
+</aside>
+<div class="content">
+<div id="banner" hidden></div>
+<main>
+  <section id="dashboard" class="view">
+    <div class="dhead" id="dashHead"></div>
+    <div class="kpis" id="dashKpi"></div>
+    <div class="dgrid">
+      <div class="card span2"><h3>Headcount by department <small class="muted">click a bar to open the list</small></h3><div id="dashDept"></div></div>
+      <div class="card"><h3>Account status</h3><div id="dashStatus"></div></div>
+      <div class="card span2"><h3>Activity, last 14 days</h3><div id="dashAct"></div></div>
+      <div class="card"><h3>Recent activity</h3><div id="dashFeed" class="feed"></div></div>
+      <div class="card"><h3>Largest teams (direct reports)</h3><div id="dashMgr"></div></div>
+      <div class="card"><h3>Automation health, 7 days</h3><div id="dashWf"></div></div>
+      <div class="card"><h3>Azure cost, 30 days</h3><div id="dashCost"></div></div>
+    </div>
+  </section>
+  <section id="lifecycle" class="view" hidden>
+    <h2>User lifecycle</h2><p class="muted">Joiner, mover and leaver in one guided step. Each one becomes a single reviewed change request.</p>
+    <div class="tabs" id="lcTabs"><button data-lct="joiner" class="on">Joiner</button><button data-lct="mover">Mover</button><button data-lct="leaver">Leaver</button></div>
+    <div class="lcgrid"><form id="lcForm" class="card"></form><div id="lcPlan" class="card plan"></div></div>
+  </section>
+  <section id="grules" class="view" hidden>
+    <h2>Dynamic group rules</h2>
+    <p class="muted">Membership follows department, title and reporting lines. The nightly run lists who would be added or removed; nothing is written to Entra until the owner switches rules to live.</p>
+    <div id="grKpi" class="kpis"></div>
+    <div class="grwrap"><div id="grList" class="sclist"></div>
+    <div class="card grbuild"><h3>Try a rule</h3>
+      <label>Rule name<input id="gbName" value="Imaging and Lab"></label>
+      <label>Target group<input id="gbGroup" value="Esther - Diagnostics"></label>
+      <label>Departments</label><div id="gbDepts" class="chips"></div>
+      <label>Title contains (comma separated)<input id="gbTitle" placeholder="e.g. Nurse, Technician"></label>
+      <label class="chk"><input type="checkbox" id="gbMgr"> Only people with direct reports</label>
+      <div id="gbPrev"></div>
+      <button id="gbCopy" class="primary">Copy rule JSON</button><span class="muted" id="gbMsg"></span>
+    </div></div>
+  </section>
+  <section id="deleg" class="view" hidden>
+    <h2>Delegated administration</h2>
+    <p class="muted">Each department gets its own admin who sees and edits only the people in that department. Preview only: nothing is granted in Entra until the owner switches delegation to live.</p>
+    <div id="dgKpi" class="kpis"></div>
+    <div class="grwrap"><div id="dgList" class="sclist"></div>
+    <div class="card grbuild"><h3>View as a delegated admin</h3>
+      <label>Delegated admin<select id="dgAs"></select></label>
+      <div id="dgScope"></div>
+    </div></div>
+  </section>
+  <section id="self" class="view" hidden>
+    <h2>Employee self-service</h2>
+    <p class="muted">What an employee sees about themselves, and the requests they can file on their own. Each request goes to an approver like any other change; nothing is applied directly.</p>
+    <label class="ssas">View as employee<input id="ssWho" dir="ltr" list="ssList" placeholder="Name or UPN"><datalist id="ssList"></datalist></label>
+    <div class="grwrap"><div id="ssMe" class="card"></div>
+    <div class="card grbuild"><h3>Update my phone</h3>
+      <label>Mobile phone<input id="ssPhone" dir="ltr" inputmode="tel" placeholder="e.g. 050-123-4567"></label>
+      <button id="ssPhoneSend" class="primary">Send for approval</button>
+      <h3 style="margin-top:18px">Ask to join a group</h3>
+      <label>Group<select id="ssGroup"></select></label>
+      <label>Why<input id="ssWhy" placeholder="e.g. joining the weekend rota"></label>
+      <div id="ssPrev" class="muted"></div>
+      <button id="ssSend" class="primary">Send for approval</button>
+    </div></div>
+  </section>
+  <section id="scheduled" class="view" hidden>
+    <h2>Scheduled tasks</h2>
+    <p class="muted">Every task runs each night and only reports what it would change. Nothing is written to Entra until the owner switches a task to live.</p>
+    <div id="scKpi" class="kpis"></div>
+    <div id="scList" class="sclist"></div>
+  </section>
+  <section id="ops" class="view" hidden>
+    <div class="opshead"><h2>Ops / GitHub</h2><span id="opsLive" class="pill"></span><span class="grow"></span><span id="opsAt" class="muted"></span></div>
+    <p class="muted">Every workflow the assistant runs in GitHub Actions, live. Refreshes every 15 seconds. Click a run to open its log.</p>
+    <div id="opsKpi" class="kpis"></div>
+    <div id="opsHb"></div>
+    <div id="opsNow" class="opsnow"></div>
+    <div id="opsStreams" class="opsstreams"></div>
+    <div class="opsgrid"><div class="card"><h3>Recent runs</h3><div class="bar"><select id="opsF"><option value="">All streams</option></select><select id="opsS"><option value="">Any status</option><option>running</option><option>queued</option><option>success</option><option>failure</option><option>cancelled</option></select></div><div id="opsRuns"></div></div>
+    <div class="card"><h3>Latest commits</h3><div id="opsCommits"></div></div></div>
+  </section>
+  <section id="audit" class="view" hidden>
+    <h2>Audit log</h2>
+    <div class="card">
+      <div class="bar"><input id="auQ" placeholder="Search who, what, target, detail"><select id="auSrc"><option value="">All sources</option><option value="request">Change requests</option><option value="workflow">Workflow runs</option><option value="commit">Commits</option></select>
+      <select id="auSt"><option value="">Any status</option><option>applied</option><option>pending</option><option>rejected</option><option>success</option><option>failure</option><option>cancelled</option><option>recorded</option></select>
+      <select id="auWho"></select><select id="auAct"></select></div>
+      <div class="bar"><span class="seg" id="auRange"><button data-r="1">24 h</button><button data-r="7">7 d</button><button data-r="30" class="on">30 d</button><button data-r="all">All</button></span>
+      <label>From <input type="date" id="auFrom"></label><label>To <input type="date" id="auTo"></label><button id="auReset">Reset</button><span class="grow"></span><button id="auCsv" class="primary">Export CSV</button><button id="auJson">Export JSON</button></div>
+      <div id="auChips" class="chips"></div><div id="auSpark"></div>
+      <p class="muted" id="auMeta"></p>
+      <table id="auTable"><thead><tr><th>When</th><th>Source</th><th>Who</th><th>Action</th><th>Target</th><th>Status</th></tr></thead><tbody></tbody></table>
+      <div class="pager"><button id="auPrev">Previous</button><button id="auNext">Next</button></div>
+    </div>
+  </section>
+  <section id="users" class="view" hidden>
+    <div class="stats" id="stats"></div>
+    <div class="bar"><input id="q" placeholder="Search name, UPN, title"><select id="deptFilter"><option value="">All departments</option></select><label><input type="checkbox" id="showDisabled"> disabled only</label></div>
+    <p class="muted" id="snapshot"></p>
+    <table id="userTable"><thead><tr><th>Name</th><th>Department</th><th>Title</th><th>Manager</th><th>Status</th></tr></thead><tbody></tbody></table>
+  </section>
+  <section id="detail" class="view" hidden></section>
+  <section id="create" class="view" hidden>
+    <h2>New user</h2>
+    <form id="createForm">
+      <label>First name <input name="first" required></label>
+      <label>Last name <input name="last" required></label>
+      <label>UPN <input name="userPrincipalName" required></label>
+      <label>Department <select name="department" class="deptSelect" required></select></label>
+      <label>Job title <input name="jobTitle" list="titleList"></label><datalist id="titleList"></datalist>
+      <label>Manager <select name="manager" class="userSelect"></select></label>
+      <label>Reason <input name="reason" required></label>
+      <button type="submit">Create user</button>
+    </form>
+  </section>
+  <section id="groups" class="view" hidden><div id="groupList"></div></section>
+  <section id="org" class="view" hidden><div id="orgTree"></div></section>
+  <section id="reports" class="view" hidden>
+    <div class="bar"><select id="reportSel"><option value="dept">People per department</option><option value="nomgr">People without a manager</option><option value="disabled">Disabled accounts</option><option value="titles">Titles per department</option><option value="span">Managers and team size</option><option value="rules">Rules check</option></select><button id="csvBtn">Download CSV</button></div>
+    <div id="reportOut"></div>
+  </section>
+  <section id="bulk" class="view" hidden>
+    <div class="card"><h3>Bulk change from CSV</h3>
+      <p class="muted">Columns: action,userPrincipalName,displayName,department,jobTitle,manager,group. Actions: createUser, updateUser, setManager, addToGroup, removeFromGroup, disableUser, enableUser. Up to 200 rows, filed as one request.</p>
+      <textarea id="csvIn" rows="8" placeholder="action,userPrincipalName,jobTitle&#10;updateUser,or.shalev@estherh.v6.rocks,Chief Executive Officer"></textarea>
+      <div class="bar"><input type="file" id="csvFile" accept=".csv,text/csv"><input id="bulkReason" placeholder="Reason (applies to every row)"><button id="bulkPreview">Preview</button><button class="primary" id="bulkSubmit" disabled>Submit</button></div>
+      <div id="bulkOut"></div></div>
+  </section>
+  <section id="helpdesk" class="view" hidden>
+    <div class="hdhead"><h2>Help desk</h2><p class="muted">Find a person, check their account, reset a password or re-enable a sign-in. Every help desk change needs an approver and is logged.</p></div>
+    <div class="bar"><input id="hdq" placeholder="Name, UPN or title" autocomplete="off"></div>
+    <div id="hdResults" class="hdgrid"></div>
+    <div id="hdCard"></div>
+  </section>
+  <section id="admin" class="view" hidden>
+    <div class="stats" id="admStats"></div>
+    <div class="card"><h3>Azure cost (read-only, last 30 days)</h3><div id="admCost" class="cost"></div></div>
+    <div class="card"><h3>Automation health</h3><div id="admFlows" class="flows"></div></div>
+    <div class="card"><h3>Activity log</h3>
+      <div class="bar"><select id="admSrc"><option value="">All sources</option><option value="request">Change requests</option><option value="workflow">Workflow runs</option><option value="commit">Commits</option></select>
+      <select id="admStatus"><option value="">Any status</option><option>applied</option><option>pending</option><option>rejected</option><option>success</option><option>failure</option><option>cancelled</option></select>
+      <input id="admQ" placeholder="Filter by actor, action, target"><button id="admCsv">Export CSV</button></div>
+      <p class="muted" id="admAsOf"></p>
+      <table id="admTable"><thead><tr><th>When</th><th>Source</th><th>Actor</th><th>Action</th><th>Target</th><th>Status</th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+  <section id="requests" class="view" hidden>
+    <h2>Waiting for approval</h2><div id="pendingList"></div>
+    <h2>Recent</h2><div id="recentList"></div>
+  </section>
+</main>
+</div>
+<dialog id="actionDialog"><form method="dialog" id="actionForm"><h3 id="actionTitle"></h3><div id="actionFields"></div>
+  <label>Reason <input name="reason" required></label><p class="muted" id="actionNote"></p>
+  <menu><button value="cancel" formnovalidate>Cancel</button><button value="ok" id="actionOk">Submit</button></menu></form></dialog>
+<script src="/vendor/msal-browser.min.js"></script>
+<script src="/app.js"></script>
+<script src="/pro.js"></script>
+</body></html>

@@ -1,0 +1,6 @@
+# Checksum pinning (user-approved 11:46): media stage fails closed on any mismatch.
+# name sha256 bytes source-url
+SQL2022-Dev.iso 80d2cd75dd2b28098c0182f50ad86bd44f9b3a9f357c30ff617480a1497daffd 1163053056 https://download.microsoft.com/download/3/8/d/38de7036-2433-4207-8eae-06e247e17b25/SQLServer2022-x64-ENU-Dev.iso
+SQLServerReportingServices.exe 917c8c436c3d776ea0aa52e552df00284fe2e1615149860848a8abe3d1b247d4 137587528 https://download.microsoft.com/download/8/3/2/832616ff-af64-42b5-a0b1-5eb07f71dec9/SQLServerReportingServices.exe
+SCOM_2025.zip eab2eb4a877857e44420759512682a153afbbd80a169752ccd9b0db8a9c0d1c2 829541552 https://download.microsoft.com/download/6314b969-ddb8-42f2-aec0-5c96e8c4630a/SCOM_2025.zip
+7zr.exe ad4c82fadcbdf93c03b4fc440f300509c7d60c5c2f4d183e35d9d70d6957037d 602624 https://www.7-zip.org/a/7zr.exe

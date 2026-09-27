@@ -1,0 +1,10 @@
+{
+  "_note": "Who may use the portal. identityProvider must be aad. approvers can approve special actions by others; admins can file requests. Match is case-insensitive on the SWA userDetails (UPN or email). helpdesk: limited role (search, password reset and re-enable only, each needs an approver).",
+  "approvers": [
+    "azure-lab-operator@estherh.v6.rocks",
+    "lesson.archive.cloud@tutamail.com",
+    "elnalegend@estherh.v6.rocks"
+  ],
+  "admins": [],
+  "helpdesk": []
+}

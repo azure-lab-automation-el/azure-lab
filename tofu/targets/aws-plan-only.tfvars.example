@@ -1,0 +1,3 @@
+# PLAN-ONLY: no AWS account/card yet. Values are placeholders for tofu validate/plan shape checks.
+region            = "eu-west-1"
+media_bucket_name = "esther-lab-media-CHANGE-ME"

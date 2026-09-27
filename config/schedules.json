@@ -1,0 +1,12 @@
+{
+  "_note": "Scheduled tasks. All run inside esther-scheduled (nightly 01:17 UTC) and are REPORT ONLY: they list what they would change, nothing is written to Entra. mode stays dry-run until the owner says live.",
+  "tasks": [
+    { "id": "disabled-cleanup", "name": "Remove disabled users from groups", "when": "daily", "kind": "disabled-cleanup", "mode": "dry-run" },
+    { "id": "orphaned-reports", "name": "Reassign people whose manager left", "when": "daily", "kind": "orphaned-reports", "mode": "dry-run" },
+    { "id": "dept-group-sync", "name": "Keep department groups in sync", "when": "daily", "kind": "dept-group-sync", "mode": "dry-run" },
+    { "id": "drift", "name": "Drift against desired state", "when": "daily", "kind": "drift", "mode": "dry-run" },
+    { "id": "empty-groups", "name": "Empty groups report", "when": "weekly:Sun", "kind": "empty-groups", "mode": "dry-run" },
+    { "id": "group-rules", "name": "Dynamic group rules", "when": "daily", "kind": "group-rules", "mode": "dry-run" },
+    { "id": "rules", "name": "Directory rules check", "when": "daily", "kind": "rules", "mode": "dry-run" }
+  ]
+}

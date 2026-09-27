@@ -1,0 +1,5 @@
+{
+  "_note": "standard = applied as soon as it is filed. special = needs an approver who is not the requester, unless the requester is an approver.",
+  "standard": ["updateUser", "setManager", "addToGroup"],
+  "special": ["createUser", "disableUser", "enableUser", "removeFromGroup", "resetPassword"]
+}

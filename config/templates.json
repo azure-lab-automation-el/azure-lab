@@ -1,0 +1,135 @@
+{
+  "_note": "Titles per department, taken from the current directory. manager defaults to the department head.",
+  "defaults": {
+    "usageLocation": "IL"
+  },
+  "departments": {
+    "Administration": {
+      "titles": [
+        "Chief Executive Officer",
+        "Chief Operating Officer",
+        "Human Resources Manager",
+        "Executive Assistant",
+        "Office Manager",
+        "Quality Assurance Coordinator",
+        "Patient Relations Officer"
+      ]
+    },
+    "Admissions": {
+      "titles": [
+        "Admissions Supervisor",
+        "Admissions Clerk",
+        "Admissions Manager",
+        "Patient Registration Clerk",
+        "Bed Management Coordinator",
+        "Front Desk Representative"
+      ]
+    },
+    "Cardiology": {
+      "titles": [
+        "Senior Cardiologist",
+        "Head of Cardiology",
+        "Cardiologist",
+        "Cardiac Nurse",
+        "Echocardiography Technician",
+        "Cardiology Resident",
+        "Cath Lab Technician"
+      ]
+    },
+    "Emergency": {
+      "titles": [
+        "Senior Emergency Physician",
+        "Emergency Physician",
+        "Head of Emergency Medicine",
+        "Emergency Nurse",
+        "Triage Nurse",
+        "Paramedic",
+        "Emergency Resident",
+        "Emergency Department Clerk"
+      ]
+    },
+    "Facilities": {
+      "titles": [
+        "Facilities Manager",
+        "Maintenance Supervisor",
+        "Electrician",
+        "HVAC Technician",
+        "Maintenance Technician",
+        "Housekeeping Supervisor"
+      ]
+    },
+    "Finance": {
+      "titles": [
+        "Finance Manager",
+        "Senior Accountant",
+        "Accountant",
+        "Billing Specialist",
+        "Payroll Specialist",
+        "Procurement Officer"
+      ]
+    },
+    "IT": {
+      "titles": [
+        "Systems Administrator",
+        "IT Manager",
+        "Network Engineer",
+        "Help Desk Technician",
+        "Clinical Applications Analyst",
+        "Security Analyst"
+      ]
+    },
+    "Imaging": {
+      "titles": [
+        "Senior Radiologist",
+        "Head of Imaging",
+        "Radiologist",
+        "Radiographer",
+        "MRI Technologist",
+        "CT Technologist",
+        "Ultrasound Technician"
+      ]
+    },
+    "Laboratory": {
+      "titles": [
+        "Senior Lab Scientist",
+        "Medical Lab Scientist",
+        "Laboratory Manager",
+        "Lab Technician",
+        "Phlebotomist",
+        "Pathology Assistant"
+      ]
+    },
+    "Neurology": {
+      "titles": [
+        "Senior Neurologist",
+        "Head of Neurology",
+        "Neurologist",
+        "Neurology Nurse",
+        "EEG Technician",
+        "Neurology Resident"
+      ]
+    },
+    "Nursing": {
+      "titles": [
+        "Registered Nurse",
+        "Head Nurse",
+        "Charge Nurse",
+        "Practical Nurse",
+        "Nursing Assistant",
+        "Nurse Educator",
+        "Clinical Nurse Specialist",
+        "Director of Nursing"
+      ]
+    },
+    "Oncology": {
+      "titles": [
+        "Senior Oncologist",
+        "Head of Oncology",
+        "Oncologist",
+        "Oncology Nurse",
+        "Radiation Therapist",
+        "Oncology Social Worker"
+      ]
+    }
+  }
+}

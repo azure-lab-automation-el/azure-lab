@@ -1,0 +1,9 @@
+output "rg_name" { value = azurerm_resource_group.lab.name }
+output "dc_vm_name" { value = azurerm_windows_virtual_machine.dc.name }
+output "dc_private_ip" { value = var.dc_private_ip }
+output "esther_vm_name" { value = azurerm_windows_virtual_machine.esther.name }
+output "esther_private_ip" { value = var.esther_private_ip }
+output "linux_vm_name" { value = var.enable_linux_spoke ? azurerm_linux_virtual_machine.linux[0].name : null }
+output "linux_private_ip" { value = var.enable_linux_spoke ? var.linux_private_ip : null }
+output "media_account" { value = azurerm_storage_account.media.name }
+output "exec_hint" { value = "post-config: existing engine via az vm run-command (dc-promote, join, sql, scom)" }

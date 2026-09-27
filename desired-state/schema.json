@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Esther desired state",
+  "type": "object",
+  "required": ["upnSuffix", "users", "groups"],
+  "properties": {
+    "upnSuffix": { "type": "string", "pattern": "^@[A-Za-z0-9.-]+$" },
+    "users": { "type": "array", "items": {
+      "type": "object", "required": ["userPrincipalName", "displayName"], "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" }, "userPrincipalName": { "type": "string" }, "displayName": { "type": "string", "maxLength": 64 },
+        "department": { "type": "string" }, "jobTitle": { "type": "string" },
+        "accountEnabled": { "type": "boolean", "default": true },
+        "usageLocation": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "manager": { "type": ["string", "null"] }
+      } } },
+    "groups": { "type": "array", "items": {
+      "type": "object", "required": ["displayName", "members"], "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" }, "displayName": { "type": "string" },
+        "exclusive": { "type": "boolean", "default": false, "description": "true = remove members not listed" },
+        "members": { "type": "array", "items": { "type": "string" } }
+      } } }
+  }
+}

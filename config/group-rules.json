@@ -1,0 +1,9 @@
+{
+  "_note": "Dynamic group rules. Evaluated nightly by esther-scheduled (task group-rules) in DRY-RUN: it reports who would be added or removed; nothing is written until the owner says live. Portal page: Group rules.",
+  "rules": [
+    { "id": "dept", "name": "Department groups", "group": "Esther Hospital - {department}", "match": { "department": "*" }, "removeOthers": true },
+    { "id": "managers", "name": "People managers", "group": "Esther - People Managers", "match": { "hasReports": true }, "removeOthers": true },
+    { "id": "clinical", "name": "Clinical staff", "group": "Esther - Clinical", "match": { "department": ["Cardiology", "Emergency", "Imaging", "Laboratory", "Neurology", "Nursing", "Oncology"] }, "removeOthers": true },
+    { "id": "nurses", "name": "Nursing titles", "group": "Esther - Nurses", "match": { "titleContains": ["Nurse", "Nursing"] }, "removeOthers": true }
+  ]
+}

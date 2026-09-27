@@ -1,0 +1,5 @@
+{ "users": [
+    { "id": "u1", "userPrincipalName": "esther.admin01@estherh.v6.rocks", "displayName": "Admin 01", "department": "Administration", "jobTitle": "Director", "accountEnabled": true, "manager": null },
+    { "id": "u2", "userPrincipalName": "esther.it01@estherh.v6.rocks", "displayName": "IT 01", "department": "Surgery", "jobTitle": "Engineer", "accountEnabled": true, "manager": null },
+    { "id": "u3", "userPrincipalName": "esther.x@estherh.v6.rocks", "displayName": "X", "accountEnabled": true, "manager": null } ],
+  "groups": [ { "id": "g1", "displayName": "IT", "members": [] } ] }

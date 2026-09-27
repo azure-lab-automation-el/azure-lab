@@ -1,0 +1,12 @@
+{
+  "id": "2026-09-23T08-27-13-000Z-elna",
+  "requestedBy": "azure-lab-operator@lessonarchivecloudtutamail.onmicrosoft.com",
+  "requestedAt": "2026-09-23T08:27:13Z",
+  "kind": "standard",
+  "action": "createUser",
+  "userPrincipalName": "elnalegend@lessonarchivecloudtutamail.onmicrosoft.com",
+  "displayName": "Elnatan Levy",
+  "department": "IT",
+  "jobTitle": "Estherdaxes Administrator",
+  "reason": "Owner's own lab admin account (requested by the user)"
+}

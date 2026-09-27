@@ -1,0 +1,1199 @@
+{
+  "generatedAt": "2026-09-23T02:31:20.240Z",
+  "users": [
+    {
+      "id": "88fc099f-29b7-4370-a1d2-1f50f6428876",
+      "userPrincipalName": "azure-lab-operator@estherh.v6.rocks",
+      "displayName": "Azure Lab Operator",
+      "department": null,
+      "jobTitle": null,
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "26672866-8e3b-46af-b368-c035a01244ff",
+      "userPrincipalName": "esther-administration-011@estherh.v6.rocks",
+      "displayName": "Or Shalev",
+      "department": "Administration",
+      "jobTitle": "Hospital Administration Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "88fc619c-0cc8-4d79-9308-3c23ccff925f",
+      "userPrincipalName": "esther-administration-023@estherh.v6.rocks",
+      "displayName": "Yael Gefen",
+      "department": "Administration",
+      "jobTitle": "Hospital Administration Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "c1bd2286-679f-444c-9746-b6ed7663234d",
+      "userPrincipalName": "esther-administration-035@estherh.v6.rocks",
+      "displayName": "Adi Kedem",
+      "department": "Administration",
+      "jobTitle": "Hospital Administration Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "8caeea1b-2365-46a3-aaf0-a2b74ab8b459",
+      "userPrincipalName": "esther-administration-047@estherh.v6.rocks",
+      "displayName": "Adi Gefen",
+      "department": "Administration",
+      "jobTitle": "Hospital Administration Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "cf4da1d7-96b0-42bc-8af7-bb4879543133",
+      "userPrincipalName": "esther-administration-059@estherh.v6.rocks",
+      "displayName": "Yuval Barak",
+      "department": "Administration",
+      "jobTitle": "Hospital Administration Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "0a186dce-9f2e-40d1-8ad2-daa58312f758",
+      "userPrincipalName": "esther-administration-071@estherh.v6.rocks",
+      "displayName": "Shahar Kedem",
+      "department": "Administration",
+      "jobTitle": "Hospital Administration Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "e09b631a-2810-440d-9a1f-a26ee2218810",
+      "userPrincipalName": "esther-administration-083@estherh.v6.rocks",
+      "displayName": "Gal Talmon",
+      "department": "Administration",
+      "jobTitle": "Hospital Administration Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "2df4f9d0-7afc-4d95-8186-29ffdb31a134",
+      "userPrincipalName": "esther-administration-095@estherh.v6.rocks",
+      "displayName": "Tamar Avni",
+      "department": "Administration",
+      "jobTitle": "Hospital Administration Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "ae3b31c7-6a3f-4b1b-b711-1830cfd50ed1",
+      "userPrincipalName": "esther-cardiology-002@estherh.v6.rocks",
+      "displayName": "Noam Avni",
+      "department": "Cardiology",
+      "jobTitle": "Cardiology Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "3f8fe368-c5a2-4c30-92e0-296cd402669b",
+      "userPrincipalName": "esther-cardiology-014@estherh.v6.rocks",
+      "displayName": "Gal Paz",
+      "department": "Cardiology",
+      "jobTitle": "Cardiology Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "742d9797-be04-47a3-964b-2283cb929dec",
+      "userPrincipalName": "esther-cardiology-026@estherh.v6.rocks",
+      "displayName": "Yarden Carmel",
+      "department": "Cardiology",
+      "jobTitle": "Cardiology Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "edd331aa-9281-4534-a7db-343bf22aebc6",
+      "userPrincipalName": "esther-cardiology-038@estherh.v6.rocks",
+      "displayName": "Tal Shavit",
+      "department": "Cardiology",
+      "jobTitle": "Cardiology Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "1ce7abed-af98-45cd-a18c-61fb976d3328",
+      "userPrincipalName": "esther-cardiology-050@estherh.v6.rocks",
+      "displayName": "Dana Barak",
+      "department": "Cardiology",
+      "jobTitle": "Cardiology Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "0cd253be-eb7b-41d0-a1e9-bdcaf8c764b4",
+      "userPrincipalName": "esther-cardiology-062@estherh.v6.rocks",
+      "displayName": "Roni Dror",
+      "department": "Cardiology",
+      "jobTitle": "Cardiology Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "36b1492e-ebe0-4172-9766-6f87bc451096",
+      "userPrincipalName": "esther-cardiology-074@estherh.v6.rocks",
+      "displayName": "Neta Paz",
+      "department": "Cardiology",
+      "jobTitle": "Cardiology Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "2416bb9b-5bfb-4c8f-946f-412f6fb00252",
+      "userPrincipalName": "esther-cardiology-086@estherh.v6.rocks",
+      "displayName": "Lior Paz",
+      "department": "Cardiology",
+      "jobTitle": "Cardiology Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "a28b94a7-a02f-4b23-b1e9-397e504d0431",
+      "userPrincipalName": "esther-cardiology-098@estherh.v6.rocks",
+      "displayName": "Omer Harari",
+      "department": "Cardiology",
+      "jobTitle": "Cardiology Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "bd3bbe25-9906-4791-875a-8608fe582494",
+      "userPrincipalName": "esther-emergency-001@estherh.v6.rocks",
+      "displayName": "Neta Talmon",
+      "department": "Emergency",
+      "jobTitle": "Emergency Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "b5b424a6-8b08-4833-81a2-a259742f5091",
+      "userPrincipalName": "esther-emergency-013@estherh.v6.rocks",
+      "displayName": "Adi Carmel",
+      "department": "Emergency",
+      "jobTitle": "Emergency Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "0941d4e9-9cda-44d4-b024-60ab8e4cb173",
+      "userPrincipalName": "esther-emergency-025@estherh.v6.rocks",
+      "displayName": "Noam Shavit",
+      "department": "Emergency",
+      "jobTitle": "Emergency Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "862eea7c-ce7c-49ac-b311-eb63fa7ceba2",
+      "userPrincipalName": "esther-emergency-037@estherh.v6.rocks",
+      "displayName": "Amit Halperin",
+      "department": "Emergency",
+      "jobTitle": "Emergency Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "2deea665-8397-4d5d-80d2-51a8c43dc696",
+      "userPrincipalName": "esther-emergency-049@estherh.v6.rocks",
+      "displayName": "Yael Raz",
+      "department": "Emergency",
+      "jobTitle": "Emergency Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "81b56e60-50d8-4c8f-bb83-2edd3d904c5e",
+      "userPrincipalName": "esther-emergency-061@estherh.v6.rocks",
+      "displayName": "Hila Talmon",
+      "department": "Emergency",
+      "jobTitle": "Emergency Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "554ca0c3-234d-4297-8df9-f583af2b9208",
+      "userPrincipalName": "esther-emergency-073@estherh.v6.rocks",
+      "displayName": "Tamar Naveh",
+      "department": "Emergency",
+      "jobTitle": "Emergency Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "fe517bc3-3fc4-4849-a5ed-0db4014c3bb7",
+      "userPrincipalName": "esther-emergency-085@estherh.v6.rocks",
+      "displayName": "Omer Barak",
+      "department": "Emergency",
+      "jobTitle": "Emergency Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "c30c1f07-e2ac-44cb-99ce-d496e27ac1f0",
+      "userPrincipalName": "esther-emergency-097@estherh.v6.rocks",
+      "displayName": "Yael Kedem",
+      "department": "Emergency",
+      "jobTitle": "Emergency Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "82d95ba4-beeb-49ec-80c1-b6170f34385a",
+      "userPrincipalName": "esther-facilities-012@estherh.v6.rocks",
+      "displayName": "Hila Harari",
+      "department": "Facilities",
+      "jobTitle": "Facilities Operations Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "4835bdcc-2085-411b-ac34-af4ae0acdd4e",
+      "userPrincipalName": "esther-facilities-024@estherh.v6.rocks",
+      "displayName": "Erez Doron",
+      "department": "Facilities",
+      "jobTitle": "Facilities Operations Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "1dd1fe91-9919-4c08-972b-749106e64c8f",
+      "userPrincipalName": "esther-facilities-036@estherh.v6.rocks",
+      "displayName": "Tamar Dror",
+      "department": "Facilities",
+      "jobTitle": "Facilities Operations Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "48dc1b31-3f12-4fee-a2b9-bef7411c5b32",
+      "userPrincipalName": "esther-facilities-048@estherh.v6.rocks",
+      "displayName": "Gal Doron",
+      "department": "Facilities",
+      "jobTitle": "Facilities Operations Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "fde220a2-2c5b-445c-b5b0-6882c6f1c7d6",
+      "userPrincipalName": "esther-facilities-060@estherh.v6.rocks",
+      "displayName": "Lior Barak",
+      "department": "Facilities",
+      "jobTitle": "Facilities Operations Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "228d05a4-e804-4894-8ab9-55178351089d",
+      "userPrincipalName": "esther-facilities-072@estherh.v6.rocks",
+      "displayName": "Tal Naveh",
+      "department": "Facilities",
+      "jobTitle": "Facilities Operations Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "d592d96b-c2c7-432a-8cf7-7ee66b91d327",
+      "userPrincipalName": "esther-facilities-084@estherh.v6.rocks",
+      "displayName": "Roni Halperin",
+      "department": "Facilities",
+      "jobTitle": "Facilities Operations Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "b98670e7-1300-4d40-9670-f4fe675f6998",
+      "userPrincipalName": "esther-facilities-096@estherh.v6.rocks",
+      "displayName": "Tal Halperin",
+      "department": "Facilities",
+      "jobTitle": "Facilities Operations Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "bf5b8c06-83ab-4cdd-9498-76d9605e7d56",
+      "userPrincipalName": "esther-laboratory-006@estherh.v6.rocks",
+      "displayName": "Hila Paz",
+      "department": "Laboratory",
+      "jobTitle": "Laboratory Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "d48f4590-5089-4956-a2c1-8500daf56922",
+      "userPrincipalName": "esther-laboratory-018@estherh.v6.rocks",
+      "displayName": "Dana Talmon",
+      "department": "Laboratory",
+      "jobTitle": "Laboratory Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "96c23df1-7b81-4407-8ffa-d865bff66342",
+      "userPrincipalName": "esther-laboratory-030@estherh.v6.rocks",
+      "displayName": "Erez Harari",
+      "department": "Laboratory",
+      "jobTitle": "Laboratory Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "b8db5924-fb67-405a-b8c3-434a5e4b14af",
+      "userPrincipalName": "esther-laboratory-042@estherh.v6.rocks",
+      "displayName": "Shahar Gefen",
+      "department": "Laboratory",
+      "jobTitle": "Laboratory Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "fa7f23a0-8486-44db-8a18-bd3beabad214",
+      "userPrincipalName": "esther-laboratory-054@estherh.v6.rocks",
+      "displayName": "Lior Harari",
+      "department": "Laboratory",
+      "jobTitle": "Laboratory Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "273614ec-4089-42c7-af47-b48d331e10cb",
+      "userPrincipalName": "esther-laboratory-066@estherh.v6.rocks",
+      "displayName": "Omer Doron",
+      "department": "Laboratory",
+      "jobTitle": "Laboratory Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "55c4154a-0c44-4af0-87c5-7df08a44c596",
+      "userPrincipalName": "esther-laboratory-078@estherh.v6.rocks",
+      "displayName": "Yuval Talmon",
+      "department": "Laboratory",
+      "jobTitle": "Laboratory Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "55cde48e-577c-4ca6-859b-f6b032d1a94a",
+      "userPrincipalName": "esther-laboratory-090@estherh.v6.rocks",
+      "displayName": "Yarden Zohar",
+      "department": "Laboratory",
+      "jobTitle": "Laboratory Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "a1785074-76d6-4055-9aac-a1d19432cd4a",
+      "userPrincipalName": "esther-neurology-010@estherh.v6.rocks",
+      "displayName": "Yuval Doron",
+      "department": "Neurology",
+      "jobTitle": "Neurology Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "ba668c67-5bd6-4fc9-8d06-d97692536b44",
+      "userPrincipalName": "esther-neurology-022@estherh.v6.rocks",
+      "displayName": "Or Shavit",
+      "department": "Neurology",
+      "jobTitle": "Neurology Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "10bebfb8-a96c-45b0-83f5-eca6a536c6d9",
+      "userPrincipalName": "esther-neurology-034@estherh.v6.rocks",
+      "displayName": "Tal Avni",
+      "department": "Neurology",
+      "jobTitle": "Neurology Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "9d903037-7cbb-4006-989b-5ae982a7ddcc",
+      "userPrincipalName": "esther-neurology-046@estherh.v6.rocks",
+      "displayName": "Neta Ilan",
+      "department": "Neurology",
+      "jobTitle": "Neurology Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "1f432864-6810-432f-9c61-76610f5f1886",
+      "userPrincipalName": "esther-neurology-058@estherh.v6.rocks",
+      "displayName": "Erez Talmon",
+      "department": "Neurology",
+      "jobTitle": "Neurology Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "a1bd3977-091a-4a8d-864f-224c5415c97a",
+      "userPrincipalName": "esther-neurology-070@estherh.v6.rocks",
+      "displayName": "Yarden Raz",
+      "department": "Neurology",
+      "jobTitle": "Neurology Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "8235fd52-9db0-4622-af1a-25cb0ba9aca6",
+      "userPrincipalName": "esther-neurology-082@estherh.v6.rocks",
+      "displayName": "Amit Shavit",
+      "department": "Neurology",
+      "jobTitle": "Neurology Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "7aa172e0-9503-4ca3-8be6-e4913011492e",
+      "userPrincipalName": "esther-neurology-094@estherh.v6.rocks",
+      "displayName": "Roni Avni",
+      "department": "Neurology",
+      "jobTitle": "Neurology Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "9b9378da-561a-4e04-826d-82cf097664be",
+      "userPrincipalName": "esther-nursing-008@estherh.v6.rocks",
+      "displayName": "Rotem Dror",
+      "department": "Nursing",
+      "jobTitle": "Nursing Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "ae2af9e6-cff9-4d99-91d0-0ab440ac3252",
+      "userPrincipalName": "esther-nursing-020@estherh.v6.rocks",
+      "displayName": "Neta Harari",
+      "department": "Nursing",
+      "jobTitle": "Nursing Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "8352b583-11a9-4887-a95d-84f2511fbca9",
+      "userPrincipalName": "esther-nursing-032@estherh.v6.rocks",
+      "displayName": "Rotem Shavit",
+      "department": "Nursing",
+      "jobTitle": "Nursing Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "3cb5b3c8-8450-4b84-a483-cffc203f20af",
+      "userPrincipalName": "esther-nursing-044@estherh.v6.rocks",
+      "displayName": "Maya Dror",
+      "department": "Nursing",
+      "jobTitle": "Nursing Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "26389230-60a6-455c-a5ee-11dd56b59f77",
+      "userPrincipalName": "esther-nursing-056@estherh.v6.rocks",
+      "displayName": "Gal Harari",
+      "department": "Nursing",
+      "jobTitle": "Nursing Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "7e6af71b-b49d-4dc4-99ec-52051b776bb9",
+      "userPrincipalName": "esther-nursing-068@estherh.v6.rocks",
+      "displayName": "Tal Dror",
+      "department": "Nursing",
+      "jobTitle": "Nursing Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "01c66a8a-ccfa-42bc-9b56-bb08d80f656d",
+      "userPrincipalName": "esther-nursing-080@estherh.v6.rocks",
+      "displayName": "Maya Shalev",
+      "department": "Nursing",
+      "jobTitle": "Nursing Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "b5b690a4-0eff-4e36-9c4b-939343464442",
+      "userPrincipalName": "esther-nursing-092@estherh.v6.rocks",
+      "displayName": "Roni Shavit",
+      "department": "Nursing",
+      "jobTitle": "Nursing Care Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "b9ffc5a0-ebc8-496b-af25-b0e8e83d4fdb",
+      "userPrincipalName": "esther-oncology-009@estherh.v6.rocks",
+      "displayName": "Neta Doron",
+      "department": "Oncology",
+      "jobTitle": "Oncology Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "ea80ac18-21b4-4672-8426-e79e4d48c8fc",
+      "userPrincipalName": "esther-oncology-021@estherh.v6.rocks",
+      "displayName": "Tamar Halperin",
+      "department": "Oncology",
+      "jobTitle": "Oncology Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "18b4a148-70b2-48d3-8a62-a5bd0e5a538b",
+      "userPrincipalName": "esther-oncology-033@estherh.v6.rocks",
+      "displayName": "Gal Ilan",
+      "department": "Oncology",
+      "jobTitle": "Oncology Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "ec74b09d-636b-484e-bc6f-35aff4df6641",
+      "userPrincipalName": "esther-oncology-045@estherh.v6.rocks",
+      "displayName": "Noam Naveh",
+      "department": "Oncology",
+      "jobTitle": "Oncology Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "ae76b369-e27f-45c8-b368-cf4d094a504f",
+      "userPrincipalName": "esther-oncology-057@estherh.v6.rocks",
+      "displayName": "Roni Naveh",
+      "department": "Oncology",
+      "jobTitle": "Oncology Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "1b57ec5d-2628-4083-9a85-65f6635a1448",
+      "userPrincipalName": "esther-oncology-069@estherh.v6.rocks",
+      "displayName": "Amit Dror",
+      "department": "Oncology",
+      "jobTitle": "Oncology Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "14979b6f-e979-4b45-9e8b-e25a6fef69ec",
+      "userPrincipalName": "esther-oncology-081@estherh.v6.rocks",
+      "displayName": "Dana Harari",
+      "department": "Oncology",
+      "jobTitle": "Oncology Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "a13dc943-20b7-4c06-b5df-0936ee920dff",
+      "userPrincipalName": "esther-oncology-093@estherh.v6.rocks",
+      "displayName": "Yarden Gefen",
+      "department": "Oncology",
+      "jobTitle": "Oncology Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "855dd764-1d5f-4003-8473-2a9fae32ae08",
+      "userPrincipalName": "esther-pediatrics-003@estherh.v6.rocks",
+      "displayName": "Lior Doron",
+      "department": "Pediatrics",
+      "jobTitle": "Pediatric Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "5b18374c-465b-40a6-8185-f285a4025bcc",
+      "userPrincipalName": "esther-pediatrics-015@estherh.v6.rocks",
+      "displayName": "Hila Doron",
+      "department": "Pediatrics",
+      "jobTitle": "Pediatric Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "c953fb82-b3e4-47dc-aa1f-d636c32fd57b",
+      "userPrincipalName": "esther-pediatrics-027@estherh.v6.rocks",
+      "displayName": "Dana Doron",
+      "department": "Pediatrics",
+      "jobTitle": "Pediatric Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "d9052008-f172-4224-9a8c-3eab8a29bede",
+      "userPrincipalName": "esther-pediatrics-039@estherh.v6.rocks",
+      "displayName": "Maya Shavit",
+      "department": "Pediatrics",
+      "jobTitle": "Pediatric Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "6dfbe170-efc8-4262-b7d9-ba5618108d39",
+      "userPrincipalName": "esther-pediatrics-051@estherh.v6.rocks",
+      "displayName": "Or Naveh",
+      "department": "Pediatrics",
+      "jobTitle": "Pediatric Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "e4b295fb-1083-4bae-8846-db8bcb00f834",
+      "userPrincipalName": "esther-pediatrics-063@estherh.v6.rocks",
+      "displayName": "Hila Ilan",
+      "department": "Pediatrics",
+      "jobTitle": "Pediatric Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "fb6b93f0-89c8-4af2-90ac-c40813d4994b",
+      "userPrincipalName": "esther-pediatrics-075@estherh.v6.rocks",
+      "displayName": "Yuval Paz",
+      "department": "Pediatrics",
+      "jobTitle": "Pediatric Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "7fb968d6-8733-4723-bed0-5e6751a95f41",
+      "userPrincipalName": "esther-pediatrics-087@estherh.v6.rocks",
+      "displayName": "Amit Avni",
+      "department": "Pediatrics",
+      "jobTitle": "Pediatric Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "85ebd7b9-ccd7-48e7-a8da-b0ccce2c151e",
+      "userPrincipalName": "esther-pediatrics-099@estherh.v6.rocks",
+      "displayName": "Maya Avni",
+      "department": "Pediatrics",
+      "jobTitle": "Pediatric Care Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "b4e336b0-ed26-493a-aa05-b4ac63a95e5b",
+      "userPrincipalName": "esther-pharmacy-007@estherh.v6.rocks",
+      "displayName": "Rotem Shalev",
+      "department": "Pharmacy",
+      "jobTitle": "Pharmacy Operations Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "10e92046-c12a-471d-95bd-eed9c912ed7e",
+      "userPrincipalName": "esther-pharmacy-019@estherh.v6.rocks",
+      "displayName": "Noam Dror",
+      "department": "Pharmacy",
+      "jobTitle": "Pharmacy Operations Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "aba58365-1233-45c3-862b-3452221df10c",
+      "userPrincipalName": "esther-pharmacy-031@estherh.v6.rocks",
+      "displayName": "Or Dror",
+      "department": "Pharmacy",
+      "jobTitle": "Pharmacy Operations Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "2fbf925d-d519-444c-be94-6dd047f1002a",
+      "userPrincipalName": "esther-pharmacy-043@estherh.v6.rocks",
+      "displayName": "Yael Carmel",
+      "department": "Pharmacy",
+      "jobTitle": "Pharmacy Operations Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "5c021a0a-2f0b-465a-8d96-94c3a43d86e7",
+      "userPrincipalName": "esther-pharmacy-055@estherh.v6.rocks",
+      "displayName": "Erez Paz",
+      "department": "Pharmacy",
+      "jobTitle": "Pharmacy Operations Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "9ab3fa41-f39a-4c3d-9d81-1dec85a6c0a2",
+      "userPrincipalName": "esther-pharmacy-067@estherh.v6.rocks",
+      "displayName": "Yael Zohar",
+      "department": "Pharmacy",
+      "jobTitle": "Pharmacy Operations Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "ac874073-4c0c-4955-bcc0-4fc9b7b18c5b",
+      "userPrincipalName": "esther-pharmacy-079@estherh.v6.rocks",
+      "displayName": "Yarden Kedem",
+      "department": "Pharmacy",
+      "jobTitle": "Pharmacy Operations Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "b5f0ee60-6b8a-435f-9ac8-8b42fa589be0",
+      "userPrincipalName": "esther-pharmacy-091@estherh.v6.rocks",
+      "displayName": "Shahar Carmel",
+      "department": "Pharmacy",
+      "jobTitle": "Pharmacy Operations Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "3a388503-5381-42ef-a2b7-2223c50be3c0",
+      "userPrincipalName": "esther-radiology-005@estherh.v6.rocks",
+      "displayName": "Shahar Zohar",
+      "department": "Radiology",
+      "jobTitle": "Imaging Services Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "7e83d77b-7c1d-42cf-bf15-feee9e29a2f8",
+      "userPrincipalName": "esther-radiology-017@estherh.v6.rocks",
+      "displayName": "Dana Paz",
+      "department": "Radiology",
+      "jobTitle": "Imaging Services Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "6b9bfc90-1423-462d-bb33-769293a69e35",
+      "userPrincipalName": "esther-radiology-029@estherh.v6.rocks",
+      "displayName": "Tamar Shavit",
+      "department": "Radiology",
+      "jobTitle": "Imaging Services Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "514f7b94-178d-43ca-9467-b08fbeb54524",
+      "userPrincipalName": "esther-radiology-041@estherh.v6.rocks",
+      "displayName": "Maya Naveh",
+      "department": "Radiology",
+      "jobTitle": "Imaging Services Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "5707aa07-a786-4caf-b886-e38c1b019587",
+      "userPrincipalName": "esther-radiology-053@estherh.v6.rocks",
+      "displayName": "Omer Talmon",
+      "department": "Radiology",
+      "jobTitle": "Imaging Services Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "45e841e8-40dd-461b-863a-1560b4b6646e",
+      "userPrincipalName": "esther-radiology-065@estherh.v6.rocks",
+      "displayName": "Erez Ilan",
+      "department": "Radiology",
+      "jobTitle": "Imaging Services Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "dcc1e6ce-c334-437a-8e52-9b65bd9e7b24",
+      "userPrincipalName": "esther-radiology-077@estherh.v6.rocks",
+      "displayName": "Adi Zohar",
+      "department": "Radiology",
+      "jobTitle": "Imaging Services Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "375fb869-2abc-4d5c-963e-f4f211630de1",
+      "userPrincipalName": "esther-radiology-089@estherh.v6.rocks",
+      "displayName": "Yuval Harari",
+      "department": "Radiology",
+      "jobTitle": "Imaging Services Coordinator",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "b44220a1-3465-4c64-984a-4405148e29ff",
+      "userPrincipalName": "esther-surgery-004@estherh.v6.rocks",
+      "displayName": "Omer Paz",
+      "department": "Surgery",
+      "jobTitle": "Surgical Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "648b8b78-797d-40be-88f2-6991b1ebd349",
+      "userPrincipalName": "esther-surgery-016@estherh.v6.rocks",
+      "displayName": "Noam Shalev",
+      "department": "Surgery",
+      "jobTitle": "Surgical Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "05f7237f-4562-4014-aea5-b71197d2a92f",
+      "userPrincipalName": "esther-surgery-028@estherh.v6.rocks",
+      "displayName": "Adi Raz",
+      "department": "Surgery",
+      "jobTitle": "Surgical Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "80c4432f-07b4-4018-afb6-0a52c2004ad5",
+      "userPrincipalName": "esther-surgery-040@estherh.v6.rocks",
+      "displayName": "Shahar Raz",
+      "department": "Surgery",
+      "jobTitle": "Surgical Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "eb3edaed-dda7-40b8-88d7-34270a5b5a2a",
+      "userPrincipalName": "esther-surgery-052@estherh.v6.rocks",
+      "displayName": "Lior Talmon",
+      "department": "Surgery",
+      "jobTitle": "Surgical Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "203107fe-de79-49d4-a59f-4345565c8742",
+      "userPrincipalName": "esther-surgery-064@estherh.v6.rocks",
+      "displayName": "Rotem Naveh",
+      "department": "Surgery",
+      "jobTitle": "Surgical Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "13df6343-5522-4801-9cac-c747ae02102b",
+      "userPrincipalName": "esther-surgery-076@estherh.v6.rocks",
+      "displayName": "Rotem Avni",
+      "department": "Surgery",
+      "jobTitle": "Surgical Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "ac781a94-63e6-4162-99f8-938ce5042814",
+      "userPrincipalName": "esther-surgery-088@estherh.v6.rocks",
+      "displayName": "Or Avni",
+      "department": "Surgery",
+      "jobTitle": "Surgical Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "4a782ff8-fb49-45bd-b8b1-1783c439bc7a",
+      "userPrincipalName": "esther-surgery-100@estherh.v6.rocks",
+      "displayName": "Amit Naveh",
+      "department": "Surgery",
+      "jobTitle": "Surgical Services Specialist",
+      "accountEnabled": true,
+      "usageLocation": null,
+      "manager": null
+    },
+    {
+      "id": "69ab5911-6881-4776-aa96-37ef718bf6c5",
+      "userPrincipalName": "lesson.archive.cloud_tutamail.com#EXT#@estherh.v6.rocks",
+      "displayName": "שלום שלומי",
+      "department": null,
+      "jobTitle": null,
+      "accountEnabled": true,
+      "usageLocation": "IL",
+      "manager": null
+    }
+  ],
+  "groups": [
+    {
+      "id": "3b157b58-dd7e-4ddb-9563-e2a51d6c5ddc",
+      "displayName": "Esther Hospital - Surgery",
+      "members": [
+        "esther-surgery-004@estherh.v6.rocks",
+        "esther-surgery-016@estherh.v6.rocks",
+        "esther-surgery-028@estherh.v6.rocks",
+        "esther-surgery-040@estherh.v6.rocks",
+        "esther-surgery-052@estherh.v6.rocks",
+        "esther-surgery-064@estherh.v6.rocks",
+        "esther-surgery-076@estherh.v6.rocks",
+        "esther-surgery-088@estherh.v6.rocks",
+        "esther-surgery-100@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "44d2d534-50df-401a-a185-a1e4c68d3bd3",
+      "displayName": "Esther Hospital - Administration",
+      "members": [
+        "esther-administration-011@estherh.v6.rocks",
+        "esther-administration-023@estherh.v6.rocks",
+        "esther-administration-035@estherh.v6.rocks",
+        "esther-administration-047@estherh.v6.rocks",
+        "esther-administration-059@estherh.v6.rocks",
+        "esther-administration-071@estherh.v6.rocks",
+        "esther-administration-083@estherh.v6.rocks",
+        "esther-administration-095@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "47ab55c1-5926-4244-b9f2-dcc5434a82c7",
+      "displayName": "Esther Hospital - Cardiology",
+      "members": [
+        "esther-cardiology-002@estherh.v6.rocks",
+        "esther-cardiology-014@estherh.v6.rocks",
+        "esther-cardiology-026@estherh.v6.rocks",
+        "esther-cardiology-038@estherh.v6.rocks",
+        "esther-cardiology-050@estherh.v6.rocks",
+        "esther-cardiology-062@estherh.v6.rocks",
+        "esther-cardiology-074@estherh.v6.rocks",
+        "esther-cardiology-086@estherh.v6.rocks",
+        "esther-cardiology-098@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "4b7022af-5e17-40c1-83d4-532c531358be",
+      "displayName": "Esther Hospital - Oncology",
+      "members": [
+        "esther-oncology-009@estherh.v6.rocks",
+        "esther-oncology-021@estherh.v6.rocks",
+        "esther-oncology-033@estherh.v6.rocks",
+        "esther-oncology-045@estherh.v6.rocks",
+        "esther-oncology-057@estherh.v6.rocks",
+        "esther-oncology-069@estherh.v6.rocks",
+        "esther-oncology-081@estherh.v6.rocks",
+        "esther-oncology-093@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "512b479d-1e0e-4a73-8bb1-06a280397b5e",
+      "displayName": "Esther Hospital - Neurology",
+      "members": [
+        "esther-neurology-010@estherh.v6.rocks",
+        "esther-neurology-022@estherh.v6.rocks",
+        "esther-neurology-034@estherh.v6.rocks",
+        "esther-neurology-046@estherh.v6.rocks",
+        "esther-neurology-058@estherh.v6.rocks",
+        "esther-neurology-070@estherh.v6.rocks",
+        "esther-neurology-082@estherh.v6.rocks",
+        "esther-neurology-094@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "80acd626-9d0e-4f07-bed4-c02e863bd5e5",
+      "displayName": "Esther Hospital - Radiology",
+      "members": [
+        "esther-radiology-005@estherh.v6.rocks",
+        "esther-radiology-017@estherh.v6.rocks",
+        "esther-radiology-029@estherh.v6.rocks",
+        "esther-radiology-041@estherh.v6.rocks",
+        "esther-radiology-053@estherh.v6.rocks",
+        "esther-radiology-065@estherh.v6.rocks",
+        "esther-radiology-077@estherh.v6.rocks",
+        "esther-radiology-089@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "85a059b4-ac04-4c8b-ba18-53a284940e9c",
+      "displayName": "Esther Hospital - Laboratory",
+      "members": [
+        "esther-laboratory-006@estherh.v6.rocks",
+        "esther-laboratory-018@estherh.v6.rocks",
+        "esther-laboratory-030@estherh.v6.rocks",
+        "esther-laboratory-042@estherh.v6.rocks",
+        "esther-laboratory-054@estherh.v6.rocks",
+        "esther-laboratory-066@estherh.v6.rocks",
+        "esther-laboratory-078@estherh.v6.rocks",
+        "esther-laboratory-090@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "b817fcc6-cff7-4bfe-b865-d4aa6992bb77",
+      "displayName": "Esther Hospital - Facilities",
+      "members": [
+        "esther-facilities-012@estherh.v6.rocks",
+        "esther-facilities-024@estherh.v6.rocks",
+        "esther-facilities-036@estherh.v6.rocks",
+        "esther-facilities-048@estherh.v6.rocks",
+        "esther-facilities-060@estherh.v6.rocks",
+        "esther-facilities-072@estherh.v6.rocks",
+        "esther-facilities-084@estherh.v6.rocks",
+        "esther-facilities-096@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "c21d4ed0-1cd3-4ccd-bc1a-1b4618b899e3",
+      "displayName": "Esther Hospital - Pediatrics",
+      "members": [
+        "esther-pediatrics-003@estherh.v6.rocks",
+        "esther-pediatrics-015@estherh.v6.rocks",
+        "esther-pediatrics-027@estherh.v6.rocks",
+        "esther-pediatrics-039@estherh.v6.rocks",
+        "esther-pediatrics-051@estherh.v6.rocks",
+        "esther-pediatrics-063@estherh.v6.rocks",
+        "esther-pediatrics-075@estherh.v6.rocks",
+        "esther-pediatrics-087@estherh.v6.rocks",
+        "esther-pediatrics-099@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "cd85ef5a-4a29-4f63-8571-5f042b9b2b69",
+      "displayName": "Esther Hospital - Emergency",
+      "members": [
+        "esther-emergency-001@estherh.v6.rocks",
+        "esther-emergency-013@estherh.v6.rocks",
+        "esther-emergency-025@estherh.v6.rocks",
+        "esther-emergency-037@estherh.v6.rocks",
+        "esther-emergency-049@estherh.v6.rocks",
+        "esther-emergency-061@estherh.v6.rocks",
+        "esther-emergency-073@estherh.v6.rocks",
+        "esther-emergency-085@estherh.v6.rocks",
+        "esther-emergency-097@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "cec8f506-8d54-4ba9-bc98-79053eb91263",
+      "displayName": "Esther Hospital - Pharmacy",
+      "members": [
+        "esther-pharmacy-007@estherh.v6.rocks",
+        "esther-pharmacy-019@estherh.v6.rocks",
+        "esther-pharmacy-031@estherh.v6.rocks",
+        "esther-pharmacy-043@estherh.v6.rocks",
+        "esther-pharmacy-055@estherh.v6.rocks",
+        "esther-pharmacy-067@estherh.v6.rocks",
+        "esther-pharmacy-079@estherh.v6.rocks",
+        "esther-pharmacy-091@estherh.v6.rocks"
+      ]
+    },
+    {
+      "id": "fe5fb272-c335-4e69-b689-de06e17ffd12",
+      "displayName": "Esther Hospital - Nursing",
+      "members": [
+        "esther-nursing-008@estherh.v6.rocks",
+        "esther-nursing-020@estherh.v6.rocks",
+        "esther-nursing-032@estherh.v6.rocks",
+        "esther-nursing-044@estherh.v6.rocks",
+        "esther-nursing-056@estherh.v6.rocks",
+        "esther-nursing-068@estherh.v6.rocks",
+        "esther-nursing-080@estherh.v6.rocks",
+        "esther-nursing-092@estherh.v6.rocks"
+      ]
+    }
+  ]
+}

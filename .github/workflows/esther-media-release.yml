@@ -1,0 +1,14 @@
+name: esther-media-release
+run-name: "media (scom-tree + SSRS + 7zr) -> release scom-prereqs"
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: esther-media-release__run
+      timeout: 40
+      media_account: estherlabmedia8c8c3c92

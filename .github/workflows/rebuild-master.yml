@@ -128,7 +128,7 @@ jobs:
         LAB_NET_BASE=${{ inputs.lab_net_base }}
         LAB_SE_NET_BASE=${{ inputs.lab_se_net_base }}
         LAB_NAME_SUFFIX=${{ inputs.lab_name_suffix }}
-      timeout: 25
+      timeout: 50
       media_account: ${{ inputs.media_account }}
   sql:
     uses: ./.github/workflows/_lab-job.yml

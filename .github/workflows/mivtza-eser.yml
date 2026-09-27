@@ -20,9 +20,13 @@ on:
         default: esther
       target:
         type: choice
-        options: [all, dc]
+        options: [all, dc, scom]
         default: all
-        description: 'dc = בניית DC בלבד (ללא מכונת SCOM)'
+        description: 'dc = בניית DC בלבד; scom = איטרציית SCOM בלבד על DC חי (דיבאג)'
+      keep:
+        type: boolean
+        default: false
+        description: 'מצב דיבאג: להשאיר DC+מדיה חיים בסיום (אסור בריצות אמת קרות)'
       mon_timeout:
         type: number
         default: 60
@@ -46,7 +50,7 @@ jobs:
     with:
       entry: mivtza-eser__teardown
       timeout: 20
-      media_account: estherm${{ github.run_number }}
+      media_account: ${{ inputs.keep && 'esthermdbg' || format('estherm{0}', github.run_number) }}
       extra_env: |
         TARGET=${{ inputs.target }}
   create:
@@ -70,7 +74,7 @@ jobs:
     with:
       entry: mivtza-eser__media
       timeout: 50
-      media_account: estherm${{ github.run_number }}
+      media_account: ${{ inputs.keep && 'esthermdbg' || format('estherm{0}', github.run_number) }}
       extra_env: |
         LAB_LOCATION=${{ inputs.lab_location }}
   secrets:
@@ -81,7 +85,7 @@ jobs:
     with:
       entry: mivtza-eser__secrets
       timeout: 15
-      media_account: estherm${{ github.run_number }}
+      media_account: ${{ inputs.keep && 'esthermdbg' || format('estherm{0}', github.run_number) }}
       extra_env: |
         LAB_PREFIX=${{ inputs.lab_prefix }}
         TARGET=${{ inputs.target }}
@@ -93,7 +97,7 @@ jobs:
     with:
       entry: mivtza-eser__monitor
       timeout: 65
-      media_account: estherm${{ github.run_number }}
+      media_account: ${{ inputs.keep && 'esthermdbg' || format('estherm{0}', github.run_number) }}
       extra_env: |
         MON_TIMEOUT_MIN=${{ inputs.mon_timeout }}
         TARGET=${{ inputs.target }}
@@ -105,7 +109,8 @@ jobs:
     with:
       entry: mivtza-eser__finalize
       timeout: 25
-      media_account: estherm${{ github.run_number }}
+      media_account: ${{ inputs.keep && 'esthermdbg' || format('estherm{0}', github.run_number) }}
       extra_env: |
         MODE=${{ needs.monitor.result == 'success' && 'success' || 'abort' }}
         LAB_PREFIX=${{ inputs.lab_prefix }}
+        KEEP=${{ inputs.keep && 1 || 0 }}

@@ -21,6 +21,6 @@ jobs:
             sz=$(stat -c%s "$f"); echo "$f: $sz bytes"
             [ "$sz" -gt 1000000 ] || { echo "❌ $f too small - bad download"; exit 1; }
           done
-          gh release delete scom-prereqs --yes --cleanup-tag 2>/dev/null || true
-          gh release create scom-prereqs --title "SCOM prereq installers" --notes "Report Viewer 2015 + CLR Types SQL2014 x64 (SCOM OMConsole prereqs)" ReportViewer.msi SQLSysClrTypes.msi
+          gh release delete scom-prereqs -R azure-lab-automation-el/azure-lab --yes --cleanup-tag 2>/dev/null || true
+          gh release create scom-prereqs -R azure-lab-automation-el/azure-lab --title "SCOM prereq installers" --notes "Report Viewer 2015 + CLR Types SQL2014 x64 (SCOM OMConsole prereqs)" ReportViewer.msi SQLSysClrTypes.msi
           echo "RELEASE_OK"

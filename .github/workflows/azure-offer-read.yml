@@ -15,13 +15,13 @@ jobs:
           tar xzf /tmp/age.tgz -C /tmp && sudo install -m755 /tmp/age/age /usr/local/bin/age
       - name: מיסוך מזהים
         env:
-          M1: "${{ vars.AZURE_CLIENT_ID }}"
-          M2: "${{ vars.AZURE_SUBSCRIPTION_ID }}"
-          M3: "${{ vars.AZURE_TENANT_ID }}"
-          M4: "${{ vars.ESTHER_PASSWORD_CLIENT_ID }}"
-          M5: "${{ vars.ESTHER_PORTAL_CLIENT_ID }}"
-          M6: "${{ vars.ESTHER_READ_CLIENT_ID }}"
-          M7: "${{ vars.ESTHER_WRITE_CLIENT_ID }}"
+          M1: "${{ secrets.AZURE_CLIENT_ID }}"
+          M2: "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          M3: "${{ secrets.AZURE_TENANT_ID }}"
+          M4: "${{ secrets.ESTHER_PASSWORD_CLIENT_ID }}"
+          M5: "${{ secrets.ESTHER_PORTAL_CLIENT_ID }}"
+          M6: "${{ secrets.ESTHER_READ_CLIENT_ID }}"
+          M7: "${{ secrets.ESTHER_WRITE_CLIENT_ID }}"
         shell: bash
         run: |
           set +x
@@ -29,9 +29,9 @@ jobs:
           for v in "$M1" "$M2" "$M3" "$M4" "$M5" "$M6" "$M7"; do mask "$v"; done
       - uses: azure/login@v2
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Decrypt payload
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
@@ -41,13 +41,13 @@ jobs:
           shred -u /tmp/age.key 2>/dev/null || rm -f /tmp/age.key
       - name: Mask sensitive values
         env:
-          M1: "${{ vars.AZURE_CLIENT_ID }}"
-          M2: "${{ vars.AZURE_SUBSCRIPTION_ID }}"
-          M3: "${{ vars.AZURE_TENANT_ID }}"
-          M4: "${{ vars.ESTHER_PASSWORD_CLIENT_ID }}"
-          M5: "${{ vars.ESTHER_PORTAL_CLIENT_ID }}"
-          M6: "${{ vars.ESTHER_READ_CLIENT_ID }}"
-          M7: "${{ vars.ESTHER_WRITE_CLIENT_ID }}"
+          M1: "${{ secrets.AZURE_CLIENT_ID }}"
+          M2: "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          M3: "${{ secrets.AZURE_TENANT_ID }}"
+          M4: "${{ secrets.ESTHER_PASSWORD_CLIENT_ID }}"
+          M5: "${{ secrets.ESTHER_PORTAL_CLIENT_ID }}"
+          M6: "${{ secrets.ESTHER_READ_CLIENT_ID }}"
+          M7: "${{ secrets.ESTHER_WRITE_CLIENT_ID }}"
         shell: bash
         run: |
           set +x

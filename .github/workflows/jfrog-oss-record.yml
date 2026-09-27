@@ -30,13 +30,13 @@ jobs:
           shred -u /tmp/age.key 2>/dev/null || rm -f /tmp/age.key
       - name: Mask sensitive values
         env:
-          M1: "${{ vars.AZURE_CLIENT_ID }}"
-          M2: "${{ vars.AZURE_SUBSCRIPTION_ID }}"
-          M3: "${{ vars.AZURE_TENANT_ID }}"
-          M4: "${{ vars.ESTHER_PASSWORD_CLIENT_ID }}"
-          M5: "${{ vars.ESTHER_PORTAL_CLIENT_ID }}"
-          M6: "${{ vars.ESTHER_READ_CLIENT_ID }}"
-          M7: "${{ vars.ESTHER_WRITE_CLIENT_ID }}"
+          M1: "${{ secrets.AZURE_CLIENT_ID }}"
+          M2: "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          M3: "${{ secrets.AZURE_TENANT_ID }}"
+          M4: "${{ secrets.ESTHER_PASSWORD_CLIENT_ID }}"
+          M5: "${{ secrets.ESTHER_PORTAL_CLIENT_ID }}"
+          M6: "${{ secrets.ESTHER_READ_CLIENT_ID }}"
+          M7: "${{ secrets.ESTHER_WRITE_CLIENT_ID }}"
         shell: bash
         run: |
           set +x

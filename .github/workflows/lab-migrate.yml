@@ -4,7 +4,7 @@ on:
     inputs:
       stage:
         type: choice
-        options: [snapshot, delete-vms, rollback-test, restore, cleanup]
+        options: [snapshot, delete-vms, rollback-test, restore, cleanup, r1-clean]
         default: snapshot
         description: 'שלב המיגרציה (snapshot=גיבוי, delete-vms=מחיקת מכונות, rollback-test=מבחן שחזור, restore=שחזור חירום, cleanup=ניקוי אחרי ירוק)'
 permissions: { id-token: write, contents: write }

@@ -1,4 +1,5 @@
 name: mivtza-eser
+run-name: "${{ inputs.dryrun && '⚠️ DRY-RUN ONLY - לא נבנה ולא נמחק כלום' || format('מבצע עשר - בילד אמת #{0}', github.run_number) }}"
 on:
   workflow_dispatch:
     inputs:

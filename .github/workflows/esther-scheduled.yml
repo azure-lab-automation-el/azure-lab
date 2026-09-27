@@ -19,6 +19,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: מיסוך מזהים
+        shell: bash
+        run: |
+          set +x
+          mask() { [ -n "$1" ] && echo "::add-mask::$1" || true; }
+          for v in "${{ vars.AZURE_CLIENT_ID }}" "${{ vars.AZURE_SUBSCRIPTION_ID }}" "${{ vars.AZURE_TENANT_ID }}" "${{ vars.ESTHER_PASSWORD_CLIENT_ID }}" "${{ vars.ESTHER_PORTAL_CLIENT_ID }}" "${{ vars.ESTHER_READ_CLIENT_ID }}" "${{ vars.ESTHER_WRITE_CLIENT_ID }}"; do mask "$v"; done
       - uses: azure/login@v2
         with:
           client-id: ${{ vars.ESTHER_WRITE_CLIENT_ID }}

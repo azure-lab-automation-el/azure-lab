@@ -18,6 +18,12 @@ jobs:
         run: |
           curl -fsSL -o /tmp/age.tgz https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz
           tar xzf /tmp/age.tgz -C /tmp && sudo install -m755 /tmp/age/age /usr/local/bin/age
+      - name: מיסוך מזהים
+        shell: bash
+        run: |
+          set +x
+          mask() { [ -n "$1" ] && echo "::add-mask::$1" || true; }
+          for v in "${{ vars.AZURE_CLIENT_ID }}" "${{ vars.AZURE_SUBSCRIPTION_ID }}" "${{ vars.AZURE_TENANT_ID }}" "${{ vars.ESTHER_PASSWORD_CLIENT_ID }}" "${{ vars.ESTHER_PORTAL_CLIENT_ID }}" "${{ vars.ESTHER_READ_CLIENT_ID }}" "${{ vars.ESTHER_WRITE_CLIENT_ID }}"; do mask "$v"; done
       - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}

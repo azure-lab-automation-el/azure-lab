@@ -45,7 +45,7 @@ jobs:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
           MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
           MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
-        run: bash lesson-producer.sh
+        run: bash producer.sh
       - name: Encrypted diagnostic
         if: always()
         uses: actions/upload-artifact@v4

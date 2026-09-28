@@ -62,7 +62,7 @@ jobs:
           s=s.replace("unzip -qj /tmp/rc.zip '*/rclone' -d /tmp","test -x /tmp/rclone || unzip -qj /tmp/rc.zip '*/rclone' -d /tmp")
           q="/tmp/rclone copyto 'mega:Backups/lesson-voice/1-moon.wav' /tmp/moon.wav"
           assert s.count(q)==1
-          s=s.replace(q,"if ! /tmp/rclone copyto 'mega:Backups/lesson-voice/1-moon.wav' /tmp/moon.wav 2>/tmp/moon-copy-private.err; then\n  if grep -Eiq 'not found|does not exist|directory not found' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=NOT_FOUND >&3; elif grep -Eiq 'invalid password|login|authentication|access denied|permission' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=AUTH >&3; elif grep -Eiq 'quota|rate limit|429|bandwidth' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=RATE_OR_QUOTA >&3; elif grep -Eiq 'timeout|connection|network|tls' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=NETWORK >&3; else echo MOON_COPY_CLASS=OTHER >&3; fi\n  exit 1\nfi")
+          s=s.replace(q,"mkdir -p /tmp/moon-ref\n/tmp/rclone copy 'mega:Backups/lesson-voice' /tmp/moon-ref --include '1-moon.wav'\ntest -s /tmp/moon-ref/1-moon.wav\ncp /tmp/moon-ref/1-moon.wav /tmp/moon.wav")
           open(p,'w').write(s)
           PYSTAGE
           if ! bash producer.sh; then

@@ -44,3 +44,19 @@ jobs:
           echo 'למה: מקרי סוף מקוצר או ממושך נדחו; אין דיבור אמיתי ב-fixture.'
           echo 'צעד הבא: אודיו Moon וקליק אמיתי, בדיקת צפייה מלאה בטלפון.'
           echo 'קיצור זמן: קליפ 3 שניות ו-matrix מקביל. שיפור צופה: הקפאת רגע קליק ותזמון קריינות.'
+      - name: בדיקת שיעור סינתטי ארוך וקטיעות
+        if: matrix.train == 'edge'
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-lesson-rail-long-fixtures-v4-20260928-2337.tar.gz' /tmp/long-tests.tar.gz >/tmp/long-mega.log 2>&1
+          echo '7c0afea9af99da848f8301ae824b4d898be0bfda3602857af211eccb47b684dd  /tmp/long-tests.tar.gz' | sha256sum -c - >/dev/null
+          mkdir -p /tmp/long-tests && tar -xzf /tmp/long-tests.tar.gz -C /tmp/long-tests
+          cd /tmp/long-tests
+          python3 compose/test_harden.py

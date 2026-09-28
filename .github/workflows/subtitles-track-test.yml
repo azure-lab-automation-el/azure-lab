@@ -1,0 +1,41 @@
+name: 06 - מסילת כתוביות ניסויי תזמון ו-RTL
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  subtitles:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: {train: [alignment, bidi]}
+    steps:
+      - name: אימות מקור מ-MEGA והרצת רכבת ניסוי
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+          TRAIN: ${{ matrix.train }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-lesson-rail-subtitles-compose-v3-20260928-2248.tar.gz' /tmp/source.tar.gz >/tmp/mega.log 2>&1
+          echo '1141306cf9d42ce23565288783a0243db4fffbc0346473bac2d55ded5ea28c65  /tmp/source.tar.gz' | sha256sum -c - >/dev/null
+          mkdir -p /tmp/rails && tar -xzf /tmp/source.tar.gz -C /tmp/rails
+          cd /tmp/rails
+          if [ "$TRAIN" = alignment ]; then
+            python3 subtitles/test_tracks.py
+          else
+            command -v ffmpeg >/dev/null || { echo 'ffmpeg missing'; exit 1; }
+            command -v google-chrome >/dev/null || { echo 'google-chrome missing'; exit 1; }
+            python3 subtitles/render_corpus.py
+            test "$(find compose/corpus -name '*-ass.png' | wc -l)" -eq 7
+            test "$(find compose/corpus -name '*-html.png' | wc -l)" -eq 7
+            echo 'עבר: 7 זוגות רינדור ASS/Chrome נוצרו. בדיקה ויזואלית אנושית עדיין נדרשת.'
+          fi
+          echo 'למה: הרכבת העצמאית עברה שלוש חזרות או שבע דוגמאות, לפי הסוג.'
+          echo 'צעד הבא: לבדוק דיבור אמיתי, פיסוק על מסך טלפון וכתוביות מאדיו סופי.'
+          echo 'קיצור זמן: fixture קצר ו-matrix מקביל. שיפור צופה: פיסוק RTL וזום לקליק.'

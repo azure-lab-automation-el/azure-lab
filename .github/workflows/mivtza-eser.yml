@@ -53,6 +53,7 @@ jobs:
       media_account: ${{ inputs.keep && 'esthermdbg' || format('estherm{0}', github.run_number) }}
       extra_env: |
         TARGET=${{ inputs.target }}
+        LAB_LOCATION=${{ inputs.lab_location }}
   create:
     needs: [prestatus, teardown]
     if: inputs.dryrun == true || needs.teardown.result == 'success'

@@ -7,6 +7,23 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+      - name: Fetch exact verified build context from MEGA
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-lesson-unified-source-20260928-2228.tar.gz' /tmp/unified-source.tar.gz >/tmp/transfer-private.log 2>&1
+          echo '10e9640589466007efe9574807f6a7b2b1f239a4a83ff62e4d8b4296e72283a1  /tmp/unified-source.tar.gz' | sha256sum -c - >/dev/null
+          mkdir -p /tmp/unified-build-context/docker
+          tar -xzf /tmp/unified-source.tar.gz -C /tmp/unified-build-context Dockerfile 1-moon.wav.age
+          mv /tmp/unified-build-context/Dockerfile /tmp/unified-build-context/docker/Dockerfile.lesson-unified
+          echo 'מקור Docker: עבר - גיבוי MEGA תואם byte-byte; הבא: בנייה.' >> "$GITHUB_STEP_SUMMARY"
       - name: Runner capacity before build
         run: df -h / && docker system df
       - uses: docker/setup-buildx-action@v3
@@ -17,7 +34,7 @@ jobs:
             --cache-from type=gha,scope=lesson-unified-v1 \
             --cache-to type=gha,mode=max,scope=lesson-unified-v1 \
             -f docker/Dockerfile.lesson-unified \
-            -t ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 .
+            -t ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 /tmp/unified-build-context
           docker image inspect ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 --format 'IMAGE_SIZE_BYTES={{.Size}}'
           df -h /
       - name: Smoke-test all tools and verify ciphertext is the only lesson input

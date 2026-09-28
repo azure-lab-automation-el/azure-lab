@@ -54,6 +54,8 @@ jobs:
           b='if [ "$rc" -eq 0 ]; then echo PRODUCER_OK >&3; else echo "PRODUCER_FAILED_AT_${STAGE} exit=$rc" >&3; fi;'
           assert s.count(a)==1 and s.count('exec >"$LOG" 2>&1')==1
           s=s.replace(a,b).replace('exec >"$LOG" 2>&1','exec 3>&1\nexec >"$LOG" 2>&1')
+          for command,stage in [('curl -fsSL -o /tmp/rc.zip','moon-rclone-download'),('unzip -qj /tmp/rc.zip','moon-rclone-unzip'),('export RCLONE_CONFIG_MEGA_TYPE','moon-rclone-config'),('/tmp/rclone copyto \'mega:Backups/lesson-voice/1-moon.wav\'','moon-mega-copy'),('sha256sum -c -','moon-hash'),('ffmpeg -v error -y -i /tmp/moon.wav','moon-ffmpeg')]:
+            if s.count(command)==1:s=s.replace(command,'STAGE='+stage+'\n'+command)
           open(p,'w').write(s)
           PYSTAGE
           bash producer.sh

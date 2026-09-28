@@ -1,0 +1,25 @@
+name: lesson-unified-scanfix-source-verify
+on:
+  workflow_dispatch: {}
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Verify MEGA plaintext source backup bytes
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-lesson-unified-scanfix-20260928-2249.tar.gz' /tmp/lesson-source-remote.tar.gz > /tmp/lesson-verify.log 2>&1
+          printf '%s  %s\n' 'b9d32451a6df5090f732e975ea31e7199e302f8e00f61403194e5e8597373e27' '/tmp/lesson-source-remote.tar.gz' | sha256sum -c - >/dev/null
+          tar -tzf /tmp/lesson-source-remote.tar.gz >/dev/null
+          echo LESSON_UNIFIED_SCANFIX_REMOTE_BYTE_VERIFIED

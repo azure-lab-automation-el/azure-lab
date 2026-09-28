@@ -8,8 +8,8 @@ on:
         default: inventory
       scope:
         type: choice
-        options: [spare-lessons, full]
-        default: spare-lessons
+        options: [billable-only]
+        default: billable-only
 permissions: { id-token: write, contents: read }
 jobs:
   run:
@@ -20,4 +20,3 @@ jobs:
       timeout: 25
       extra_env: |
         MODE=${{ inputs.mode }}
-        SCOPE=${{ inputs.scope }}

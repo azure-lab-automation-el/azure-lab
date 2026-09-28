@@ -1,0 +1,105 @@
+name: lesson-unified-image-secret-diagnostic
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch exact verified build context from MEGA
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-lesson-unified-source-20260928-2228.tar.gz' /tmp/unified-source.tar.gz >/tmp/transfer-private.log 2>&1
+          echo '10e9640589466007efe9574807f6a7b2b1f239a4a83ff62e4d8b4296e72283a1  /tmp/unified-source.tar.gz' | sha256sum -c - >/dev/null
+          mkdir -p /tmp/unified-build-context/docker
+          tar -xzf /tmp/unified-source.tar.gz -C /tmp/unified-build-context Dockerfile 1-moon.wav.age
+          mv /tmp/unified-build-context/Dockerfile /tmp/unified-build-context/docker/Dockerfile.lesson-unified
+          echo 'מקור Docker: עבר - גיבוי MEGA תואם byte-byte; הבא: בנייה.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Runner capacity before build
+        run: df -h / && docker system df
+      - uses: docker/setup-buildx-action@v3
+      - name: Build locally with layer cache (do not publish yet)
+        run: |
+          set -euo pipefail
+          docker buildx build --load --progress=plain \
+            --cache-from type=gha,scope=lesson-unified-v1 \
+            --cache-to type=gha,mode=max,scope=lesson-unified-v1 \
+            -f docker/Dockerfile.lesson-unified \
+            -t ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 /tmp/unified-build-context
+          docker image inspect ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 --format 'IMAGE_SIZE_BYTES={{.Size}}'
+          df -h /
+      - name: Smoke-test all tools and verify ciphertext is the only lesson input
+        run: |
+          set -euo pipefail
+          docker run --rm ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 bash -lc '
+            age --version >/dev/null && rclone version >/dev/null && ffprobe -version >/dev/null && ffmpeg -version >/dev/null
+            node -e "const p=require(\"playwright\");require(\"fs\").accessSync(p.chromium.executablePath())"
+            python -c "import faster_whisper,soundfile;from renikud_onnx import G2P"
+            test -x /opt/qwentts/build/qwen-tts
+            echo "ba41945e50948663c9cd6dcaef81b09d1c3c15b7245486b2ff55e9f70c1f477c  /opt/lesson-data/1-moon.wav.age" | sha256sum -c - >/dev/null
+          '
+      - name: Compare secret findings in pinned base and locally built candidate
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/trufflehog.tar.gz https://github.com/trufflesecurity/trufflehog/releases/download/v3.94.3/trufflehog_3.94.3_linux_amd64.tar.gz
+          curl -fsSL -o /tmp/checksums.txt https://github.com/trufflesecurity/trufflehog/releases/download/v3.94.3/trufflehog_3.94.3_checksums.txt
+          grep ' trufflehog_3.94.3_linux_amd64.tar.gz$' /tmp/checksums.txt | sed 's#trufflehog_3.94.3_linux_amd64.tar.gz#/tmp/trufflehog.tar.gz#' | sha256sum -c - >/dev/null
+          mkdir -p /tmp/th-bin && tar -xzf /tmp/trufflehog.tar.gz -C /tmp/th-bin trufflehog
+          export GOMEMLIMIT=2GiB GOGC=50
+          base='ghcr.io/azure-lab-automation-el/synthetic-voice-runtime@sha256:d59bf349ff0baaf62d50ce0b87370a8d306a15d8e87d40022afaf3c87572cf66'
+          image='ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1'
+          for kind in base candidate; do
+            if [ "$kind" = base ]; then target="$base"; else target="$image"; fi
+            status=0
+            /tmp/th-bin/trufflehog docker --image "docker://$target" --concurrency=2 --no-update --fail-on-scan-errors --json >/tmp/scan-"$kind".jsonl 2>/tmp/scan-"$kind".err || status=$?
+            if [ "$status" -ne 0 ]; then
+              echo "SCAN_${kind}_ERROR_CODE=$status; output withheld"; exit 1
+            fi
+            test ! -s /tmp/scan-"$kind".err || echo "SCAN_${kind}_STDERR_PRESENT; output withheld"
+          done
+          python3 - <<'PYCODE'
+          import json, pathlib, collections, re, hashlib
+          def safe(s):
+            # Never echo any raw detector-provided text without a strict allowlist.
+            return re.sub(r'[^A-Za-z0-9_+-]', '?', str(s))[:50]
+          def load(kind):
+            path=pathlib.Path('/tmp/scan-'+kind+'.jsonl')
+            items=[]
+            for line in path.read_text().splitlines():
+              try: x=json.loads(line)
+              except ValueError: raise SystemExit('INVALID_SCANNER_JSON_'+kind)
+              d=x.get('SourceMetadata',{}).get('Data',{}).get('Docker',{})
+              file=str(d.get('file',d.get('File','unknown')))
+              layer=str(d.get('layer',d.get('Layer','unknown')))
+              # Never print untrusted file paths. Hash and give only a fixed location class.
+              file_class=next((prefix for prefix in ['/usr/local/lib/','/usr/lib/','/opt/','/root/.cache/','image-metadata:'] if file.startswith(prefix)),'other')
+              file_ref=file_class+'#'+hashlib.sha256(file.encode()).hexdigest()[:12]
+              layer_ref=layer if re.fullmatch(r'sha256:[0-9a-f]{64}',layer) else 'unknown'
+              items.append((safe(x.get('DetectorName','unknown')),x.get('Verified') is True,file_ref,layer_ref))
+            return items
+          base,candidate=load('base'),load('candidate')
+          # Layer digest + detector + file identifies an inherited finding without printing secret values.
+          inherited=collections.Counter(base)
+          new=[]
+          for item in candidate:
+            if inherited[item]: inherited[item]-=1
+            else: new.append(item)
+          for kind,items in [('BASE',base),('CANDIDATE',candidate),('CANDIDATE_NOT_IN_BASE',new)]:
+            print(f'{kind}_FINDING_COUNT={len(items)} VERIFIED_COUNT={sum(i[1] for i in items)}')
+            for detector,verified,file,layer in sorted(set(items)):
+              print(f'{kind} DETECTOR={detector} VERIFIED={str(verified).lower()} FILE={file} LAYER={layer}')
+          if new or any(i[1] for i in candidate):
+            print('PUBLICATION_REMAINS_BLOCKED')
+          else:
+            print('NO_NEW_OR_VERIFIED_FINDINGS; publication not attempted by this diagnostic')
+          PYCODE

@@ -4,6 +4,8 @@ on:
     inputs:
       vm_name: { description: 'VM to run on', required: true, default: 'esther-adaxes-01' }
       script_b64: { description: 'base64 PowerShell script', required: true }
+      media_account: { description: 'storage account for PULL_PNG', required: false, default: 'esthermdbg' }
+      pull_png: { description: 'pull scom-console png from harvest -> release', required: false, default: '0' }
 permissions: { id-token: write, contents: read }
 jobs:
   run:
@@ -12,6 +14,8 @@ jobs:
     with:
       entry: lab-vm-runcmd__run
       timeout: 15
+      media_account: ${{ inputs.media_account }}
       extra_env: |
         SCRIPT_B64=${{ inputs.script_b64 }}
         VM_NAME=${{ inputs.vm_name }}
+        PULL_PNG=${{ inputs.pull_png }}

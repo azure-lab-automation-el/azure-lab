@@ -42,6 +42,8 @@ jobs:
     with:
       entry: mivtza-eser__prestatus
       timeout: 5
+      extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}
   teardown:
     if: inputs.dryrun == false
     needs: [prestatus]

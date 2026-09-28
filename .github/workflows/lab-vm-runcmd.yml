@@ -1,0 +1,17 @@
+name: lab-vm-runcmd
+on:
+  workflow_dispatch:
+    inputs:
+      vm_name: { description: 'VM to run on', required: true, default: 'esther-adaxes-01' }
+      script_b64: { description: 'base64 PowerShell script', required: true }
+permissions: { id-token: write, contents: read }
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: lab-vm-runcmd__run
+      timeout: 15
+      extra_env: |
+        SCRIPT_B64=${{ inputs.script_b64 }}
+        VM_NAME=${{ inputs.vm_name }}

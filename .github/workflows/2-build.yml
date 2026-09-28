@@ -50,12 +50,25 @@ jobs:
       - name: Scan local image layers for leaks before any public push
         run: |
           set -euo pipefail
+          echo 'Runner capacity before scan:'
+          df -h / && free -m
+          # The first attempt's default 12 workers ended with SIGTERM (143), not a clean finding.
+          # Keep the full-image gate, but bound memory and concurrency before publishing.
           curl -fsSL -o /tmp/trufflehog.tar.gz https://github.com/trufflesecurity/trufflehog/releases/download/v3.94.3/trufflehog_3.94.3_linux_amd64.tar.gz
           curl -fsSL -o /tmp/checksums.txt https://github.com/trufflesecurity/trufflehog/releases/download/v3.94.3/trufflehog_3.94.3_checksums.txt
           grep ' trufflehog_3.94.3_linux_amd64.tar.gz$' /tmp/checksums.txt | sed 's#trufflehog_3.94.3_linux_amd64.tar.gz#/tmp/trufflehog.tar.gz#' | sha256sum -c - >/dev/null
           mkdir -p /tmp/th-bin && tar -xzf /tmp/trufflehog.tar.gz -C /tmp/th-bin trufflehog
-          /tmp/th-bin/trufflehog docker --image docker://ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 --no-update --fail --fail-on-scan-errors --json >/tmp/scan-private.jsonl 2>/tmp/scan-private.err || { echo 'IMAGE_LEAK_SCAN_FAILED_OR_FINDINGS'; exit 1; }
-          test ! -s /tmp/scan-private.jsonl || { echo 'IMAGE_LEAK_SCAN_FINDINGS'; exit 1; }
+          export GOMEMLIMIT=2GiB GOGC=50
+          scan_status=0
+          /tmp/th-bin/trufflehog docker --image docker://ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 --concurrency=2 --no-update --fail --fail-on-scan-errors --json >/tmp/scan-private.jsonl 2>/tmp/scan-private.err || scan_status=$?
+          echo "SCANNER_EXIT_CODE=$scan_status"
+          echo 'Runner capacity after scan:'
+          df -h / && free -m
+          if [ "$scan_status" -ne 0 ]; then
+            echo 'IMAGE_LEAK_SCAN_FAILED_OR_FINDINGS; private scanner output withheld from logs'
+            exit 1
+          fi
+          test ! -s /tmp/scan-private.jsonl || { echo 'IMAGE_LEAK_SCAN_FINDINGS; private scanner output withheld from logs'; exit 1; }
           echo IMAGE_LEAK_SCAN_CLEAR
       - uses: docker/login-action@v3
         with:

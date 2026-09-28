@@ -1,0 +1,19 @@
+name: lab-cold-clean
+on:
+  workflow_dispatch:
+    inputs:
+      lab_location:
+        type: choice
+        options: [swedencentral, israelcentral]
+        default: swedencentral
+permissions: { id-token: write, contents: read }
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: lab-cold-clean__clean
+      timeout: 20
+      media_account: estherm63
+      extra_env: |
+        LAB_LOCATION=${{ inputs.lab_location }}

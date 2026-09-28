@@ -1,0 +1,56 @@
+name: lesson-producer
+on:
+  workflow_dispatch: {}
+permissions: {contents: read}
+jobs:
+  produce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    container:
+      image: ghcr.io/azure-lab-automation-el/synthetic-voice-runtime@sha256:d59bf349ff0baaf62d50ce0b87370a8d306a15d8e87d40022afaf3c87572cf66
+    defaults:
+      run: {shell: bash}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare age
+        run: |
+          apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq age unzip >/dev/null 2>&1
+      - name: Verify ciphertext, decrypt private producer and back up plaintext to MEGA
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          patch=$(find . -maxdepth 1 -name '*lesson-producer-package.tar.gz.age' -type f -print -quit)
+          test -n "$patch"
+          echo '46bf7268a2c345b2b7f18934808b8f75f63524e72586389d69e43a9269075e9e  '"$patch" | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" > /tmp/lab.age.key
+          age -d -i /tmp/lab.age.key "$patch" | tar xz
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto "$patch" 'mega:JFrog/L7-2026-09-28/source/lesson-producer-package.tar.gz.age'
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/lesson-producer-package.tar.gz.age' /tmp/prod-remote.age
+          cmp "$patch" /tmp/prod-remote.age
+          # Plain source backup is private and byte-verified before execution.
+          tar -czf /tmp/producer-plaintext.tar.gz producer.sh bundle
+          /tmp/rclone copyto /tmp/producer-plaintext.tar.gz 'mega:JFrog/L7-2026-09-28/source/producer-plaintext.tar.gz'
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/producer-plaintext.tar.gz' /tmp/producer-plaintext-remote.tar.gz
+          cmp /tmp/producer-plaintext.tar.gz /tmp/producer-plaintext-remote.tar.gz
+          echo PRODUCER_SOURCE_BACKUP_OK
+      - name: Produce Moon audio and MEGA input bundle
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: bash lesson-producer.sh
+      - name: Encrypted diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lesson-producer-private-log
+          path: ${{ runner.temp }}/lesson-producer.log.age
+          retention-days: 1
+          if-no-files-found: ignore

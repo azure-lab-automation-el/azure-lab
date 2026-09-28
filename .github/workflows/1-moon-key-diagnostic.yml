@@ -1,0 +1,38 @@
+name: lesson-moon-key-diagnostic
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Check Moon key shape and recipient without printing secret
+        env:
+          MOON_AGE_KEY: ${{ secrets.MOON_AGE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          sudo apt-get update -qq >/dev/null 2>&1
+          sudo apt-get install -y -qq age >/dev/null 2>&1
+          printf '%s' "$MOON_AGE_KEY" > /tmp/moon-key
+          python3 - <<'PY'
+          import os,re
+          b=open('/tmp/moon-key','rb').read()
+          lines=b.splitlines()
+          match=sum(bool(re.fullmatch(rb'AGE-SECRET-KEY-1[0-9A-Z]{58}',line)) for line in lines)
+          print('KEY_PRESENT='+str(bool(b)).upper())
+          print('KEY_LINE_COUNT='+str(len(lines)))
+          print('KEY_SHAPE_EXACT='+str(match==1 and len(lines)==1).upper())
+          print('KEY_HAS_CRLF='+str(b'\r\n' in b).upper())
+          PY
+          if age-keygen -y /tmp/moon-key >/tmp/moon-recipient 2>/dev/null; then
+            if grep -Fxq 'age1wa58xw6szfc34ghfrs4vqp0yx3sqjxwmsf7xa9m9yucvwyzxzdesj2u2r5' /tmp/moon-recipient; then
+              echo 'KEY_RECIPIENT_MATCH=TRUE'
+            else
+              echo 'KEY_RECIPIENT_MATCH=FALSE'
+            fi
+          else
+            echo 'KEY_RECIPIENT_PARSE=FALSE'
+          fi
+          shred -u /tmp/moon-key /tmp/moon-recipient 2>/dev/null || rm -f /tmp/moon-key /tmp/moon-recipient

@@ -91,7 +91,7 @@ jobs:
     secrets: inherit
     with:
       entry: mivtza-eser__finalize
-      timeout: 25
+      timeout: 35
       media_account: ${{ inputs.keep && 'esthermdbg' || format('estherm{0}', github.run_number) }}
       extra_env: |
         MODE=${{ needs.monitor.result == 'success' && 'success' || 'abort' }}

@@ -46,6 +46,27 @@ jobs:
           MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
           MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
         run: bash producer.sh
+      - name: Classify private producer failure without exposing private log
+        if: failure()
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          test -f "${{ runner.temp }}/lesson-producer.log.age"
+          printf '%s' "$LAB_AGE_KEY" > /tmp/lab.age.key
+          age -d -i /tmp/lab.age.key "${{ runner.temp }}/lesson-producer.log.age" > /tmp/producer-failure-private.log
+          python3 - <<'PYLOG'
+          t=open('/tmp/producer-failure-private.log').read().lower()
+          if 'verified scenes' not in t: label='ASSETS_OR_RUNTIME'
+          elif 'sha256sum: warning' in t or 'computed checksum did not match' in t: label='MOON_HASH_MISMATCH'
+          elif 'directory not found' in t or 'object not found' in t or 'file not found' in t: label='REMOTE_OBJECT_NOT_FOUND'
+          elif 'renikud' in t or 'phonemize' in t: label='G2P_RUNTIME'
+          elif 'qwen-tts' in t: label='QWEN_RUNTIME'
+          elif 'rclone' in t: label='REMOTE_TRANSFER'
+          else: label='OTHER'
+          print('PRODUCER_FAILURE_CLASS='+label)
+          PYLOG
+          rm -f /tmp/producer-failure-private.log
       - name: Encrypted diagnostic
         if: always()
         uses: actions/upload-artifact@v4

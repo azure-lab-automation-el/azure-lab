@@ -1,0 +1,22 @@
+name: lab-bootstrap
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [export, apply]
+        default: export
+      approve_policy:
+        type: string
+        default: 'NO'
+permissions: { id-token: write, contents: read }
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: lab-bootstrap__boot
+      timeout: 10
+      extra_env: |
+        MODE=${{ inputs.mode }}
+        APPROVE_POLICY=${{ inputs.approve_policy }}

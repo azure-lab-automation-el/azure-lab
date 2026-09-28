@@ -30,8 +30,9 @@ jobs:
             -C /tmp/lesson-migrate/original . \
             -C "$GITHUB_WORKSPACE" .lab-entry/lesson-render__render.sh scripts/lessons .github/workflows/lesson-render.yml
           cp -a /tmp/lesson-migrate/original/. /tmp/lesson-migrate/new/
-          test -s 1-lesson-patch-20260928.tar.gz.age
-          age -d -i /tmp/lesson-migrate/key 1-lesson-patch-20260928.tar.gz.age | tar -xz -C /tmp/lesson-migrate/new
+          patch=$(find . -maxdepth 1 -name '*lesson-patch-20260928.tar.gz.age' -type f -print -quit)
+          test -n "$patch" && test "$(sha256sum "$patch" | cut -d' ' -f1)" = '581f2b98351965c9201a3c53fbc40299ed35ced012d3723ad048d9feb30843c8'
+          age -d -i /tmp/lesson-migrate/key "$patch" | tar -xz -C /tmp/lesson-migrate/new
           bash -n /tmp/lesson-migrate/new/.lab-entry/lesson-render__render.sh /tmp/lesson-migrate/new/scripts/lessons/render.sh
           python3 -m py_compile /tmp/lesson-migrate/new/scripts/lessons/*.py
           test -s /tmp/lesson-migrate/new/lesson-render.yml

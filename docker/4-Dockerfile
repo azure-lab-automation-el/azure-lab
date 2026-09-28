@@ -1,0 +1,22 @@
+# Public tooling only; immutable base image already contains the portable Moon/Qwen synthesis models.
+FROM ghcr.io/azure-lab-automation-el/synthetic-voice-runtime@sha256:d59bf349ff0baaf62d50ce0b87370a8d306a15d8e87d40022afaf3c87572cf66
+LABEL org.opencontainers.image.description="Public lesson runtime: Qwen voice, Hebrew alignment, Playwright capture, FFmpeg render. No credentials or plaintext lesson content."
+ENV DEBIAN_FRONTEND=noninteractive PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      age rclone nodejs npm git jq ffmpeg imagemagick fonts-noto-core fonts-noto-extra \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/lesson-runtime
+# Playwright 1.63 requires Node >=20; npm's pinned node package installs its own binary.
+RUN npm install --omit=dev --no-audit --no-fund node@22.15.0 \
+    && /opt/lesson-runtime/node_modules/node/bin/node --version \
+    && /opt/lesson-runtime/node_modules/node/bin/node /usr/bin/npm install --prefix /opt/lesson-runtime --omit=dev --no-audit --no-fund playwright@1.63.0 \
+    && /opt/lesson-runtime/node_modules/node/bin/node /opt/lesson-runtime/node_modules/playwright/cli.js install --with-deps chromium \
+    && rm -rf /root/.npm /root/.cache /var/lib/apt/lists/* \
+    && python -c 'from renikud_onnx import G2P; import faster_whisper,soundfile' \
+    && test -x /opt/qwentts/build/qwen-tts && test -s /opt/models/renikud/model.onnx \
+    && ffprobe -version >/dev/null && age --version >/dev/null && rclone version >/dev/null
+ENV NODE_PATH=/opt/lesson-runtime/node_modules PATH="/opt/lesson-runtime/node_modules/node/bin:/opt/qwentts/build:${PATH}" LD_LIBRARY_PATH=/opt/qwentts/build
+WORKDIR /workspace
+# Small lesson-specific final layer: verified age ciphertext only, never plaintext or keys.
+COPY 1-moon.wav.age /opt/lesson-data/1-moon.wav.age
+RUN echo 'ba41945e50948663c9cd6dcaef81b09d1c3c15b7245486b2ff55e9f70c1f477c  /opt/lesson-data/1-moon.wav.age' | sha256sum -c -

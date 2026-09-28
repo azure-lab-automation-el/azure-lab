@@ -45,7 +45,18 @@ jobs:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
           MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
           MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
-        run: bash producer.sh
+        run: |
+          set -euo pipefail
+          python3 - <<'PYSTAGE'
+          p='producer.sh'
+          s=open(p).read()
+          a='if [ "$rc" -eq 0 ]; then echo PRODUCER_OK; else echo "PRODUCER_FAILED_AT_${STAGE} exit=$rc"; fi;'
+          b='if [ "$rc" -eq 0 ]; then echo PRODUCER_OK >&3; else echo "PRODUCER_FAILED_AT_${STAGE} exit=$rc" >&3; fi;'
+          assert s.count(a)==1 and s.count('exec >"$LOG" 2>&1')==1
+          s=s.replace(a,b).replace('exec >"$LOG" 2>&1','exec 3>&1\nexec >"$LOG" 2>&1')
+          open(p,'w').write(s)
+          PYSTAGE
+          bash producer.sh
       - name: Classify private producer failure without exposing private log
         if: failure()
         env:

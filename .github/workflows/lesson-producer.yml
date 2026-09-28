@@ -56,6 +56,8 @@ jobs:
           s=s.replace(a,b).replace('exec >"$LOG" 2>&1','exec 3>&1\nexec >"$LOG" 2>&1')
           for command,stage in [('curl -fsSL -o /tmp/rc.zip','moon-rclone-download'),('unzip -qj /tmp/rc.zip','moon-rclone-unzip'),('export RCLONE_CONFIG_MEGA_TYPE','moon-rclone-config'),('/tmp/rclone copyto \'mega:Backups/lesson-voice/1-moon.wav\'','moon-mega-copy'),('sha256sum -c -','moon-hash'),('ffmpeg -v error -y -i /tmp/moon.wav','moon-ffmpeg')]:
             if s.count(command)==1:s=s.replace(command,'STAGE='+stage+'\n'+command)
+          assert s.count("unzip -qj /tmp/rc.zip '*/rclone' -d /tmp")==1
+          s=s.replace("unzip -qj /tmp/rc.zip '*/rclone' -d /tmp","test -x /tmp/rclone || unzip -qj /tmp/rc.zip '*/rclone' -d /tmp")
           open(p,'w').write(s)
           PYSTAGE
           bash producer.sh

@@ -1,0 +1,25 @@
+name: 08 - אימות גיבוי workflows של מסילות
+on:
+  workflow_dispatch: {}
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: אימות hash של עותק המקור ב-MEGA
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-lesson-rail-workflows-20260928-2252.tar.gz' /tmp/lesson-rails-source.tar.gz > /tmp/lesson-rails-verify.log 2>&1
+          printf '%s  %s\n' '0ac8c54639b2274827c6dc065112f6019cf7264dba5016dd8cbaa797bbbbf6cb' '/tmp/lesson-rails-source.tar.gz' | sha256sum -c - >/dev/null
+          tar -tzf /tmp/lesson-rails-source.tar.gz >/dev/null
+          echo LESSON_RAILS_SOURCE_REMOTE_BYTE_VERIFIED

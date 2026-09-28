@@ -24,17 +24,19 @@ jobs:
           set -euo pipefail
           umask 077
           LOG="$RUNNER_TEMP/lesson-migration.log"
+          STAGE=init
           finish() {
             rc=$?
             trap - EXIT
             set +e
             age -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -o "$RUNNER_TEMP/lesson-migration.log.age" "$LOG" >/dev/null 2>&1
             shred -u "$LOG" 2>/dev/null || rm -f "$LOG"
-            if [ "$rc" -eq 0 ]; then echo 'Migration succeeded; encrypted log retained.'; else echo "Migration failed (exit $rc); encrypted log retained."; fi
+            if [ "$rc" -eq 0 ]; then echo 'Migration succeeded; encrypted log retained.'; else echo "Migration failed at $STAGE (exit $rc); encrypted log retained."; fi
             exit "$rc"
           }
           trap finish EXIT
           exec > "$LOG" 2>&1
+          STAGE=decrypt
           mkdir -p /tmp/lesson-migrate/original /tmp/lesson-migrate/new
           printf '%s' "$LAB_AGE_KEY" > /tmp/lesson-migrate/key
           age -d -i /tmp/lesson-migrate/key payload.tar.gz.age | tar -xz -C /tmp/lesson-migrate/original
@@ -42,6 +44,7 @@ jobs:
             -C /tmp/lesson-migrate/original . \
             -C "$GITHUB_WORKSPACE" .lab-entry/lesson-render__render.sh scripts/lessons .github/workflows/lesson-render.yml
           cp -a /tmp/lesson-migrate/original/. /tmp/lesson-migrate/new/
+          STAGE=patch
           patch=$(find . -maxdepth 1 -name '*lesson-patch-20260928.tar.gz.age' -type f -print -quit)
           test -n "$patch" && test "$(sha256sum "$patch" | cut -d' ' -f1)" = '581f2b98351965c9201a3c53fbc40299ed35ced012d3723ad048d9feb30843c8'
           age -d -i /tmp/lesson-migrate/key "$patch" | tar -xz -C /tmp/lesson-migrate/new
@@ -49,28 +52,33 @@ jobs:
           python3 -m py_compile /tmp/lesson-migrate/new/scripts/lessons/*.py
           test -s /tmp/lesson-migrate/new/lesson-render.yml
           tar -czf /tmp/lesson-migrate/new-source.tar.gz -C /tmp/lesson-migrate/new .
+          STAGE=install-storage
           curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
           unzip -qj /tmp/rc.zip '*/rclone' -d /tmp/lesson-migrate
           R=/tmp/lesson-migrate/rclone
           export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
           export RCLONE_CONFIG_MEGA_PASS="$($R obscure "$MEGA_PASSWORD")"
           D='mega:JFrog/L7-2026-09-28/source'
+          STAGE=backup
           for f in original-source new-source; do
             $R copyto "/tmp/lesson-migrate/$f.tar.gz" "$D/$f.tar.gz" >/dev/null
             $R copyto "$D/$f.tar.gz" "/tmp/lesson-migrate/check-$f.tar.gz" >/dev/null
             cmp "/tmp/lesson-migrate/$f.tar.gz" "/tmp/lesson-migrate/check-$f.tar.gz"
             echo "$f MEGA byte check OK"
           done
+          STAGE=reencrypt
           tar -czf /tmp/lesson-migrate/new-payload.tar.gz -C /tmp/lesson-migrate/new .
           age -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -o payload.tar.gz.age /tmp/lesson-migrate/new-payload.tar.gz
           age -d -i /tmp/lesson-migrate/key payload.tar.gz.age > /tmp/lesson-migrate/verify-payload.tar.gz
           cmp /tmp/lesson-migrate/new-payload.tar.gz /tmp/lesson-migrate/verify-payload.tar.gz
+          STAGE=commit
           git rm .lab-entry/lesson-render__render.sh scripts/lessons/align_ass.py scripts/lessons/render.sh
           git ls-files scripts/lessons | grep -E 'pyc$' | xargs -r git rm
           git add payload.tar.gz.age
           git config user.name lab-agent
           git config user.email lab-agent@users.noreply.github.com
           git commit -m 'Move lesson renderer to encrypted payload after verified MEGA source backup'
+          STAGE=push
           git push
           echo 'LESSON_MIGRATION_OK'
       - name: Upload encrypted migration log

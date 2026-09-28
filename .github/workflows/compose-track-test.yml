@@ -1,0 +1,40 @@
+name: 07 - מסילת הרכבה ניסויי סנכרון ועצירת סוף
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  compose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: {train: [short, edge]}
+    steps:
+      - name: אימות מקור מ-MEGA והרצת רכבת הרכבה
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+          TRAIN: ${{ matrix.train }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-lesson-rail-subtitles-compose-v3-20260928-2248.tar.gz' /tmp/source.tar.gz >/tmp/mega.log 2>&1
+          echo '1141306cf9d42ce23565288783a0243db4fffbc0346473bac2d55ded5ea28c65  /tmp/source.tar.gz' | sha256sum -c - >/dev/null
+          mkdir -p /tmp/rails && tar -xzf /tmp/source.tar.gz -C /tmp/rails
+          cd /tmp/rails
+          command -v ffmpeg >/dev/null || { echo 'ffmpeg missing'; exit 1; }
+          if [ "$TRAIN" = short ]; then
+            ffmpeg -hide_banner -loglevel error -f lavfi -i 'color=c=navy:s=720x1280:r=24:d=3' -f lavfi -i 'sine=frequency=440:sample_rate=48000:duration=3' -vf 'ass=subtitles/fixture.ass' -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -t 3 -y compose/fixture-captioned.mp4
+          else
+            ffmpeg -hide_banner -loglevel error -f lavfi -i 'color=c=navy:s=720x1280:r=24:d=3' -f lavfi -i 'sine=frequency=880:sample_rate=48000:duration=3' -vf 'ass=subtitles/isolate.ass' -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -t 3 -y compose/fixture-captioned.mp4
+          fi
+          python3 compose/test_tracks.py
+          ffmpeg -hide_banner -loglevel error -i compose/fixture-captioned.mp4 -f null -
+          echo 'עבר: מעטפת MP4, אודיו+וידאו, סף גודל וסוף נבדקו שלוש פעמים.'
+          echo 'למה: מקרי סוף מקוצר או ממושך נדחו; אין דיבור אמיתי ב-fixture.'
+          echo 'צעד הבא: אודיו Moon וקליק אמיתי, בדיקת צפייה מלאה בטלפון.'
+          echo 'קיצור זמן: קליפ 3 שניות ו-matrix מקביל. שיפור צופה: הקפאת רגע קליק ותזמון קריינות.'

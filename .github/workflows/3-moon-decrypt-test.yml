@@ -1,0 +1,33 @@
+name: lesson-unified-image-smoke
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    container:
+      image: ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1
+    defaults:
+      run: {shell: bash}
+    steps:
+      - name: Verify all tools and private Moon decrypt
+        env:
+          MOON_AGE_KEY: ${{ secrets.MOON_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          node -e "const p=require('playwright');require('fs').accessSync(p.chromium.executablePath())"
+          ffmpeg -version >/dev/null && ffprobe -version >/dev/null
+          python -c 'from renikud_onnx import G2P; import faster_whisper,soundfile'
+          test -x /opt/qwentts/build/qwen-tts && age --version >/dev/null && rclone version >/dev/null
+          cp /opt/lesson-data/1-moon.wav.age /tmp/moon.wav.age
+          printf '%s  %s\n' 'ba41945e50948663c9cd6dcaef81b09d1c3c15b7245486b2ff55e9f70c1f477c' /tmp/moon.wav.age | sha256sum -c - >/dev/null
+          printf '%s' "$MOON_AGE_KEY" > /tmp/moon.key
+          chmod 600 /tmp/moon.key
+          if age -d -i /tmp/moon.key -o /tmp/moon.wav /tmp/moon.wav.age >/tmp/decrypt-private.log 2>&1; then
+            echo MOON_DECRYPT_OK=TRUE
+            if printf '%s  %s\n' '48ce34759c7265f0fab5bceab0f896b789a160471785b30a34cd2c2b5883e5ea' /tmp/moon.wav | sha256sum -c - >/dev/null 2>&1; then echo MOON_PLAINTEXT_HASH_MATCH=TRUE; else echo MOON_PLAINTEXT_HASH_MATCH=FALSE; fi
+          else
+            echo MOON_DECRYPT_OK=FALSE
+          fi
+          shred -u /tmp/moon.key /tmp/moon.wav /tmp/decrypt-private.log 2>/dev/null || rm -f /tmp/moon.key /tmp/moon.wav /tmp/decrypt-private.log

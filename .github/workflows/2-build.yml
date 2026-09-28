@@ -1,0 +1,53 @@
+name: lesson-unified-image-build
+on: {workflow_dispatch: {}}
+permissions: {contents: read, packages: write}
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Runner capacity before build
+        run: df -h / && docker system df
+      - uses: docker/setup-buildx-action@v3
+      - name: Build locally with layer cache (do not publish yet)
+        run: |
+          set -euo pipefail
+          docker buildx build --load --progress=plain \
+            --cache-from type=gha,scope=lesson-unified-v1 \
+            --cache-to type=gha,mode=max,scope=lesson-unified-v1 \
+            -f docker/Dockerfile.lesson-unified \
+            -t ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 .
+          docker image inspect ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 --format 'IMAGE_SIZE_BYTES={{.Size}}'
+          df -h /
+      - name: Smoke-test all tools and verify ciphertext is the only lesson input
+        run: |
+          set -euo pipefail
+          docker run --rm ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 bash -lc '
+            age --version >/dev/null && rclone version >/dev/null && ffprobe -version >/dev/null && ffmpeg -version >/dev/null
+            node -e "const p=require(\"playwright\");require(\"fs\").accessSync(p.chromium.executablePath())"
+            python -c "import faster_whisper,soundfile;from renikud_onnx import G2P"
+            test -x /opt/qwentts/build/qwen-tts
+            echo "ba41945e50948663c9cd6dcaef81b09d1c3c15b7245486b2ff55e9f70c1f477c  /opt/lesson-data/1-moon.wav.age" | sha256sum -c - >/dev/null
+          '
+      - name: Scan local image layers for leaks before any public push
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/trufflehog.tar.gz https://github.com/trufflesecurity/trufflehog/releases/download/v3.94.3/trufflehog_3.94.3_linux_amd64.tar.gz
+          curl -fsSL -o /tmp/checksums.txt https://github.com/trufflesecurity/trufflehog/releases/download/v3.94.3/trufflehog_3.94.3_checksums.txt
+          grep ' trufflehog_3.94.3_linux_amd64.tar.gz$' /tmp/checksums.txt | sed 's#trufflehog_3.94.3_linux_amd64.tar.gz#/tmp/trufflehog.tar.gz#' | sha256sum -c - >/dev/null
+          mkdir -p /tmp/th-bin && tar -xzf /tmp/trufflehog.tar.gz -C /tmp/th-bin trufflehog
+          /tmp/th-bin/trufflehog docker --image docker://ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 --no-update --fail --fail-on-scan-errors --json >/tmp/scan-private.jsonl 2>/tmp/scan-private.err || { echo 'IMAGE_LEAK_SCAN_FAILED_OR_FINDINGS'; exit 1; }
+          test ! -s /tmp/scan-private.jsonl || { echo 'IMAGE_LEAK_SCAN_FINDINGS'; exit 1; }
+          echo IMAGE_LEAK_SCAN_CLEAR
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish scanned image and record digest
+        run: |
+          set -euo pipefail
+          docker push ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1
+          docker inspect ghcr.io/azure-lab-automation-el/synthetic-voice-runtime:lesson-unified-v1 --format 'IMAGE_DIGEST={{index .RepoDigests 0}}'
+          df -h /

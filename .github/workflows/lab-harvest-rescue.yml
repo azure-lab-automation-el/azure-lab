@@ -1,0 +1,19 @@
+name: lab-harvest-rescue
+on:
+  workflow_dispatch:
+    inputs:
+      delete_dbg:
+        type: boolean
+        default: false
+        description: 'מחק גם את esthermdbg אחרי העלאה מאומתת (דורש אישור מפורש)'
+permissions: { id-token: write, contents: write }
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: lab-harvest-rescue__rescue
+      timeout: 15
+      media_account: esthermdbg
+      extra_env: |
+        DELETE_DBG=${{ inputs.delete_dbg && 1 || 0 }}

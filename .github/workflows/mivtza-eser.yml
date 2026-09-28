@@ -30,7 +30,7 @@ on:
       mon_timeout:
         type: number
         default: 60
-permissions: { id-token: write, contents: read }
+permissions: { id-token: write, contents: write }
 # כלל קבוע: לעולם לא לבטל ריצה באמצע teardown/מחיקה (מניעת הקצאות רפאים במכסה)
 concurrency:
   group: mivtza-eser

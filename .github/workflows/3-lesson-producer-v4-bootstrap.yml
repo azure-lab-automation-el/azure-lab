@@ -1,0 +1,77 @@
+name: 10 - אבחון פקודות קריינות Moon
+on:
+  workflow_dispatch: {}
+permissions: {contents: read}
+jobs:
+  produce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    container:
+      image: ghcr.io/azure-lab-automation-el/synthetic-voice-runtime@sha256:d59bf349ff0baaf62d50ce0b87370a8d306a15d8e87d40022afaf3c87572cf66
+    defaults:
+      run: {shell: bash}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare age
+        run: |
+          apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq age unzip >/dev/null 2>&1
+      - name: Verify ciphertext, decrypt private producer and back up plaintext to MEGA
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          patch=$(find . -maxdepth 1 -name '*lesson-producer-package.tar.gz.age' -type f -print -quit)
+          test -n "$patch"
+          echo '46bf7268a2c345b2b7f18934808b8f75f63524e72586389d69e43a9269075e9e  '"$patch" | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" > /tmp/lab.age.key
+          age -d -i /tmp/lab.age.key "$patch" | tar xz
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          if [ "$MEGA_EMAIL" = 'lesson.archive.cloud@tutamail.com' ]; then echo MEGA_IDENTITY=LESSON_ARCHIVE; else echo MEGA_IDENTITY=OTHER; fi
+          if /tmp/rclone lsf mega:Backups/lesson-voice --files-only --format p 2>/tmp/lesson-voice-list-private.err | grep -Fxq '1-moon.wav'; then echo MOON_PATH_VISIBLE=YES; else echo MOON_PATH_VISIBLE=NO; fi
+          /tmp/rclone copyto "$patch" 'mega:JFrog/L7-2026-09-28/source/lesson-producer-package.tar.gz.age'
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/lesson-producer-package.tar.gz.age' /tmp/prod-remote.age
+          cmp "$patch" /tmp/prod-remote.age
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-lesson-producer-v4-command-diagnostic-20260929-0104.tar.gz' /tmp/producer-v4-workflow-source.tar.gz >/tmp/v4-backup-private.log 2>&1
+          printf '%s  %s\n' '6f5c086494ef929432e4780d2b329e8e0deffac80abaaf4fc430087d0ab2c55c' /tmp/producer-v4-workflow-source.tar.gz | sha256sum -c - >/dev/null
+          echo PRODUCER_V4_WORKFLOW_SOURCE_BACKUP_OK
+      - name: פענוח תיקון מוצפן והרצת קריינות Moon
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+          MOON_AGE_KEY: ${{ secrets.MOON_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          ciphertext=$(find . -maxdepth 1 -name '*lesson-producer-v4-patch.py.age' -type f -print -quit)
+          test -n "$ciphertext"
+          printf '%s  %s\n' 'a548d4137dffd78029b47292db93d9558106d8fc140375631c0cb9d8245573da' "$ciphertext" | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lab-v4.age.key
+          age -d -i /tmp/lab-v4.age.key -o /tmp/patch-private.py "$ciphertext"
+          shred -u /tmp/lab-v4.age.key 2>/dev/null || rm -f /tmp/lab-v4.age.key
+          printf '%s  %s\n' 'cb7d0ee7306706918a77a79496c59b8f7720ba96ccda7eaa7a886ea2a0af799e' /tmp/patch-private.py | sha256sum -c - >/dev/null
+          python3 /tmp/patch-private.py
+          shred -u /tmp/patch-private.py 2>/dev/null || rm -f /tmp/patch-private.py
+          if ! bash producer.sh; then
+            if test -s /tmp/moon-copy-private.err; then
+              python3 - <<'PYERR'
+          import re
+          s=open('/tmp/moon-copy-private.err').read().lower()
+          patterns=[('NOT_FOUND',r'not found|does not exist|directory not found'),('AUTH',r'invalid password|login|authentication|access denied|permission'),('RATE_OR_QUOTA',r'quota|rate limit|429|bandwidth'),('NETWORK',r'timeout|connection|network|tls'),('MEGA_API',r'mega|api')]
+          print('MOON_RCLONE_ERROR_CLASS='+next((k for k,p in patterns if re.search(p,s)),'OTHER'))
+          PYERR
+            fi
+            exit 1
+          fi
+      - name: Encrypted diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lesson-producer-private-log
+          path: ${{ runner.temp }}/lesson-producer.log.age
+          retention-days: 1
+          if-no-files-found: ignore

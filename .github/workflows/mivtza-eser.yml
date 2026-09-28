@@ -36,34 +36,14 @@ concurrency:
   group: mivtza-eser
   cancel-in-progress: false
 jobs:
-  prestatus:
+  # #78: prestatus+teardown+create ממוזגים ל-job אחד (bootchain) - חיסכון 2 job setups + פערי תזמון (~35-45s מדוד ב-#74)
+  boot:
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     with:
-      entry: mivtza-eser__prestatus
-      timeout: 5
-      extra_env: |
-        LAB_LOCATION=${{ inputs.lab_location }}
-  teardown:
-    if: inputs.dryrun == false
-    needs: [prestatus]
-    uses: ./.github/workflows/_lab-job.yml
-    secrets: inherit
-    with:
-      entry: mivtza-eser__teardown
-      timeout: 25
+      entry: mivtza-eser__bootchain
+      timeout: 30
       media_account: ${{ inputs.keep && 'esthermdbg' || format('estherm{0}', github.run_number) }}
-      extra_env: |
-        TARGET=${{ inputs.target }}
-        LAB_LOCATION=${{ inputs.lab_location }}
-  create:
-    needs: [prestatus, teardown]
-    if: inputs.dryrun == true || needs.teardown.result == 'success'
-    uses: ./.github/workflows/_lab-job.yml
-    secrets: inherit
-    with:
-      entry: mivtza-eser__create
-      timeout: 25
       extra_env: |
         DRYRUN=${{ inputs.dryrun }}
         BUILD_SKU=${{ inputs.build_sku }}
@@ -82,7 +62,7 @@ jobs:
         LAB_LOCATION=${{ inputs.lab_location }}
   secrets:
     if: inputs.dryrun == false
-    needs: [create, media]
+    needs: [boot, media]
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     with:
@@ -105,8 +85,8 @@ jobs:
         MON_TIMEOUT_MIN=${{ inputs.mon_timeout }}
         TARGET=${{ inputs.target }}
   finalize:
-    if: always() && inputs.dryrun == false && needs.create.result != 'cancelled'
-    needs: [create, secrets, monitor]
+    if: always() && inputs.dryrun == false && needs.boot.result != 'cancelled'
+    needs: [boot, secrets, monitor]
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     with:

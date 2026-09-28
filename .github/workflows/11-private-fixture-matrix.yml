@@ -1,0 +1,53 @@
+name: 11 - Private fixture matrix
+on:
+  workflow_dispatch:
+    inputs:
+      archive_name:
+        description: 'Verified archive name in configured private source folder'
+        required: true
+        type: string
+      source_folder:
+        description: 'Private source folder inside MEGA'
+        required: true
+        type: string
+      sha256:
+        description: 'Expected SHA-256 of the exact archive'
+        required: true
+        type: string
+permissions: {contents: read}
+jobs:
+  case:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: {case_id: [0, 1, 2]}
+    steps:
+      - name: Run byte-verified private fixture
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+          ARCHIVE_NAME: ${{ inputs.archive_name }}
+          EXPECTED_SHA256: ${{ inputs.sha256 }}
+          SOURCE_FOLDER: ${{ inputs.source_folder }}
+          CASE_ID: ${{ matrix.case_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          [[ "$ARCHIVE_NAME" =~ ^[a-zA-Z0-9._-]+\.tar\.gz$ ]]
+          [[ "$EXPECTED_SHA256" =~ ^[a-fA-F0-9]{64}$ ]]
+          [[ "$SOURCE_FOLDER" =~ ^[a-zA-Z0-9/_-]+$ ]]
+          sudo apt-get update -qq >/dev/null
+          sudo apt-get install -y -qq ffmpeg python3-pil python3-numpy unzip >/dev/null
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto "mega:$SOURCE_FOLDER/$ARCHIVE_NAME" /tmp/source.tar.gz >/tmp/source-fetch-private.log 2>&1
+          printf '%s  %s\n' "$EXPECTED_SHA256" /tmp/source.tar.gz | sha256sum -c - >/dev/null
+          mkdir /tmp/fixture
+          tar -xzf /tmp/source.tar.gz -C /tmp/fixture
+          cd /tmp/fixture
+          bash ./run.sh "$CASE_ID"
+          echo "PRIVATE_FIXTURE_CASE_${CASE_ID}_PASS"

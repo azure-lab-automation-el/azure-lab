@@ -9,6 +9,12 @@ jobs:
       fail-fast: false
       matrix: {train: [alignment, bidi]}
     steps:
+      - name: התקנת ffmpeg ו-fonts לבדיקת bidi
+        if: matrix.train == 'bidi'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-core
+          ffmpeg -hide_banner -filters | grep -E '[[:space:]]ass[[:space:]]'
       - name: אימות מקור מ-MEGA והרצת רכבת ניסוי
         env:
           MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}

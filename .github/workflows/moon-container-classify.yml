@@ -1,0 +1,51 @@
+name: lesson-moon-container-decrypt-classify
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  classify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    container:
+      image: ghcr.io/azure-lab-automation-el/synthetic-voice-runtime@sha256:d59bf349ff0baaf62d50ce0b87370a8d306a15d8e87d40022afaf3c87572cf66
+    defaults:
+      run: {shell: bash}
+    steps:
+      - name: Classify private age decrypt failure without outputting values
+        env:
+          MOON_AGE_KEY: ${{ secrets.MOON_AGE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          apt-get update -qq >/dev/null 2>&1
+          apt-get install -y -qq age >/dev/null 2>&1
+          curl -fsSL --retry 2 -o /tmp/moon.age https://raw.githubusercontent.com/azure-lab-automation-el/qwen-voice-synthetic-test/92277c58007663899da3841b6277de8d9b7dda46/1-moon.wav.age
+          echo 'ba41945e50948663c9cd6dcaef81b09d1c3c15b7245486b2ff55e9f70c1f477c  /tmp/moon.age' | sha256sum -c - >/dev/null
+          printf '%s' "$MOON_AGE_KEY" > /tmp/moon.key
+          python3 - <<'PY'
+          b=open('/tmp/moon.key','rb').read()
+          print('KEY_LINES='+str(len(b.splitlines())))
+          print('KEY_TRAILING_NEWLINE='+str(b.endswith(b'\n')).upper())
+          print('KEY_CR_BYTES='+str(b'\r' in b).upper())
+          PY
+          if age-keygen -y /tmp/moon.key >/tmp/recipient 2>/tmp/key-error; then
+            if grep -Fxq 'age1wa58xw6szfc34ghfrs4vqp0yx3sqjxwmsf7xa9m9yucvwyzxzdesj2u2r5' /tmp/recipient; then echo KEY_RECIPIENT_MATCH=TRUE; else echo KEY_RECIPIENT_MATCH=FALSE; fi
+          else echo KEY_PARSE_FAILED=TRUE; fi
+          if age -d -i /tmp/moon.key -o /tmp/moon.wav /tmp/moon.age >/tmp/decrypt-stdout 2>/tmp/decrypt-stderr; then
+            echo DECRYPT_OK=TRUE
+            if echo '48ce34759c7265f0fab5bceab0f896b789a160471785b30a34cd2c2b5883e5ea  /tmp/moon.wav' | sha256sum -c - >/dev/null 2>&1; then echo PLAINTEXT_HASH_MATCH=TRUE; else echo PLAINTEXT_HASH_MATCH=FALSE; fi
+          else
+            python3 - <<'PY'
+          import pathlib
+          s=pathlib.Path('/tmp/decrypt-stderr').read_text(errors='replace').lower()
+          if 'no identity matched any of the recipients' in s: c='NO_IDENTITY_MATCH'
+          elif 'incorrect identity' in s or 'incorrect passphrase' in s: c='WRONG_IDENTITY_OR_PASSPHRASE'
+          elif 'malformed' in s or 'invalid header' in s: c='MALFORMED_CIPHERTEXT'
+          elif 'failed to decrypt and authenticate' in s or 'message authentication failed' in s: c='AUTHENTICATION_FAILED'
+          elif 'error parsing' in s or 'failed to parse' in s: c='KEY_PARSE_ERROR'
+          else: c='OTHER'
+          print('DECRYPT_OK=FALSE')
+          print('DECRYPT_ERROR_CLASS='+c)
+          PY
+          fi
+          shred -u /tmp/moon.key /tmp/moon.wav /tmp/decrypt-stdout /tmp/decrypt-stderr /tmp/key-error /tmp/recipient 2>/dev/null || true

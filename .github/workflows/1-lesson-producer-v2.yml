@@ -1,0 +1,116 @@
+name: lesson-producer-v2
+on:
+  workflow_dispatch: {}
+permissions: {contents: read}
+jobs:
+  produce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    container:
+      image: ghcr.io/azure-lab-automation-el/synthetic-voice-runtime@sha256:d59bf349ff0baaf62d50ce0b87370a8d306a15d8e87d40022afaf3c87572cf66
+    defaults:
+      run: {shell: bash}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare age
+        run: |
+          apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq age unzip >/dev/null 2>&1
+      - name: Verify ciphertext, decrypt private producer and back up plaintext to MEGA
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          patch=$(find . -maxdepth 1 -name '*lesson-producer-package.tar.gz.age' -type f -print -quit)
+          test -n "$patch"
+          echo '46bf7268a2c345b2b7f18934808b8f75f63524e72586389d69e43a9269075e9e  '"$patch" | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" > /tmp/lab.age.key
+          age -d -i /tmp/lab.age.key "$patch" | tar xz
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          if [ "$MEGA_EMAIL" = 'lesson.archive.cloud@tutamail.com' ]; then echo MEGA_IDENTITY=LESSON_ARCHIVE; else echo MEGA_IDENTITY=OTHER; fi
+          if /tmp/rclone lsf mega:Backups/lesson-voice --files-only --format p 2>/tmp/lesson-voice-list-private.err | grep -Fxq '1-moon.wav'; then echo MOON_PATH_VISIBLE=YES; else echo MOON_PATH_VISIBLE=NO; fi
+          /tmp/rclone copyto "$patch" 'mega:JFrog/L7-2026-09-28/source/lesson-producer-package.tar.gz.age'
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/lesson-producer-package.tar.gz.age' /tmp/prod-remote.age
+          cmp "$patch" /tmp/prod-remote.age
+          # Plain source backup is private and byte-verified before execution.
+          tar -czf /tmp/producer-plaintext.tar.gz producer.sh bundle .github/workflows/lesson-producer-v2.yml
+          /tmp/rclone copyto /tmp/producer-plaintext.tar.gz 'mega:JFrog/L7-2026-09-28/source/producer-plaintext.tar.gz'
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/producer-plaintext.tar.gz' /tmp/producer-plaintext-remote.tar.gz
+          cmp /tmp/producer-plaintext.tar.gz /tmp/producer-plaintext-remote.tar.gz
+          echo PRODUCER_SOURCE_BACKUP_OK
+      - name: Produce Moon audio and MEGA input bundle
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+          MOON_AGE_KEY: ${{ secrets.MOON_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYSTAGE'
+          p='producer.sh'
+          s=open(p).read()
+          a='if [ "$rc" -eq 0 ]; then echo PRODUCER_OK; else echo "PRODUCER_FAILED_AT_${STAGE} exit=$rc"; fi;'
+          b='if [ "$rc" -eq 0 ]; then echo PRODUCER_OK >&3; else echo "PRODUCER_FAILED_AT_${STAGE} exit=$rc" >&3; fi;'
+          assert s.count(a)==1 and s.count('exec >"$LOG" 2>&1')==1
+          s=s.replace(a,b).replace('exec >"$LOG" 2>&1','exec 3>&1\nexec >"$LOG" 2>&1')
+          for command,stage in [('curl -fsSL -o /tmp/rc.zip','moon-rclone-download'),('unzip -qj /tmp/rc.zip','moon-rclone-unzip'),('export RCLONE_CONFIG_MEGA_TYPE','moon-rclone-config'),('/tmp/rclone copyto \'mega:Backups/lesson-voice/1-moon.wav\'','moon-reference-download'),('sha256sum -c -','moon-hash'),('ffmpeg -v error -y -i /tmp/moon.wav','moon-ffmpeg')]:
+            if s.count(command)==1:s=s.replace(command,'STAGE='+stage+'\n'+command)
+          assert s.count("unzip -qj /tmp/rc.zip '*/rclone' -d /tmp")==1
+          s=s.replace("unzip -qj /tmp/rc.zip '*/rclone' -d /tmp","test -x /tmp/rclone || unzip -qj /tmp/rc.zip '*/rclone' -d /tmp")
+          q="/tmp/rclone copyto 'mega:Backups/lesson-voice/1-moon.wav' /tmp/moon.wav"
+          assert s.count(q)==1
+          s=s.replace(q, 'curl -fsSL --retry 2 -o /tmp/moon.wav.age https://raw.githubusercontent.com/azure-lab-automation-el/qwen-voice-synthetic-test/92277c58007663899da3841b6277de8d9b7dda46/1-moon.wav.age\nprintf \'%s  %s\\n\' \'ba41945e50948663c9cd6dcaef81b09d1c3c15b7245486b2ff55e9f70c1f477c\' /tmp/moon.wav.age | sha256sum -c -\ntest -n "${MOON_AGE_KEY:-}"\nprintf \'%s\\n\' "$MOON_AGE_KEY" >/tmp/moon.age.key\nage -d -i /tmp/moon.age.key -o /tmp/moon.wav /tmp/moon.wav.age\nshred -u /tmp/moon.age.key 2>/dev/null || rm -f /tmp/moon.age.key')
+          open(p,'w').write(s)
+          PYSTAGE
+          if ! bash producer.sh; then
+            if test -s /tmp/moon-copy-private.err; then
+              python3 - <<'PYERR'
+          import re
+          s=open('/tmp/moon-copy-private.err').read().lower()
+          patterns=[('NOT_FOUND',r'not found|does not exist|directory not found'),('AUTH',r'invalid password|login|authentication|access denied|permission'),('RATE_OR_QUOTA',r'quota|rate limit|429|bandwidth'),('NETWORK',r'timeout|connection|network|tls'),('MEGA_API',r'mega|api')]
+          print('MOON_RCLONE_ERROR_CLASS='+next((k for k,p in patterns if re.search(p,s)),'OTHER'))
+          PYERR
+            fi
+            exit 1
+          fi
+      - name: Classify private producer failure without exposing private log
+        if: failure()
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          if test -s /tmp/moon-copy-private.err; then
+            python3 - <<'PYERROR'
+          import re
+          s=open('/tmp/moon-copy-private.err').read().lower()
+          patterns=[('NOT_FOUND',r'not found|does not exist|directory not found'),('AUTH',r'invalid password|login|authentication|access denied|permission'),('RATE_OR_QUOTA',r'quota|rate limit|429|bandwidth'),('NETWORK',r'timeout|connection|network|tls'),('MEGA_API',r'mega|api')]
+          print('MOON_RCLONE_ERROR_CLASS='+next((k for k,p in patterns if re.search(p,s)),'OTHER'))
+          PYERROR
+          fi
+          test -f "${{ runner.temp }}/lesson-producer.log.age"
+          printf '%s' "$LAB_AGE_KEY" > /tmp/lab.age.key
+          age -d -i /tmp/lab.age.key "${{ runner.temp }}/lesson-producer.log.age" > /tmp/producer-failure-private.log
+          python3 - <<'PYLOG'
+          t=open('/tmp/producer-failure-private.log').read().lower()
+          if 'verified scenes' not in t: label='ASSETS_OR_RUNTIME'
+          elif 'sha256sum: warning' in t or 'computed checksum did not match' in t: label='MOON_HASH_MISMATCH'
+          elif 'directory not found' in t or 'object not found' in t or 'file not found' in t: label='REMOTE_OBJECT_NOT_FOUND'
+          elif 'renikud' in t or 'phonemize' in t: label='G2P_RUNTIME'
+          elif 'qwen-tts' in t: label='QWEN_RUNTIME'
+          elif 'rclone' in t: label='REMOTE_TRANSFER'
+          else: label='OTHER'
+          print('PRODUCER_FAILURE_CLASS='+label)
+          PYLOG
+          rm -f /tmp/producer-failure-private.log
+      - name: Encrypted diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lesson-producer-private-log
+          path: ${{ runner.temp }}/lesson-producer.log.age
+          retention-days: 1
+          if-no-files-found: ignore

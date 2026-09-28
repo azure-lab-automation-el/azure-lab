@@ -1,0 +1,50 @@
+name: lesson-moon-producer-error-classify-v2
+on: {workflow_dispatch: {}}
+permissions: {contents: read, actions: read}
+jobs:
+  classify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Read encrypted producer v3 error privately and print fixed class only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          sudo apt-get update -qq >/dev/null 2>&1
+          sudo apt-get install -y -qq age >/dev/null 2>&1
+          mkdir -p /tmp/private-log
+          gh run download 36469095520 --repo azure-lab-automation-el/azure-lab --name lesson-producer-private-log --dir /tmp/private-log >/tmp/download.log 2>&1
+          test -s /tmp/private-log/lesson-producer.log.age
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lab.key
+          if ! age -d -i /tmp/lab.key -o /tmp/producer.log /tmp/private-log/lesson-producer.log.age >/tmp/age-out 2>/tmp/age-err; then echo LOG_DECRYPT_FAILED=TRUE; exit 1; fi
+          python3 - <<'PY'
+          import pathlib,re
+          t=pathlib.Path('/tmp/producer.log').read_text(errors='replace').lower()
+          # Emit only fixed boolean features and a class. Do not print log fragments.
+          checks={
+            'SCENES_VERIFIED': 'verified scenes' in t,
+            'CIPHER_HASH_OK': '/tmp/moon.wav.age: ok' in t,
+            'AGE_WORD': 'age' in t,
+            'COMMAND_NOT_FOUND': 'command not found' in t,
+            'NO_IDENTITY_MATCH': 'no identity matched any of the recipients' in t,
+            'KEY_PARSE': 'error parsing' in t or 'failed to parse' in t,
+            'AGE_GENERIC': 'age: error' in t or 'age: failed' in t,
+            'OUTPUT_FILE_EXISTS': 'already exists' in t or 'file exists' in t,
+            'PERMISSION_DENIED': 'permission denied' in t,
+            'FILE_NOT_FOUND': 'no such file or directory' in t or 'file not found' in t,
+            'SHA_MISMATCH': 'did not match' in t or 'sha256sum: warning' in t,
+            'FFMPEG_ERROR': 'ffmpeg' in t,
+            'BAD_IDENTITY_FILE': 'identity file' in t,
+            'BAD_CIPHERTEXT': 'invalid header' in t or 'malformed' in t,
+            'PASS_PHRASE': 'passphrase' in t,
+            'ERROR_TOKEN': 'error' in t,
+          }
+          for k,v in checks.items(): print(k+'='+str(v).upper())
+          print('PRIVATE_LOG_BYTES='+str(len(t.encode())))
+          print('PRIVATE_LOG_LINES='+str(len(t.splitlines())))
+          PY
+          shred -u /tmp/lab.key /tmp/producer.log /tmp/age-out /tmp/age-err 2>/dev/null || true

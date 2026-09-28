@@ -31,6 +31,8 @@ jobs:
           unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
           export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
           export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          if [ "$MEGA_EMAIL" = 'lesson.archive.cloud@tutamail.com' ]; then echo MEGA_IDENTITY=LESSON_ARCHIVE; else echo MEGA_IDENTITY=OTHER; fi
+          if /tmp/rclone lsf mega:Backups/lesson-voice --files-only --format p 2>/tmp/lesson-voice-list-private.err | grep -Fxq '1-moon.wav'; then echo MOON_PATH_VISIBLE=YES; else echo MOON_PATH_VISIBLE=NO; fi
           /tmp/rclone copyto "$patch" 'mega:JFrog/L7-2026-09-28/source/lesson-producer-package.tar.gz.age'
           /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/lesson-producer-package.tar.gz.age' /tmp/prod-remote.age
           cmp "$patch" /tmp/prod-remote.age

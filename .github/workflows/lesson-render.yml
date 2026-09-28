@@ -2,19 +2,18 @@ name: lesson-render
 on:
   workflow_dispatch:
     inputs:
-      src_tag: { description: 'Source: release tag, or mega:<path to inputs .tar>', required: true, default: 'mega:JFrog/L4-L5-rebuild/L4-L5-render-inputs.tar' }
-      publish: { description: 'Upload bundles to out_tag release (false = speed/QA test only)', type: boolean, default: true }
-      out_tag: { description: 'Release tag for finished bundles', required: true, default: 'lesson-jfrog-l4-l5' }
-      whisper_model: { description: 'faster-whisper model for timing', required: false, default: 'medium' }
-permissions:
-  contents: write
+      src_tag: { description: 'Verified MEGA input bundle path (mega:TRACK/date/*.tar.gz)', required: true }
+      publish: { description: 'Upload finished bundles to MEGA after verification', type: boolean, default: false }
+      out_tag: { description: 'Internal run label', required: false, default: 'lesson-2026-09-28' }
+      whisper_model: { description: 'faster-whisper model', required: false, default: 'medium' }
+permissions: {contents: read}
 jobs:
   run:
     uses: ./.github/workflows/_lab-job.yml
     secrets: inherit
     with:
       entry: lesson-render__render
-      timeout: 35
+      timeout: 90
       azure_login: false
       extra_env: |
         INPUT_PUBLISH=${{ inputs.publish }}

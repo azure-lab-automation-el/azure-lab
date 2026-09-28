@@ -1,0 +1,8 @@
+name: policy-check
+on: { workflow_dispatch: {} }
+permissions: { id-token: write, contents: read }
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with: { entry: policy-check__read, timeout: 5 }

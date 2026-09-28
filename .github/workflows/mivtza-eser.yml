@@ -49,7 +49,7 @@ jobs:
     secrets: inherit
     with:
       entry: mivtza-eser__teardown
-      timeout: 20
+      timeout: 25
       media_account: ${{ inputs.keep && 'esthermdbg' || format('estherm{0}', github.run_number) }}
       extra_env: |
         TARGET=${{ inputs.target }}

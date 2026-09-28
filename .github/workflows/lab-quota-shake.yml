@@ -1,0 +1,10 @@
+name: lab-quota-shake
+on: { workflow_dispatch: {} }
+permissions: { id-token: write, contents: read }
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: lab-quota-shake__shake
+      timeout: 15

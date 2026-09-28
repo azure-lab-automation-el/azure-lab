@@ -1,0 +1,37 @@
+name: lesson-moon-producer-error-classify
+on: {workflow_dispatch: {}}
+permissions: {contents: read, actions: read}
+jobs:
+  classify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Read encrypted producer v3 error privately and print fixed class only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          sudo apt-get update -qq >/dev/null 2>&1
+          sudo apt-get install -y -qq age >/dev/null 2>&1
+          mkdir -p /tmp/private-log
+          gh run download 36469095520 --repo azure-lab-automation-el/azure-lab --name lesson-producer-private-log --dir /tmp/private-log >/tmp/download.log 2>&1
+          test -s /tmp/private-log/lesson-producer.log.age
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lab.key
+          if ! age -d -i /tmp/lab.key -o /tmp/producer.log /tmp/private-log/lesson-producer.log.age >/tmp/age-out 2>/tmp/age-err; then echo LOG_DECRYPT_FAILED=TRUE; exit 1; fi
+          python3 - <<'PY'
+          import pathlib,re
+          t=pathlib.Path('/tmp/producer.log').read_text(errors='replace').lower()
+          if 'no identity matched any of the recipients' in t: c='NO_IDENTITY_MATCH'
+          elif 'error parsing' in t or 'failed to parse' in t: c='KEY_PARSE_ERROR'
+          elif 'failed to decrypt and authenticate' in t or 'message authentication failed' in t: c='AUTHENTICATION_FAILED'
+          elif 'already exists' in t or 'file exists' in t: c='OUTPUT_FILE_EXISTS'
+          elif 'permission denied' in t: c='PERMISSION_DENIED'
+          elif 'malformed' in t or 'invalid header' in t: c='MALFORMED_CIPHERTEXT'
+          elif 'age: error:' in t: c='OTHER_AGE_ERROR'
+          else: c='OTHER_OR_NO_AGE_ERROR'
+          print('PRODUCER_V3_DECRYPT_ERROR_CLASS='+c)
+          PY
+          shred -u /tmp/lab.key /tmp/producer.log /tmp/age-out /tmp/age-err 2>/dev/null || true

@@ -1,0 +1,23 @@
+name: lab-level0
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [inventory, delete]
+        default: inventory
+      scope:
+        type: choice
+        options: [spare-lessons, full]
+        default: spare-lessons
+permissions: { id-token: write, contents: read }
+jobs:
+  run:
+    uses: ./.github/workflows/_lab-job.yml
+    secrets: inherit
+    with:
+      entry: lab-level0__run
+      timeout: 25
+      extra_env: |
+        MODE=${{ inputs.mode }}
+        SCOPE=${{ inputs.scope }}

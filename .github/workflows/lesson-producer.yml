@@ -63,13 +63,31 @@ jobs:
           s=s.replace(q,"if ! /tmp/rclone copyto 'mega:Backups/lesson-voice/1-moon.wav' /tmp/moon.wav 2>/tmp/moon-copy-private.err; then\n  if grep -Eiq 'not found|does not exist|directory not found' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=NOT_FOUND >&3; elif grep -Eiq 'invalid password|login|authentication|access denied|permission' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=AUTH >&3; elif grep -Eiq 'quota|rate limit|429|bandwidth' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=RATE_OR_QUOTA >&3; elif grep -Eiq 'timeout|connection|network|tls' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=NETWORK >&3; else echo MOON_COPY_CLASS=OTHER >&3; fi\n  exit 1\nfi")
           open(p,'w').write(s)
           PYSTAGE
-          bash producer.sh
+          if ! bash producer.sh; then
+            if test -s /tmp/moon-copy-private.err; then
+              python3 - <<'PYERR'
+          import re
+          s=open('/tmp/moon-copy-private.err').read().lower()
+          patterns=[('NOT_FOUND',r'not found|does not exist|directory not found'),('AUTH',r'invalid password|login|authentication|access denied|permission'),('RATE_OR_QUOTA',r'quota|rate limit|429|bandwidth'),('NETWORK',r'timeout|connection|network|tls'),('MEGA_API',r'mega|api')]
+          print('MOON_RCLONE_ERROR_CLASS='+next((k for k,p in patterns if re.search(p,s)),'OTHER'))
+          PYERR
+            fi
+            exit 1
+          fi
       - name: Classify private producer failure without exposing private log
         if: failure()
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
+          if test -s /tmp/moon-copy-private.err; then
+            python3 - <<'PYERROR'
+          import re
+          s=open('/tmp/moon-copy-private.err').read().lower()
+          patterns=[('NOT_FOUND',r'not found|does not exist|directory not found'),('AUTH',r'invalid password|login|authentication|access denied|permission'),('RATE_OR_QUOTA',r'quota|rate limit|429|bandwidth'),('NETWORK',r'timeout|connection|network|tls'),('MEGA_API',r'mega|api')]
+          print('MOON_RCLONE_ERROR_CLASS='+next((k for k,p in patterns if re.search(p,s)),'OTHER'))
+          PYERROR
+          fi
           test -f "${{ runner.temp }}/lesson-producer.log.age"
           printf '%s' "$LAB_AGE_KEY" > /tmp/lab.age.key
           age -d -i /tmp/lab.age.key "${{ runner.temp }}/lesson-producer.log.age" > /tmp/producer-failure-private.log

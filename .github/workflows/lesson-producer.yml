@@ -58,6 +58,9 @@ jobs:
             if s.count(command)==1:s=s.replace(command,'STAGE='+stage+'\n'+command)
           assert s.count("unzip -qj /tmp/rc.zip '*/rclone' -d /tmp")==1
           s=s.replace("unzip -qj /tmp/rc.zip '*/rclone' -d /tmp","test -x /tmp/rclone || unzip -qj /tmp/rc.zip '*/rclone' -d /tmp")
+          q="/tmp/rclone copyto 'mega:Backups/lesson-voice/1-moon.wav' /tmp/moon.wav"
+          assert s.count(q)==1
+          s=s.replace(q,"if ! /tmp/rclone copyto 'mega:Backups/lesson-voice/1-moon.wav' /tmp/moon.wav 2>/tmp/moon-copy-private.err; then\n  if grep -Eiq 'not found|does not exist|directory not found' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=NOT_FOUND >&3; elif grep -Eiq 'invalid password|login|authentication|access denied|permission' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=AUTH >&3; elif grep -Eiq 'quota|rate limit|429|bandwidth' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=RATE_OR_QUOTA >&3; elif grep -Eiq 'timeout|connection|network|tls' /tmp/moon-copy-private.err; then echo MOON_COPY_CLASS=NETWORK >&3; else echo MOON_COPY_CLASS=OTHER >&3; fi\n  exit 1\nfi")
           open(p,'w').write(s)
           PYSTAGE
           bash producer.sh

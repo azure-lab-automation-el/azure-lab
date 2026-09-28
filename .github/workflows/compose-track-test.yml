@@ -9,6 +9,12 @@ jobs:
       fail-fast: false
       matrix: {train: [short, edge]}
     steps:
+      - name: התקנת ffmpeg ו-fonts לבדיקת הרכבה
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-core
+          ffmpeg -hide_banner -filters | grep -E '[[:space:]]ass[[:space:]]'
+          ffmpeg -hide_banner -encoders | grep -E '[[:space:]]libx264[[:space:]]'
       - name: אימות מקור מ-MEGA והרצת רכבת הרכבה
         env:
           MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}

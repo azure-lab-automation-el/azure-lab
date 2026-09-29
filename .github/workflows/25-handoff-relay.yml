@@ -1,0 +1,39 @@
+name: 25 - Verified L7 audio and capture handoff with ffmpeg
+on: {workflow_dispatch: {}}
+permissions: {contents: read, actions: read}
+jobs:
+  relay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Retrieve exact private outputs and check source backup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
+          mkdir -p "$RUNNER_TEMP/handoff/audio" "$RUNNER_TEMP/handoff/video"
+          for scene in JFrog-01 JFrog-02 JFrog-03 JFrog-04 JFrog-05 JFrog-06 JFrog-07 JFrog-08 SquaredUp-03 SquaredUp-06; do
+            /tmp/rclone copyto "mega:JFrog/L7-2026-09-28/audio-sentence-repair-ten-20260929/$scene.flac" "$RUNNER_TEMP/handoff/audio/$scene.flac" >/tmp/private-transfer.log 2>&1
+            ffprobe -v error -show_entries format=duration -of csv=p=0 "$RUNNER_TEMP/handoff/audio/$scene.flac" >/dev/null
+          done
+          (cd "$RUNNER_TEMP/handoff/audio"; sha256sum *.flac > SHA256SUMS.txt; cat SHA256SUMS.txt)
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' 'https://api.github.com/repos/azure-lab-automation-el/azure-lab/actions/artifacts/11007639976/zip' -o "$RUNNER_TEMP/jfrog-captures.zip"
+          unzip -t "$RUNNER_TEMP/jfrog-captures.zip" >/dev/null
+          unzip -q "$RUNNER_TEMP/jfrog-captures.zip" -d "$RUNNER_TEMP/handoff/video"
+          (cd "$RUNNER_TEMP/handoff/video"; sha256sum *.webm > SHA256SUMS.txt; cat SHA256SUMS.txt)
+          for f in "$RUNNER_TEMP"/handoff/video/*.webm; do ffprobe -v error -show_entries stream=width,height,duration -of csv=p=0 "$f"; done
+          echo HANDOFF_SOURCE_FILES_VERIFIED
+      - name: Temporary reviewer handoff
+        uses: actions/upload-artifact@v4
+        with:
+          name: L7-ten-scene-audio-and-JFrog-live-capture
+          path: ${{ runner.temp }}/handoff/
+          retention-days: 1

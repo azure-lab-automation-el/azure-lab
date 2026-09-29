@@ -1,0 +1,68 @@
+name: 43 - encrypted matrix corrected trial
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  synth:
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        include:
+          - {lesson: jfrog-projects, scene: '01'}
+          - {lesson: jfrog-projects, scene: '02'}
+          - {lesson: jfrog-projects, scene: '03'}
+          - {lesson: jfrog-projects, scene: '04'}
+          - {lesson: jfrog-projects, scene: '05'}
+          - {lesson: jfrog-projects, scene: '06'}
+          - {lesson: squaredup-no-metrics, scene: '01'}
+          - {lesson: squaredup-no-metrics, scene: '02'}
+          - {lesson: squaredup-no-metrics, scene: '03'}
+          - {lesson: squaredup-no-metrics, scene: '04'}
+          - {lesson: squaredup-no-metrics, scene: '05'}
+          - {lesson: squaredup-no-metrics, scene: '06'}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container:
+      image: ghcr.io/azure-lab-automation-el/synthetic-voice-runtime@sha256:d59bf349ff0baaf62d50ce0b87370a8d306a15d8e87d40022afaf3c87572cf66
+    defaults:
+      run: {shell: bash}
+    env:
+      LESSON: ${{ matrix.lesson }}
+      SCENE_ID: ${{ matrix.scene }}
+      LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run verified encrypted source
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MOON_AGE_KEY: ${{ secrets.MOON_AGE_KEY }}
+        run: |
+          set -euo pipefail; umask 077
+          apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq age >/dev/null 2>&1
+          printf '%s  %s\n' '2d3b75e0534b4d1b9ccb2c06233e8c9406237ed0ca5cf1c0d8ef9a2219292785' ./1-moon-v2-matrix-v2-source-20260929.tar.gz.age | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lab.key
+          age -d -i /tmp/lab.key -o /tmp/source.tar.gz ./1-moon-v2-matrix-v2-source-20260929.tar.gz.age
+          shred -u /tmp/lab.key 2>/dev/null || rm -f /tmp/lab.key
+          printf '%s  %s\n' 'dc9e11a237931968e6e05b1f1f316a646a1864e29fb87a9964d3d3bedaa9e49e' /tmp/source.tar.gz | sha256sum -c - >/dev/null
+          tar -xzf /tmp/source.tar.gz -C /tmp
+          printf '%s  %s\n' 'a7121456cf0393f4e4f4463d83e4e9f959673a331bbeb92a7db22f936c0b322b' /tmp/run.sh | sha256sum -c - >/dev/null
+          bash /tmp/run.sh
+          echo ENCRYPTED_SOURCE_EXECUTION_COMPLETE
+      - name: Encrypt reviewer results and private diagnostic
+        if: always()
+        run: |
+          set -euo pipefail; umask 077
+          mkdir -p "$RUNNER_TEMP/private-voice" /tmp/reviewer
+          test ! -f /tmp/voice-private.log || cp /tmp/voice-private.log /tmp/reviewer/
+          test ! -d /tmp/audio || cp -a /tmp/audio /tmp/reviewer/
+          test -n "$(ls -A /tmp/reviewer)" || echo 'No synthesis files' >/tmp/reviewer/status.txt
+          tar -czf /tmp/reviewer.tar.gz -C /tmp/reviewer .
+          age -r "$LAB_AGE_RECIPIENT" -o "$RUNNER_TEMP/private-voice/$LESSON-$SCENE_ID.tar.gz.age" /tmp/reviewer.tar.gz
+          rm -rf /tmp/reviewer /tmp/reviewer.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: encrypted-matrix-${{ matrix.lesson }}-${{ matrix.scene }}
+          path: ${{ runner.temp }}/private-voice/*.age
+          if-no-files-found: error
+          retention-days: 1

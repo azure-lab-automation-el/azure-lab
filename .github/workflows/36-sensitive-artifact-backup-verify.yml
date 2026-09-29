@@ -1,0 +1,23 @@
+name: 36 - Sensitive capture artifact private backup verification
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Read back artifact ZIP and verify SHA256
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-squaredup-long-test.zip' /tmp/capture.zip >/tmp/private-transfer.log 2>&1
+          printf '%s  %s\n' 'b0376a7b4a63b82d697d6611d6fdb94ca7c9cd578566b79b31065b93f91dd93c' /tmp/capture.zip | sha256sum -c -
+          unzip -t /tmp/capture.zip >/dev/null
+          echo SENSITIVE_CAPTURE_ARTIFACT_BYTE_VERIFIED

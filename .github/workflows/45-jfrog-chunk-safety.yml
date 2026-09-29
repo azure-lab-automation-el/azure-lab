@@ -1,0 +1,63 @@
+name: 45 - encrypted JFrog chunk safety
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  synth:
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        scene: ['03','04','05','06']
+        group: [1,2,3,4,5,6,7,8,9,10]
+        exclude:
+          - {scene: '03', group: 8}
+          - {scene: '03', group: 9}
+          - {scene: '03', group: 10}
+          - {scene: '04', group: 10}
+          - {scene: '05', group: 10}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    container:
+      image: ghcr.io/azure-lab-automation-el/synthetic-voice-runtime@sha256:d59bf349ff0baaf62d50ce0b87370a8d306a15d8e87d40022afaf3c87572cf66
+    defaults:
+      run: {shell: bash}
+    env:
+      SCENE_ID: ${{ matrix.scene }}
+      GROUP_ID: ${{ matrix.group }}
+      LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run verified encrypted chunk source
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MOON_AGE_KEY: ${{ secrets.MOON_AGE_KEY }}
+        run: |
+          set -euo pipefail; umask 077
+          apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq age >/dev/null 2>&1
+          printf '%s  %s\n' '81b31143f342bee2836f8808c98ff13a5fa41dc825f352a6a61f4cee1f072927' ./1-moon-jfrog-chunk-safety-source-20260929.tar.gz.age | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lab.key
+          age -d -i /tmp/lab.key -o /tmp/source.tar.gz ./1-moon-jfrog-chunk-safety-source-20260929.tar.gz.age
+          shred -u /tmp/lab.key 2>/dev/null || rm -f /tmp/lab.key
+          printf '%s  %s\n' '7f271fd011f9a19b740ffd7f51be68dfd9177aa3bb31d5e55c848a7d56a5c7a1' /tmp/source.tar.gz | sha256sum -c - >/dev/null
+          tar -xzf /tmp/source.tar.gz -C /tmp
+          printf '%s  %s\n' '9b19fe7efa490b9a856f8e98a984ffaacad25cfc01f64f9122cc81b29aedc22d' /tmp/run.sh | sha256sum -c - >/dev/null
+          bash /tmp/run.sh
+          echo ENCRYPTED_CHUNK_EXECUTION_COMPLETE
+      - name: Encrypt private chunk reviewer results
+        if: always()
+        run: |
+          set -euo pipefail; umask 077
+          mkdir -p "$RUNNER_TEMP/private-voice" /tmp/reviewer
+          test ! -f /tmp/voice-private.log || cp /tmp/voice-private.log /tmp/reviewer/
+          test ! -d /tmp/audio || cp -a /tmp/audio /tmp/reviewer/
+          test -n "$(ls -A /tmp/reviewer)" || echo 'No synthesis files' >/tmp/reviewer/status.txt
+          tar -czf /tmp/reviewer.tar.gz -C /tmp/reviewer .
+          age -r "$LAB_AGE_RECIPIENT" -o "$RUNNER_TEMP/private-voice/jfrog-$SCENE_ID-$GROUP_ID.tar.gz.age" /tmp/reviewer.tar.gz
+          rm -rf /tmp/reviewer /tmp/reviewer.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: encrypted-jfrog-chunk-${{ matrix.scene }}-${{ matrix.group }}
+          path: ${{ runner.temp }}/private-voice/*.age
+          if-no-files-found: error
+          retention-days: 1

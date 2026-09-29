@@ -1,0 +1,55 @@
+name: 50 - Hila chosen voice 12 scenes private review
+on: {workflow_dispatch: {}}
+permissions: {id-token: write, contents: read}
+jobs:
+  produce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+      MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Decrypt private source, check F0, synthesize 12 scenes and transcribe
+        run: |
+          set -euo pipefail; umask 077
+          start=$(date +%s%3N)
+          curl -fsSL -o /tmp/age.tgz https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz
+          tar xzf /tmp/age.tgz -C /tmp && sudo install -m755 /tmp/age/age /usr/local/bin/age
+          printf '%s  %s\n' '1267605bc4764aaa1bc3601e2fe336b7f4e3a3f1dd7b90b8e1202aafbb9a2c98' ./5-hila-production-source.tar.gz.age | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lesson-age.key
+          age -d -i /tmp/lesson-age.key -o /tmp/hila-source.tar.gz ./5-hila-production-source.tar.gz.age
+          shred -u /tmp/lesson-age.key 2>/dev/null || rm -f /tmp/lesson-age.key
+          printf '%s  %s\n' '8ab9fbb25efbaa5175aa9c662dda3dc488f54e7396e8654c3770ba87bf853f45' /tmp/hila-source.tar.gz | sha256sum -c - >/dev/null
+          mkdir -m 700 /tmp/hila-source && tar -xzf /tmp/hila-source.tar.gz -C /tmp/hila-source
+          printf '%s  %s\n' '5ab8019c0b3266497a7ecfd05227adca8c132c8d698b7e5f60e19464145dbaaf' /tmp/hila-source/run.sh | sha256sum -c - >/dev/null
+          python3 -m pip install --quiet --break-system-packages faster-whisper
+          bash /tmp/hila-source/run.sh >"$RUNNER_TEMP/production.log" 2>&1
+          cp "$RUNNER_TEMP/production.log" "$RUNNER_TEMP/private/"
+          tar -czf "$RUNNER_TEMP/hila-12-review.tar.gz" -C "$RUNNER_TEMP/private" .
+          mkdir -p "$RUNNER_TEMP/out"
+          age -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -o "$RUNNER_TEMP/out/hila-12-review.tar.gz.age" "$RUNNER_TEMP/hila-12-review.tar.gz"
+          echo "ENCRYPTED_REVIEW_READY Synthesis_and_Whisper_ms=$(($(date +%s%3N)-start))"
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto "$RUNNER_TEMP/hila-12-review.tar.gz" mega:JFrog/L7-2026-09-28/review-20260929/hila-production-12/hila-12-review.tar.gz >/dev/null
+          /tmp/rclone copyto mega:JFrog/L7-2026-09-28/review-20260929/hila-production-12/hila-12-review.tar.gz "$RUNNER_TEMP/verify.tar.gz" >/dev/null
+          cmp -s "$RUNNER_TEMP/hila-12-review.tar.gz" "$RUNNER_TEMP/verify.tar.gz"
+          echo "PRIVATE_MEGA_BYTE_VERIFIED sha256=$(sha256sum "$RUNNER_TEMP/hila-12-review.tar.gz" | cut -d' ' -f1)"
+          echo "END_TO_END_MS=$(($(date +%s%3N)-start))"
+          rm -rf "$RUNNER_TEMP/private" "$RUNNER_TEMP/hila-12-review.tar.gz" "$RUNNER_TEMP/verify.tar.gz"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: encrypted-hila-production-review
+          path: ${{ runner.temp }}/out/*.age
+          retention-days: 1
+          if-no-files-found: ignore

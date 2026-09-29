@@ -1,0 +1,87 @@
+name: 38 - Moon candidate gate test
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        scene: [JFrogProjects-01, SquaredUpNoMetrics-03]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container:
+      image: ghcr.io/azure-lab-automation-el/synthetic-voice-runtime@sha256:d59bf349ff0baaf62d50ce0b87370a8d306a15d8e87d40022afaf3c87572cf66
+    defaults:
+      run: {shell: bash}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover backed-up private gate source
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail; umask 077
+          apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq age unzip >/dev/null 2>&1
+          cipher=$(find . -maxdepth 1 -name '*moon-candidate-gate-source-20260929.tar.gz.age' -type f -print -quit)
+          test -n "$cipher"
+          printf '%s  %s\n' '4e11c61e3097d8d80b6087e5be813246b2a94500e6c4807d371b0b343a29a61c' "$cipher" | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lab.key
+          mkdir -p src
+          age -d -i /tmp/lab.key "$cipher" | tar -xz -C src
+          shred -u /tmp/lab.key 2>/dev/null || rm -f /tmp/lab.key
+          printf '%s  %s\n' '3d155779052b05d2feace77e530f939c4b104d8a0bd31e8c66e67beccdaabeb1' src/selection.py | sha256sum -c - >/dev/null
+          cd src && python3 test_gate.py
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-1-21-moon-candidate-gate-source-20260929.tar.gz' /tmp/source-readback.tar.gz >/tmp/private-transfer.log 2>&1
+          printf '%s  %s\n' '138eb2c2b6e8ca3b9a746239835cb1b09c88de58fe4e2789f27f790bf012ea94' /tmp/source-readback.tar.gz | sha256sum -c - >/dev/null
+          echo PRIVATE_SOURCE_BACKUP_BYTE_VERIFIED
+      - name: Generate and check candidates
+        env:
+          SCENE_ID: ${{ matrix.scene }}
+          MOON_AGE_KEY: ${{ secrets.MOON_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail; umask 077
+          python3 -m pip install --no-cache-dir 'faster-whisper==1.2.1' >/tmp/private-install.log 2>&1
+          curl -fsSL --retry 2 -o /tmp/moon.wav.age https://raw.githubusercontent.com/azure-lab-automation-el/qwen-voice-synthetic-test/92277c58007663899da3841b6277de8d9b7dda46/1-moon.wav.age
+          printf '%s  %s\n' 'ba41945e50948663c9cd6dcaef81b09d1c3c15b7245486b2ff55e9f70c1f477c' /tmp/moon.wav.age | sha256sum -c - >/dev/null
+          printf '%s\n' "$MOON_AGE_KEY" >/tmp/moon.key
+          age -d -i /tmp/moon.key -o /tmp/moon.wav /tmp/moon.wav.age
+          shred -u /tmp/moon.key 2>/dev/null || rm -f /tmp/moon.key
+          printf '%s  %s\n' '48ce34759c7265f0fab5bceab0f896b789a160471785b30a34cd2c2b5883e5ea' /tmp/moon.wav | sha256sum -c - >/dev/null
+          ffmpeg -v error -y -i /tmp/moon.wav -t 2.7 -af afade=t=out:st=2.45:d=0.25 /tmp/moon-short.wav
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto "mega:JFrog/L7-2026-09-28/audio-lesson-20260929/$SCENE_ID.flac" "/tmp/$SCENE_ID-base.flac" >/tmp/private-transfer.log 2>&1
+          PYTHONPATH=src SCENE_ID="$SCENE_ID" python3 src/selection.py > /tmp/private-gate.log 2>&1 || { echo SCENE_GATE_FAILED; exit 1; }
+          echo SCENE_CANDIDATES_PASS_REVIEW_REQUIRED
+      - name: Encrypt reviewer output on success or failure
+        if: always()
+        env:
+          LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
+          SCENE_ID: ${{ matrix.scene }}
+        run: |
+          set -euo pipefail; umask 077
+          mkdir -p "$RUNNER_TEMP/candidate-private"
+          mkdir -p /tmp/reviewer
+          for f in "/tmp/$SCENE_ID-candidate-selected.flac" "/tmp/$SCENE_ID-candidate-audit.json" "/tmp/$SCENE_ID-candidate-failure.json" /tmp/private-gate.log /tmp/private-install.log /tmp/private-transfer.log; do
+            test ! -f "$f" || cp "$f" /tmp/reviewer/
+          done
+          test -n "$(ls -A /tmp/reviewer)" || echo 'No candidate or diagnostic files present' >/tmp/reviewer/status.txt
+          tar -czf /tmp/reviewer.tar.gz -C /tmp/reviewer .
+          age -r "$LAB_AGE_RECIPIENT" -o "$RUNNER_TEMP/candidate-private/$SCENE_ID.tar.gz.age" /tmp/reviewer.tar.gz
+          test -s "$RUNNER_TEMP/candidate-private/$SCENE_ID.tar.gz.age"
+          rm -rf /tmp/reviewer /tmp/reviewer.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: moon-candidate-test-${{ matrix.scene }}
+          path: ${{ runner.temp }}/candidate-private/*.age
+          if-no-files-found: error
+          retention-days: 1

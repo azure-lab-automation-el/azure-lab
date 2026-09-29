@@ -30,8 +30,17 @@ jobs:
           mkdir -m 700 /tmp/hila-source && tar -xzf /tmp/hila-source.tar.gz -C /tmp/hila-source
           printf '%s  %s\n' '5ab8019c0b3266497a7ecfd05227adca8c132c8d698b7e5f60e19464145dbaaf' /tmp/hila-source/run.sh | sha256sum -c - >/dev/null
           python3 -m pip install --quiet --break-system-packages faster-whisper
+          set +e
           bash /tmp/hila-source/run.sh >"$RUNNER_TEMP/production.log" 2>&1
+          rc=$?
+          set -e
+          mkdir -p "$RUNNER_TEMP/private" "$RUNNER_TEMP/out"
           cp "$RUNNER_TEMP/production.log" "$RUNNER_TEMP/private/"
+          if [ "$rc" -ne 0 ]; then
+            age -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -o "$RUNNER_TEMP/out/production-failure.log.age" "$RUNNER_TEMP/production.log"
+            echo "PRIVATE_DIAGNOSTIC_ENCRYPTED rc=$rc"
+            exit "$rc"
+          fi
           tar -czf "$RUNNER_TEMP/hila-12-review.tar.gz" -C "$RUNNER_TEMP/private" .
           mkdir -p "$RUNNER_TEMP/out"
           age -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -o "$RUNNER_TEMP/out/hila-12-review.tar.gz.age" "$RUNNER_TEMP/hila-12-review.tar.gz"

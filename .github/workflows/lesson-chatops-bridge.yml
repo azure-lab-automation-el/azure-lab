@@ -1,0 +1,81 @@
+name: Lesson ChatOps bridge
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+jobs:
+  command:
+    if: >-
+      github.event.issue.pull_request == null &&
+      github.event.comment.user.login == 'azure-lab-automation-el' &&
+      github.event.comment.author_association == 'OWNER' &&
+      contains(github.event.issue.labels.*.name, 'lesson-chatops')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: {contents: write, actions: write, issues: write}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      GH_ISSUE: ${{ github.event.issue.number }}
+      GH_COMMENT_ID: ${{ github.event.comment.id }}
+      LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+    steps:
+      - name: Read comment body from GitHub API without shell interpolation
+        run: gh api "repos/$GH_REPO/issues/comments/$GH_COMMENT_ID" --jq .body > "$RUNNER_TEMP/command.txt"
+      - name: Apply allowlisted encrypted update or dispatch
+        run: |
+          set -euo pipefail
+          umask 077
+          command=$(cat "$RUNNER_TEMP/command.txt")
+          case "$command" in
+            '/run '*)
+              payload=${command#'/run '}
+              # JSON with exact keys only; parsed by Python, never eval'd.
+              printf '%s' "$payload" > "$RUNNER_TEMP/run.json"
+              python3 - "$RUNNER_TEMP/run.json" > "$RUNNER_TEMP/dispatch.json" <<'PY'
+          import json,re,sys
+          x=json.load(open(sys.argv[1]));assert set(x)=={'workflow','package_path','package_id','rails','mode'}
+          assert x['workflow']=='lesson-pipeline.yml'
+          assert re.fullmatch(r'packages/[A-Za-z0-9_./-]+\.age',x['package_path']) and '..' not in x['package_path'].split('/')
+          assert re.fullmatch(r'[A-Za-z0-9_-]{1,100}',x['package_id'])
+          assert x['rails'] in ('all','metric','validate','audio','capture','simulation','discover')
+          assert x['mode'] in ('production','fixture')
+          print(json.dumps({'ref':'main','inputs':{k:x[k] for k in ('package_path','package_id','rails','mode')}}))
+          PY
+              gh api -X POST "repos/$GH_REPO/actions/workflows/lesson-pipeline.yml/dispatches" --input "$RUNNER_TEMP/dispatch.json" >/dev/null
+              echo 'Dispatch submitted. Inspect Actions for outcome; this is not QA approval.' > "$RUNNER_TEMP/status.txt"
+              ;;
+            '/apply '*)
+              payload=${command#'/apply '}
+              # One encrypted JSON file per comment. Deliberate 45KB limit, no multi-comment assembly.
+              [ "${#payload}" -le 45000 ] || exit 2
+              printf '%s' "$payload" | base64 -d > "$RUNNER_TEMP/update.age"
+              sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+              printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/age.key"
+              age -d -i "$RUNNER_TEMP/age.key" -o "$RUNNER_TEMP/update.json" "$RUNNER_TEMP/update.age"
+              rm -f "$RUNNER_TEMP/age.key"
+              python3 - "$RUNNER_TEMP/update.json" > "$RUNNER_TEMP/put.json" <<'PY'
+          import base64,hashlib,json,re,sys
+          x=json.load(open(sys.argv[1]));assert set(x)=={'path','content_base64','sha256','message'}
+          path=x['path'];assert isinstance(path,str) and re.fullmatch(r'(?:pipeline|packages)/[A-Za-z0-9_./-]+',path)
+          assert '..' not in path.split('/') and not path.endswith('/') and not path.startswith('.github/')
+          data=base64.b64decode(x['content_base64'],validate=True)
+          assert len(data)<=1048576 and hashlib.sha256(data).hexdigest()==x['sha256']
+          assert isinstance(x['message'],str) and 5<=len(x['message'])<=120
+          print(json.dumps({'path':path,'content':x['content_base64'],'message':x['message']}))
+          PY
+              path=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["path"])' "$RUNNER_TEMP/put.json")
+              # Resolve remote HEAD SHA; 404 is permitted only for a new file.
+              sha=$(gh api "repos/$GH_REPO/contents/$path?ref=main" --jq .sha 2>/dev/null || true)
+              python3 - "$RUNNER_TEMP/put.json" "$sha" > "$RUNNER_TEMP/request.json" <<'PY'
+          import json,sys
+          x=json.load(open(sys.argv[1]));x.pop('path');x['branch']='main'
+          if sys.argv[2]:x['sha']=sys.argv[2]
+          json.dump(x,sys.stdout)
+          PY
+              gh api -X PUT "repos/$GH_REPO/contents/$path" --input "$RUNNER_TEMP/request.json" --jq .content.html_url > "$RUNNER_TEMP/status.txt"
+              ;;
+            *) exit 2 ;;
+          esac
+          gh issue comment "$GH_ISSUE" --repo "$GH_REPO" --body-file "$RUNNER_TEMP/status.txt"

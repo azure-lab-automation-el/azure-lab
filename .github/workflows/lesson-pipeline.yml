@@ -1,0 +1,297 @@
+name: Lesson pipeline - parallel rails
+on:
+  workflow_dispatch:
+    inputs:
+      package_path:
+        description: 'Encrypted package path in repo (under packages/)' 
+        required: true
+        type: string
+      package_id:
+        description: 'Immutable package ID, checked against decrypted package'
+        required: true
+        type: string
+      mode:
+        description: 'production or synthetic fixture; fixture never publishes'
+        required: true
+        default: production
+        type: choice
+        options: [production, fixture]
+      rails:
+        description: 'all, validate, audio, capture, simulation, metric, or discover'
+        required: true
+        default: all
+        type: choice
+        options: [all, validate, audio, capture, simulation, metric, discover]
+permissions:
+  contents: read
+concurrency:
+  group: lesson-${{ inputs.package_id }}-${{ inputs.rails }}-${{ inputs.mode }}
+  cancel-in-progress: false
+jobs:
+  metric:
+    if: inputs.rails == 'all' || inputs.rails == 'metric' || inputs.rails == 'audio'
+    runs-on: ubuntu-24.04
+    permissions: {contents: read, id-token: write}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+        if: inputs.mode == 'production'
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Read only F0 usage
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          PACKAGE_ID: ${{ inputs.package_id }}
+          PIPELINE_MODE: ${{ inputs.mode }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: bash pipeline/metric.sh
+  validate:
+    if: inputs.rails == 'all' || inputs.rails == 'validate' || inputs.rails == 'audio' || inputs.rails == 'capture' || inputs.rails == 'simulation' || inputs.rails == 'discover'
+    runs-on: ubuntu-24.04
+    outputs:
+      tracks: ${{ steps.package.outputs.tracks }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Decrypt and validate immutable package
+        id: package
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          PACKAGE_ID: ${{ inputs.package_id }}
+          PIPELINE_MODE: ${{ inputs.mode }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        run: bash pipeline/validate.sh
+  audio:
+    needs: [validate, metric]
+    timeout-minutes: 35
+    if: always() && needs.validate.result == 'success' && ((inputs.rails == 'audio' || inputs.rails == 'all') && needs.metric.result == 'success')
+    runs-on: ubuntu-24.04
+    permissions: {contents: read, id-token: write}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+        if: inputs.mode == 'production'
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Install Azure Speech SDK and local ASR
+        if: inputs.mode == 'production'
+        run: python3 -m pip install --no-cache-dir azure-cognitiveservices-speech faster-whisper
+      - name: Synthesize private WAVs and capture word boundaries for review
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          PACKAGE_ID: ${{ inputs.package_id }}
+          PIPELINE_MODE: ${{ inputs.mode }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: bash pipeline/audio.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audio-${{ inputs.package_id }}
+          path: ${{ runner.temp }}/lesson-cipher/audio/*.age
+          if-no-files-found: error
+          retention-days: 1
+  capture:
+    needs: validate
+    if: always() && needs.validate.result == 'success' && (inputs.rails == 'all' || inputs.rails == 'capture')
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        track: ${{ fromJSON(needs.validate.outputs.tracks) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Capture package-driven read-only live scenes or fail closed
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          PACKAGE_ID: ${{ inputs.package_id }}
+          PIPELINE_MODE: ${{ inputs.mode }}
+          TRACK_ID: ${{ matrix.track }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+          JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
+          JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
+          SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
+          SQUAREDUP_LAB_PASSWORD: ${{ secrets.SQUAREDUP_LAB_PASSWORD }}
+        run: bash pipeline/capture.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capture-${{ matrix.track }}-${{ inputs.package_id }}
+          path: ${{ runner.temp }}/lesson-cipher/capture/*.age
+          if-no-files-found: error
+          retention-days: 1
+  simulation:
+    needs: validate
+    if: always() && needs.validate.result == 'success' && (inputs.rails == 'all' || inputs.rails == 'simulation')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Render labeled conceptual and simulation shots without vendor login
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          PACKAGE_ID: ${{ inputs.package_id }}
+          PIPELINE_MODE: ${{ inputs.mode }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        run: bash pipeline/simulation.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: simulation-${{ inputs.package_id }}
+          path: ${{ runner.temp }}/lesson-cipher/simulation/*.age
+          if-no-files-found: error
+          retention-days: 1
+  timing:
+    needs: [validate, audio]
+    if: always() && inputs.rails == 'all' && needs.validate.result == 'success' && needs.audio.result == 'success'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - uses: actions/download-artifact@v4
+        with:
+          name: audio-${{ inputs.package_id }}
+          path: ${{ runner.temp }}/lesson-cipher/incoming
+      - name: Align final audio to exact script and review captions
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          PACKAGE_ID: ${{ inputs.package_id }}
+          PIPELINE_MODE: ${{ inputs.mode }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        run: bash pipeline/timing.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: timing-${{ inputs.package_id }}
+          path: ${{ runner.temp }}/lesson-cipher/timing/*.age
+          if-no-files-found: error
+          retention-days: 1
+  discover:
+    needs: validate
+    if: always() && needs.validate.result == 'success' && inputs.rails == 'discover'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        track: ${{ fromJSON(needs.validate.outputs.tracks) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install private discovery dependencies
+        run: |
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+          npm install --prefix "$RUNNER_TEMP" --no-audit --no-fund playwright@1.63.0
+          "$RUNNER_TEMP/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Read-only DOM discovery, ciphertext output only
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          PACKAGE_ID: ${{ inputs.package_id }}
+          PIPELINE_MODE: ${{ inputs.mode }}
+          TRACK_ID: ${{ matrix.track }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+          JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
+          JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
+          SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
+          SQUAREDUP_LAB_PASSWORD: ${{ secrets.SQUAREDUP_LAB_PASSWORD }}
+        run: bash pipeline/discover-dom.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: discovery-${{ matrix.track }}-${{ inputs.package_id }}
+          path: ${{ runner.temp }}/lesson-cipher/discovery/*.age
+          if-no-files-found: error
+          retention-days: 1
+  attach:
+    needs: [validate, audio, capture, simulation, timing]
+    if: always() && inputs.rails == 'all' && needs.validate.result == 'success' && needs.audio.result == 'success' && needs.capture.result == 'success' && needs.simulation.result == 'success' && needs.timing.result == 'success'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-${{ inputs.package_id }}'
+          path: ${{ runner.temp }}/lesson-cipher/incoming
+      - name: Join exact package, track, scene and hashes; produce timings
+        env:
+          PACKAGE_PATH: ${{ inputs.package_path }}
+          PACKAGE_ID: ${{ inputs.package_id }}
+          PIPELINE_MODE: ${{ inputs.mode }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        run: bash pipeline/attach.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: attached-${{ inputs.package_id }}
+          path: ${{ runner.temp }}/lesson-cipher/attached/*.age
+          if-no-files-found: error
+          retention-days: 1
+  compose:
+    needs: attach
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - uses: actions/download-artifact@v4
+        with:
+          name: attached-${{ inputs.package_id }}
+          path: ${{ runner.temp }}/lesson-cipher/incoming
+      - name: Render independent scenes and compose
+        env:
+          PACKAGE_ID: ${{ inputs.package_id }}
+          PIPELINE_MODE: ${{ inputs.mode }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        run: bash pipeline/compose.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: composed-${{ inputs.package_id }}
+          path: ${{ runner.temp }}/lesson-cipher/composed/*.age
+          if-no-files-found: error
+          retention-days: 1
+  qa:
+    needs: compose
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install age
+        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - uses: actions/download-artifact@v4
+        with:
+          name: composed-${{ inputs.package_id }}
+          path: ${{ runner.temp }}/lesson-cipher/incoming
+      - name: Inspect final encoded pixels, audio and QA packet; no auto-publication
+        env:
+          PACKAGE_ID: ${{ inputs.package_id }}
+          PIPELINE_MODE: ${{ inputs.mode }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        run: bash pipeline/qa.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-${{ inputs.package_id }}
+          path: ${{ runner.temp }}/lesson-cipher/qa/*.age
+          if-no-files-found: error
+          retention-days: 1

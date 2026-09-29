@@ -1,0 +1,44 @@
+name: 40 - transfer encrypted lesson trial outputs to private review
+on: {workflow_dispatch: {}}
+permissions: {contents: read, actions: read}
+jobs:
+  transfer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+      MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+    steps:
+      - name: Decrypt scoped artifact IDs in runner and verify plaintext in private MEGA
+        run: |
+          set -euo pipefail; umask 077
+          sudo apt-get update -qq >/dev/null 2>&1
+          sudo apt-get install -y -qq age unzip >/dev/null 2>&1
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lesson-age.key
+          mkdir -m 700 -p /tmp/private-review
+          for entry in '11011720515:moon-jfrog' '11010959972:moon-squaredup' '11011875805:capture-squaredup' '11011668477:capture-jfrog'; do
+            id=${entry%%:*}; label=${entry#*:}
+            mkdir -m 700 "/tmp/private-review/$label"
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/azure-lab-automation-el/azure-lab/actions/artifacts/$id/zip" -o "/tmp/private-review/$label.zip" >/tmp/artifact-transfer.log 2>&1
+            unzip -t "/tmp/private-review/$label.zip" >/dev/null
+            unzip -oq "/tmp/private-review/$label.zip" -d "/tmp/private-review/$label"
+            for ciphertext in "/tmp/private-review/$label"/*.age; do
+              test -f "$ciphertext"
+              plaintext=${ciphertext%.age}
+              age -d -i /tmp/lesson-age.key -o "$plaintext" "$ciphertext"
+              test -s "$plaintext"
+              /tmp/rclone copyto "$plaintext" "mega:JFrog/L7-2026-09-28/review-20260929/$label/$(basename "$plaintext")" >/tmp/private-transfer.log 2>&1
+              /tmp/rclone copyto "mega:JFrog/L7-2026-09-28/review-20260929/$label/$(basename "$plaintext")" /tmp/review-readback >/tmp/private-readback.log 2>&1
+              cmp -s "$plaintext" /tmp/review-readback
+              rm -f /tmp/review-readback "$plaintext"
+              echo "PRIVATE_REVIEW_BYTE_VERIFIED $label $(basename "$plaintext")"
+            done
+          done
+          shred -u /tmp/lesson-age.key 2>/dev/null || rm -f /tmp/lesson-age.key
+          echo PRIVATE_REVIEW_TRANSFER_COMPLETE

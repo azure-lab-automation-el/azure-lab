@@ -22,13 +22,13 @@ jobs:
           start=$(date +%s%3N)
           curl -fsSL -o /tmp/age.tgz https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz
           tar xzf /tmp/age.tgz -C /tmp && sudo install -m755 /tmp/age/age /usr/local/bin/age
-          printf '%s  %s\n' '1267605bc4764aaa1bc3601e2fe336b7f4e3a3f1dd7b90b8e1202aafbb9a2c98' ./5-hila-production-source.tar.gz.age | sha256sum -c - >/dev/null
+          printf '%s  %s\n' '9f7839e7a713ba0a8086578a3e9764e2f1812f41a40716c3d62e8d2909c9e953' ./7-hila-production-source-v2.tar.gz.age | sha256sum -c - >/dev/null
           printf '%s' "$LAB_AGE_KEY" >/tmp/lesson-age.key
-          age -d -i /tmp/lesson-age.key -o /tmp/hila-source.tar.gz ./5-hila-production-source.tar.gz.age
+          age -d -i /tmp/lesson-age.key -o /tmp/hila-source.tar.gz ./7-hila-production-source-v2.tar.gz.age
           shred -u /tmp/lesson-age.key 2>/dev/null || rm -f /tmp/lesson-age.key
-          printf '%s  %s\n' '8ab9fbb25efbaa5175aa9c662dda3dc488f54e7396e8654c3770ba87bf853f45' /tmp/hila-source.tar.gz | sha256sum -c - >/dev/null
+          printf '%s  %s\n' '2e55013e082ae46198acbdb6404c7a68e99d4aba9c91ada959a57775e0d63fa8' /tmp/hila-source.tar.gz | sha256sum -c - >/dev/null
           mkdir -m 700 /tmp/hila-source && tar -xzf /tmp/hila-source.tar.gz -C /tmp/hila-source
-          printf '%s  %s\n' '5ab8019c0b3266497a7ecfd05227adca8c132c8d698b7e5f60e19464145dbaaf' /tmp/hila-source/run.sh | sha256sum -c - >/dev/null
+          printf '%s  %s\n' '3f7936b084ea46e3b4a180e796a1f0fec462854e0a75dec0efeb41cb0dae52db' /tmp/hila-source/run.sh | sha256sum -c - >/dev/null
           python3 -m pip install --quiet --break-system-packages faster-whisper
           set +e
           bash /tmp/hila-source/run.sh >"$RUNNER_TEMP/production.log" 2>&1

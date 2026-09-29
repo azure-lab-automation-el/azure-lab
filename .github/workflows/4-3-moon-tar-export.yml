@@ -1,0 +1,49 @@
+name: 14 - Verify and transfer lesson render inputs
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Fetch and check private render inputs
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/lesson-render-inputs.tar' "$RUNNER_TEMP/lesson-render-inputs.tar" >/tmp/transfer-private.log 2>&1
+          tar -tf "$RUNNER_TEMP/lesson-render-inputs.tar" >/dev/null
+          python3 - <<'PY'
+          import json,tarfile,hashlib,os
+          p=os.path.join(os.environ['RUNNER_TEMP'],'lesson-render-inputs.tar')
+          with tarfile.open(p) as t:
+            names=set(t.getnames())
+            key=lambda n: './'+n
+            raw=t.extractfile(key('narration-final.json')).read()
+            narration=json.loads(raw)
+            assert set(narration)=={'JFrog','SquaredUp'}
+            assert len(narration['JFrog'])==8 and len(narration['SquaredUp'])==6
+            assert hashlib.sha256(raw).hexdigest()=='6aba8e1ad786e99a25ff01881ea115ff59505818b52be7d3c4db7f8ee6ebb534'
+            for lesson,count in [('JFrog',8),('SquaredUp',6)]:
+              for i in range(1,count+1):
+                n=f'{lesson}-{i:02d}.flac'; f=t.extractfile(key(n)); assert f
+                b=f.read(); assert len(b)>10000
+                print(f'AUDIO {n} bytes={len(b)} sha256={hashlib.sha256(b).hexdigest()}')
+          print('NARRATION_SHA256=6aba8e1ad786e99a25ff01881ea115ff59505818b52be7d3c4db7f8ee6ebb534')
+          print('TAR_SHA256='+hashlib.sha256(open(p,'rb').read()).hexdigest())
+          print('RENDER_INPUTS_VERIFIED_14')
+          PY
+      - name: Stage private artifact for compose
+        uses: actions/upload-artifact@v4
+        with:
+          name: lesson-render-inputs-verified
+          path: ${{ runner.temp }}/lesson-render-inputs.tar
+          retention-days: 1
+          if-no-files-found: error

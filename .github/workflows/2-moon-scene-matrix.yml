@@ -1,0 +1,54 @@
+name: 12 - קריינות Moon בארבע עשרה מסילות
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  health:
+    strategy:
+      fail-fast: false
+      max-parallel: 14
+      matrix:
+        scene: [JFrog-01, JFrog-02, JFrog-03, JFrog-04, JFrog-05, JFrog-06, JFrog-07, JFrog-08, SquaredUp-01, SquaredUp-02, SquaredUp-03, SquaredUp-04, SquaredUp-05, SquaredUp-06]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    container:
+      image: ghcr.io/azure-lab-automation-el/synthetic-voice-runtime@sha256:d59bf349ff0baaf62d50ce0b87370a8d306a15d8e87d40022afaf3c87572cf66
+    defaults:
+      run: {shell: bash}
+    steps:
+      - uses: actions/checkout@v4
+      - name: פענוח קוד וקטעי מקור מוצפנים
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MOON_AGE_KEY: ${{ secrets.MOON_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+          SCENE_ID: ${{ matrix.scene }}
+        run: |
+          set -euo pipefail
+          umask 077
+          apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq age >/dev/null 2>&1
+          patch=$(find . -maxdepth 1 -name '*lesson-producer-package.tar.gz.age' -type f -print -quit)
+          test -n "$patch"
+          printf '%s  %s\n' '46bf7268a2c345b2b7f18934808b8f75f63524e72586389d69e43a9269075e9e' "$patch" | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lab.key
+          age -d -i /tmp/lab.key "$patch" | tar xz
+          cp -a bundle src
+          script=$(find . -maxdepth 1 -name '*moon-scene-matrix.py.age' -type f -print -quit)
+          test -n "$script"
+          printf '%s  %s\n' '7c820a62dfe735d280b6e082fe3d75e62b62661ae3a4bf23987eec7009224720' "$script" | sha256sum -c - >/dev/null
+          age -d -i /tmp/lab.key -o /tmp/moon-scene-matrix.py "$script"
+          shred -u /tmp/lab.key 2>/dev/null || rm -f /tmp/lab.key
+          printf '%s  %s\n' '353533cbf8f8bd5f04392da0ddaefe34c29ee0a00f08af4856a725dddd6119c6' /tmp/moon-scene-matrix.py | sha256sum -c - >/dev/null
+          curl -fsSL --retry 2 -o /tmp/moon.wav.age https://raw.githubusercontent.com/azure-lab-automation-el/qwen-voice-synthetic-test/92277c58007663899da3841b6277de8d9b7dda46/1-moon.wav.age
+          printf '%s  %s\n' 'ba41945e50948663c9cd6dcaef81b09d1c3c15b7245486b2ff55e9f70c1f477c' /tmp/moon.wav.age | sha256sum -c - >/dev/null
+          printf '%s\n' "$MOON_AGE_KEY" >/tmp/moon.key
+          age -d -i /tmp/moon.key -o /tmp/moon.wav /tmp/moon.wav.age
+          shred -u /tmp/moon.key 2>/dev/null || rm -f /tmp/moon.key
+          printf '%s  %s\n' '48ce34759c7265f0fab5bceab0f896b789a160471785b30a34cd2c2b5883e5ea' /tmp/moon.wav | sha256sum -c - >/dev/null
+          ffmpeg -v error -y -i /tmp/moon.wav -t 2.7 -af afade=t=out:st=2.45:d=0.25 /tmp/moon-short.wav
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          SCENE_ID="$SCENE_ID" python3 /tmp/moon-scene-matrix.py
+          shred -u /tmp/moon-scene-matrix.py /tmp/qwen-private.log 2>/dev/null || true

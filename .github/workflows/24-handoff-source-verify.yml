@@ -1,0 +1,22 @@
+name: 24 - audio handoff source backup verification
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check backed up relay source bytes
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/14-lesson-handoff-relay-source-20260929-0448.tar.gz' /tmp/remote.tar.gz >/tmp/private.log 2>&1
+          printf '%s  %s\n' '633eb03bf4ce04f0ba77e3fcdb445396594cc5caa3c0248a527baf0063e613bf' /tmp/remote.tar.gz | sha256sum -c -
+          tar -tzf /tmp/remote.tar.gz

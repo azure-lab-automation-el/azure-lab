@@ -29,6 +29,7 @@ jobs:
           printf '%s  %s\n' '46bf7268a2c345b2b7f18934808b8f75f63524e72586389d69e43a9269075e9e' "$patch" | sha256sum -c - >/dev/null
           printf '%s' "$LAB_AGE_KEY" >/tmp/lab.key
           age -d -i /tmp/lab.key "$patch" | tar xz
+          cp -a bundle src
           script=$(find . -maxdepth 1 -name '*moon-split-health.py.age' -type f -print -quit)
           test -n "$script"
           printf '%s  %s\n' '4ef654c5595371d2d1fc43e2c8c0c57c822ece4fc20082414eef5c117a985993' "$script" | sha256sum -c - >/dev/null

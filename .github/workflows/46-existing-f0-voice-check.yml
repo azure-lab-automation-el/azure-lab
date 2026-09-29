@@ -1,0 +1,50 @@
+name: 46 - existing F0 voice check
+on: {workflow_dispatch: {}}
+permissions: {id-token: write, contents: read}
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: בדיקת משאב F0 קיים וקריינות פרטית
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/age.tgz https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz
+          tar xzf /tmp/age.tgz -C /tmp
+          sudo install -m755 /tmp/age/age /usr/local/bin/age
+          printf '%s  %s\n' '30338bbfc560cec79af2cad5a454ba7ef952767376a7577ddfc8ecb230bf77a3' ./1-hila-f0-source-20260929.tar.gz.age | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" > /tmp/age.key
+          age -d -i /tmp/age.key -o /tmp/hila-source.tar.gz ./1-hila-f0-source-20260929.tar.gz.age
+          shred -u /tmp/age.key 2>/dev/null || rm -f /tmp/age.key
+          printf '%s  %s\n' '189e29b9f7449fae94be36bec6d56e816e6d74b08c6612fa3ff4e72f0b1f1f69' /tmp/hila-source.tar.gz | sha256sum -c - >/dev/null
+          tar -xzf /tmp/hila-source.tar.gz -C /tmp
+          printf '%s  %s\n' '190993752e13c29765c16407f4b9becb0f0d84963cc4e6385e38b097aa26c83b' /tmp/run.sh | sha256sum -c - >/dev/null
+          set +e
+          bash /tmp/run.sh > "$RUNNER_TEMP/hila.log" 2>&1
+          rc=$?
+          set -e
+          mkdir -p "$RUNNER_TEMP/private" "$RUNNER_TEMP/out"
+          cp "$RUNNER_TEMP/hila.log" "$RUNNER_TEMP/private/"
+          if [ -f "$RUNNER_TEMP/hila-sample.wav" ]; then cp "$RUNNER_TEMP/hila-sample.wav" "$RUNNER_TEMP/private/"; fi
+          tar -czf "$RUNNER_TEMP/hila-review.tar.gz" -C "$RUNNER_TEMP/private" .
+          age -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -o "$RUNNER_TEMP/out/hila-review.tar.gz.age" "$RUNNER_TEMP/hila-review.tar.gz"
+          rm -rf "$RUNNER_TEMP/private" "$RUNNER_TEMP/hila-review.tar.gz" "$RUNNER_TEMP/hila-sample.wav"
+          shred -u "$RUNNER_TEMP/hila.log" 2>/dev/null || rm -f "$RUNNER_TEMP/hila.log"
+          echo "F0_CHECK_EXIT=$rc (details encrypted)"
+          exit "$rc"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: encrypted-hila-f0-review
+          path: ${{ runner.temp }}/out/*.age
+          retention-days: 1
+          if-no-files-found: ignore

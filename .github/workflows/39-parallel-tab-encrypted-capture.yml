@@ -40,8 +40,8 @@ jobs:
       - name: Install recorder
         run: |
           set -euo pipefail
-          npm install --no-audit --no-fund playwright@1.63.0
-          npx playwright install --with-deps chromium
+          npm install --prefix "$RUNNER_TEMP" --no-audit --no-fund playwright@1.63.0
+          "$RUNNER_TEMP/node_modules/.bin/playwright" install --with-deps chromium
       - name: One sign-in per vendor, two tabs and isolated scenes
         env:
           JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}

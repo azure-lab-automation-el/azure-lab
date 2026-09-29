@@ -1,0 +1,73 @@
+name: 39 - read-only parallel-tab encrypted capture review
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  capture:
+    strategy:
+      fail-fast: false
+      matrix: {vendor: [JFrog, SquaredUp]}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CAPTURE_VENDOR: ${{ matrix.vendor }}
+      LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify private source backup before any site login
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail; umask 077
+          sudo apt-get update -qq >/dev/null 2>&1
+          sudo apt-get install -y -qq age ffmpeg tesseract-ocr >/dev/null 2>&1
+          cipher=$(find . -maxdepth 1 -name '*parallel-tab-capture-source-20260929.tar.gz.age' -type f -print -quit)
+          test -n "$cipher"
+          printf '%s  %s\n' '2cbbbf95b0e039ae8eb6ed5f1f65b9e1ead89b53fec8120c8038e99348bbccfa' "$cipher" | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lab.key
+          age -d -i /tmp/lab.key "$cipher" | tar -xz -C "$RUNNER_TEMP"
+          shred -u /tmp/lab.key 2>/dev/null || rm -f /tmp/lab.key
+          printf '%s  %s\n' 'c8961a6c7a33bcdf267dca7b93fc053ad1f6771889d8d9b426ce8da679c85436' "$RUNNER_TEMP/capture-parallel-tabs.mjs" | sha256sum -c - >/dev/null
+          printf '%s  %s\n' 'dfda3a210c4394344e863fba65fb46c8e26a9b94fcbffb31506520e2b8989971' "$RUNNER_TEMP/capture-qa.py" | sha256sum -c - >/dev/null
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-1-parallel-tab-capture-source-20260929.tar.gz' /tmp/source-backup.tar.gz >/tmp/private-transfer.log 2>&1
+          printf '%s  %s\n' '686e1b2343e60449b65bdb30ac6249bf4ac6bcc8609b085fd85ce95cde9f9c6c' /tmp/source-backup.tar.gz | sha256sum -c - >/dev/null
+          echo PRIVATE_CAPTURE_SOURCE_BYTE_VERIFIED
+      - name: Install recorder
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: One sign-in per vendor, two tabs and isolated scenes
+        env:
+          JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
+          JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
+          SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
+          SQUAREDUP_LAB_PASSWORD: ${{ secrets.SQUAREDUP_LAB_PASSWORD }}
+        run: |
+          set -euo pipefail; umask 077
+          cd "$RUNNER_TEMP"
+          node "$RUNNER_TEMP/capture-parallel-tabs.mjs" >"$RUNNER_TEMP/capture-private.log" 2>&1 || { echo CAPTURE_SCENES_FAILED_REVIEW_ENCRYPTED_OUTPUT; exit 1; }
+          echo CAPTURE_SCENES_COMPLETE_REVIEW_REQUIRED
+      - name: Encrypt diagnostic even when login or recording failed
+        if: always()
+        run: |
+          set -euo pipefail; umask 077
+          mkdir -p "$RUNNER_TEMP/capture-private"
+          if test -s "$RUNNER_TEMP/capture-private.log"; then
+            age -r "$LAB_AGE_RECIPIENT" -o "$RUNNER_TEMP/capture-private/$CAPTURE_VENDOR-diagnostic.log.age" "$RUNNER_TEMP/capture-private.log"
+            rm -f "$RUNNER_TEMP/capture-private.log"
+          fi
+          test -n "$(find "$RUNNER_TEMP/capture-private" -maxdepth 1 -name '*.age' -print -quit)" || { echo NO_ENCRYPTED_OUTPUT; exit 1; }
+      - name: Upload only ciphertext, including successful scenes after other failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-capture-review-${{ matrix.vendor }}
+          path: ${{ runner.temp }}/capture-private/*.age
+          if-no-files-found: error
+          retention-days: 1

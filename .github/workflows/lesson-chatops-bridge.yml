@@ -20,6 +20,7 @@ jobs:
       GH_ISSUE: ${{ github.event.issue.number }}
       GH_COMMENT_ID: ${{ github.event.comment.id }}
       LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      LAB_WORKFLOW_PAT: ${{ secrets.LAB_WORKFLOW_PAT }}
     steps:
       - name: Read comment body from GitHub API without shell interpolation
         run: gh api "repos/$GH_REPO/issues/comments/$GH_COMMENT_ID" --jq .body > "$RUNNER_TEMP/command.txt"
@@ -39,7 +40,7 @@ jobs:
           assert x['workflow']=='lesson-pipeline.yml'
           assert re.fullmatch(r'packages/[A-Za-z0-9_./-]+\.age',x['package_path']) and '..' not in x['package_path'].split('/')
           assert re.fullmatch(r'[A-Za-z0-9_-]{1,100}',x['package_id'])
-          assert x['rails'] in ('all','metric','validate','audio','capture','simulation','discover')
+          assert x['rails'] in ('all','metric','validate','audio','capture','simulation','discover','recipient-proof')
           assert x['mode'] in ('production','fixture')
           print(json.dumps({'ref':'main','inputs':{k:x[k] for k in ('package_path','package_id','rails','mode')}}))
           PY
@@ -58,8 +59,8 @@ jobs:
               python3 - "$RUNNER_TEMP/update.json" > "$RUNNER_TEMP/put.json" <<'PY'
           import base64,hashlib,json,re,sys
           x=json.load(open(sys.argv[1]));assert set(x)=={'path','content_base64','sha256','message'}
-          path=x['path'];assert isinstance(path,str) and re.fullmatch(r'(?:pipeline|packages)/[A-Za-z0-9_./-]+',path)
-          assert '..' not in path.split('/') and not path.endswith('/') and not path.startswith('.github/')
+          path=x['path'];assert isinstance(path,str) and (re.fullmatch(r'(?:pipeline|packages)/[A-Za-z0-9_.-]+\.age',path) or path in ('.github/workflows/lesson-pipeline.yml','.github/workflows/lesson-chatops-bridge.yml','.github/workflows/esther-guard-plaintext.yml'))
+          assert '..' not in path.split('/') and not path.endswith('/')
           data=base64.b64decode(x['content_base64'],validate=True)
           assert len(data)<=1048576 and hashlib.sha256(data).hexdigest()==x['sha256']
           assert isinstance(x['message'],str) and 5<=len(x['message'])<=120
@@ -67,6 +68,10 @@ jobs:
           PY
               path=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["path"])' "$RUNNER_TEMP/put.json")
               # Resolve remote HEAD SHA; 404 is permitted only for a new file.
+              if [[ $path == .github/workflows/* ]]; then
+                test -n "$LAB_WORKFLOW_PAT" || { echo 'Missing workflow PAT' >&2; exit 3; }
+                export GH_TOKEN=$LAB_WORKFLOW_PAT
+              fi
               sha=$(gh api "repos/$GH_REPO/contents/$path?ref=main" --jq .sha 2>/dev/null || true)
               python3 - "$RUNNER_TEMP/put.json" "$sha" > "$RUNNER_TEMP/request.json" <<'PY'
           import json,sys

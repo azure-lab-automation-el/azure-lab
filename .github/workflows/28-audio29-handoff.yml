@@ -1,0 +1,32 @@
+name: 28 - 29.9 Moon audio handoff
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  relay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Retrieve exact twelve FLACs and list duration/hash
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          mkdir -p "$RUNNER_TEMP/audio"
+          for scene in JFrogProjects-01 JFrogProjects-02 JFrogProjects-03 JFrogProjects-04 JFrogProjects-05 JFrogProjects-06 SquaredUpNoMetrics-01 SquaredUpNoMetrics-02 SquaredUpNoMetrics-03 SquaredUpNoMetrics-04 SquaredUpNoMetrics-05 SquaredUpNoMetrics-06; do
+            /tmp/rclone copyto "mega:JFrog/L7-2026-09-28/audio-lesson-20260929/$scene.flac" "$RUNNER_TEMP/audio/$scene.flac" >/tmp/private.log 2>&1
+            printf '%s ' "$scene"; ffprobe -v error -show_entries format=duration -of csv=p=0 "$RUNNER_TEMP/audio/$scene.flac"
+          done
+          (cd "$RUNNER_TEMP/audio"; sha256sum *.flac > SHA256SUMS.txt; cat SHA256SUMS.txt)
+          echo AUDIO29_FILES_VERIFIED
+      - uses: actions/upload-artifact@v4
+        with:
+          name: moon-29sept-twelve-scene-flacs
+          path: ${{ runner.temp }}/audio/
+          retention-days: 1

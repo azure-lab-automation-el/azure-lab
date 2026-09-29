@@ -1,0 +1,54 @@
+name: 35 - בדיקת הקלטות קליקים ארוכות ומוסתרות
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  capture:
+    strategy:
+      fail-fast: false
+      matrix: {vendor: [JFrog, SquaredUp]}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: משיכת מקור הקלטה מגובה ומאומת
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-20-lesson-long-click-source-20260929.tar.gz' /tmp/capture-source.tar.gz >/tmp/transfer-private.log 2>&1
+          printf '%s  %s\n' '89bdc88dcdadf0d6f3792dffb9d8d3ed3e038d40ec6c866d3211394401728223' /tmp/capture-source.tar.gz | sha256sum -c - >/dev/null
+          tar -xzf /tmp/capture-source.tar.gz capture-long-20260929.mjs
+          printf '%s  %s\n' 'b123d736d515cc1e5e573959c30c2dd638bfd63efc2d564cbf5cc43bb9ca21b7' capture-long-20260929.mjs | sha256sum -c -
+      - name: התקנת Playwright ודפדפן
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+          sudo apt-get install -y -qq ffmpeg >/dev/null 2>&1
+      - name: הקלטת מסכים חיים אחרי התחברות וטעינה
+        env:
+          CAPTURE_VENDOR: ${{ matrix.vendor }}
+          JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
+          JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
+          SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
+          SQUAREDUP_LAB_PASSWORD: ${{ secrets.SQUAREDUP_LAB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$JFROG_LAB_USER" && test -n "$JFROG_LAB_PASSWORD"
+          test -n "$SQUAREDUP_LAB_USER" && test -n "$SQUAREDUP_LAB_PASSWORD"
+          node capture-long-20260929.mjs "$RUNNER_TEMP/lesson-live-captures"
+          for f in "$RUNNER_TEMP"/lesson-live-captures/*.webm; do ffprobe -v error -show_entries format=duration,size -of compact "$f"; done
+      - name: קבצי מקור להלחנה פרטית
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: long-masked-clicks-test-${{ matrix.vendor }}
+          path: ${{ runner.temp }}/lesson-live-captures/*.webm
+          retention-days: 1

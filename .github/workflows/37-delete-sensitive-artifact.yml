@@ -1,0 +1,19 @@
+name: 37 - Remove sensitive capture artifact after private byte backup
+on: {workflow_dispatch: {}}
+permissions: {actions: write, contents: read}
+jobs:
+  remove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Delete only verified-backed-up artifact and check absence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          url='https://api.github.com/repos/azure-lab-automation-el/azure-lab/actions/artifacts/11010128524'
+          code=$(curl -sS -o /tmp/delete-response -w '%{http_code}' -X DELETE -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$url")
+          test "$code" = 204 || test "$code" = 404
+          list=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' 'https://api.github.com/repos/azure-lab-automation-el/azure-lab/actions/runs/36513390953/artifacts?per_page=100')
+          if printf '%s' "$list" | jq -e '.artifacts[]? | select(.id == 11010128524)' >/dev/null; then echo 'ARTIFACT_STILL_PRESENT'; exit 1; fi
+          echo 'SENSITIVE_ARTIFACT_REMOVED_AND_ABSENT'

@@ -3,25 +3,27 @@ on:
   workflow_dispatch:
     inputs:
       package_path:
-        description: 'Encrypted package path in repo (under packages/)' 
-        required: true
+        description: 'Encrypted package path assembled in runner (packages/lesson-v3.tar.gz.age)' 
+        required: false
+        default: packages/lesson-v3.tar.gz.age
         type: string
       package_id:
         description: 'Immutable package ID, checked against decrypted package'
-        required: true
+        required: false
+        default: 20260929-source-v3-capture-dsl
         type: string
       mode:
         description: 'production or synthetic fixture; fixture never publishes'
-        required: true
+        required: false
         default: production
         type: choice
         options: [production, fixture]
       rails:
-        description: 'all, validate, audio, capture, simulation, metric, or discover'
+        description: 'all, validate, audio, capture, simulation, metric, discover, or recipient-proof'
         required: true
         default: all
         type: choice
-        options: [all, validate, audio, capture, simulation, metric, discover]
+        options: [all, validate, audio, capture, simulation, metric, discover, recipient-proof]
 permissions:
   contents: read
 concurrency:
@@ -36,6 +38,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install age
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Decrypt verified pipeline bundle and package in runner only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
+          age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
+          bash "$RUNNER_TEMP/lesson-bootstrap.sh"
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
       - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
         if: inputs.mode == 'production'
         with:
@@ -58,6 +71,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install age
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Decrypt verified pipeline bundle and package in runner only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
+          age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
+          bash "$RUNNER_TEMP/lesson-bootstrap.sh"
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
       - name: Decrypt and validate immutable package
         id: package
         env:
@@ -77,6 +101,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install age
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Decrypt verified pipeline bundle and package in runner only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
+          age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
+          bash "$RUNNER_TEMP/lesson-bootstrap.sh"
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
       - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
         if: inputs.mode == 'production'
         with:
@@ -114,6 +149,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install age
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Decrypt verified pipeline bundle and package in runner only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
+          age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
+          bash "$RUNNER_TEMP/lesson-bootstrap.sh"
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
       - name: Capture package-driven read-only live scenes or fail closed
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
@@ -142,6 +188,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install age
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Decrypt verified pipeline bundle and package in runner only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
+          age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
+          bash "$RUNNER_TEMP/lesson-bootstrap.sh"
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
       - name: Render labeled conceptual and simulation shots without vendor login
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
@@ -165,6 +222,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install age
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Decrypt verified pipeline bundle and package in runner only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
+          age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
+          bash "$RUNNER_TEMP/lesson-bootstrap.sh"
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
       - uses: actions/download-artifact@v4
         with:
           name: audio-${{ inputs.package_id }}
@@ -200,6 +268,17 @@ jobs:
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
           npm install --prefix "$RUNNER_TEMP" --no-audit --no-fund playwright@1.63.0
           "$RUNNER_TEMP/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Decrypt verified pipeline bundle and package in runner only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
+          age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
+          bash "$RUNNER_TEMP/lesson-bootstrap.sh"
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
       - name: Read-only DOM discovery, ciphertext output only
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
@@ -228,6 +307,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install age
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Decrypt verified pipeline bundle and package in runner only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
+          age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
+          bash "$RUNNER_TEMP/lesson-bootstrap.sh"
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
       - uses: actions/download-artifact@v4
         with:
           pattern: '*-${{ inputs.package_id }}'
@@ -253,6 +343,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install age
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Decrypt verified pipeline bundle and package in runner only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
+          age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
+          bash "$RUNNER_TEMP/lesson-bootstrap.sh"
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
       - uses: actions/download-artifact@v4
         with:
           name: attached-${{ inputs.package_id }}
@@ -277,6 +378,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install age
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - name: Decrypt verified pipeline bundle and package in runner only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
+          age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
+          bash "$RUNNER_TEMP/lesson-bootstrap.sh"
+          rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
       - uses: actions/download-artifact@v4
         with:
           name: composed-${{ inputs.package_id }}
@@ -295,3 +407,19 @@ jobs:
           path: ${{ runner.temp }}/lesson-cipher/qa/*.age
           if-no-files-found: error
           retention-days: 1
+
+  recipient-proof:
+    if: github.event_name == 'workflow_dispatch' && inputs.rails == 'recipient-proof'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Print public age recipient only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+          test -n "$LAB_AGE_KEY"
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/age.key"
+          age-keygen -y "$RUNNER_TEMP/age.key"
+          rm -f "$RUNNER_TEMP/age.key"

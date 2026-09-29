@@ -1,0 +1,27 @@
+name: 49 - encrypted Hila sweet review transfer
+on: {workflow_dispatch: {}}
+permissions: {contents: read, actions: read}
+jobs:
+  utility:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+      MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify and run encrypted private utility
+        run: |
+          set -euo pipefail; umask 077
+          printf '%s  %s\n' 'c31d884feb8c62135361efe252e9d7445c512e0411c1c9ef49705436630b2721' ./3-hila-sweet-transfer-source.tar.gz.age | sha256sum -c - >/dev/null
+          sudo apt-get update -qq >/dev/null 2>&1
+          sudo apt-get install -y -qq age >/dev/null 2>&1
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lesson-age.key
+          age -d -i /tmp/lesson-age.key -o /tmp/hila-utility.tar.gz ./3-hila-sweet-transfer-source.tar.gz.age
+          shred -u /tmp/lesson-age.key 2>/dev/null || rm -f /tmp/lesson-age.key
+          printf '%s  %s\n' '73cdd3cc673d7914bbb764c81b27f40f7bc1a2bd2d3ad21122aeec1d5e3f2b12' /tmp/hila-utility.tar.gz | sha256sum -c - >/dev/null
+          tar -xzf /tmp/hila-utility.tar.gz -C /tmp hila-transfer.sh
+          printf '%s  %s\n' 'f1cf0ccaa12d9e0e0662f8c5f0bc8956b6653f2940d68cc21cef76245e59eb40' /tmp/hila-transfer.sh | sha256sum -c - >/dev/null
+          bash /tmp/hila-transfer.sh

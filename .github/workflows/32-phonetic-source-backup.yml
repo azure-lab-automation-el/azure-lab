@@ -1,0 +1,23 @@
+name: 32 - Moon 29 September phonetic source byte verification
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Read back plaintext source and verify SHA256
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-19-moon-twelve-phonetic-source-20260929.tar.gz' /tmp/source.tar.gz >/tmp/private-transfer.log 2>&1
+          printf '%s  %s\n' '4d78eadcf2b5d804aa0cb0d5f8b779bd9c13e9e67ae70fd8cee7f95837b03d48' /tmp/source.tar.gz | sha256sum -c -
+          tar -tzf /tmp/source.tar.gz
+          echo SOURCE_BYTE_VERIFIED

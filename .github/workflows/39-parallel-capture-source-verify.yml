@@ -1,0 +1,23 @@
+name: 39 - verify private parallel capture source backup
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Independently read back and check private source hash
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail; umask 077
+          test -n "$MEGA_EMAIL" && test -n "$MEGA_PASSWORD"
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/1-1-parallel-tab-capture-source-20260929.tar.gz' /tmp/capture-source.tar.gz >/tmp/private-transfer.log 2>&1
+          printf '%s  %s\n' '686e1b2343e60449b65bdb30ac6249bf4ac6bcc8609b085fd85ce95cde9f9c6c' /tmp/capture-source.tar.gz | sha256sum -c - >/dev/null
+          tar -tzf /tmp/capture-source.tar.gz >/dev/null
+          echo PRIVATE_PARALLEL_CAPTURE_SOURCE_BYTE_VERIFIED

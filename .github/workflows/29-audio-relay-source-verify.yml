@@ -1,1 +1,22 @@
-
+name: 29 - 29.9 audio relay source verify
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check backed up private capture source
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/17-lesson-29-audio-relay-source.tar.gz' /tmp/remote.tar.gz >/tmp/private.log 2>&1
+          printf '%s  %s\n' 'c390b5c3bccf36b815ba220561a39c5e589013b36c52749cea444d0b0b07e271' /tmp/remote.tar.gz | sha256sum -c -
+          tar -tzf /tmp/remote.tar.gz

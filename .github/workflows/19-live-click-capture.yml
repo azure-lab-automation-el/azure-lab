@@ -1,0 +1,53 @@
+name: 19 - הקלטות קליקים אמיתיים JFrog ו-SquaredUp
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  capture:
+    strategy:
+      fail-fast: false
+      matrix: {vendor: [JFrog, SquaredUp]}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: משיכת מקור הקלטה מגובה ומאומת
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl -fsSL -o /tmp/rc.zip https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          unzip -qj /tmp/rc.zip '*/rclone' -d /tmp
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$(/tmp/rclone obscure "$MEGA_PASSWORD")"
+          /tmp/rclone copyto 'mega:JFrog/L7-2026-09-28/source/9-lesson-live-capture-v2-source-20260929-0431.tar.gz' /tmp/capture-source.tar.gz >/tmp/transfer-private.log 2>&1
+          printf '%s  %s\n' '91b8f9c4948be08fe04e36e162475135a9d62f6287d052f5a0f597090b28b01a' /tmp/capture-source.tar.gz | sha256sum -c - >/dev/null
+          tar -xzf /tmp/capture-source.tar.gz capture.mjs
+      - name: התקנת Playwright ודפדפן
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+          sudo apt-get install -y -qq ffmpeg >/dev/null 2>&1
+      - name: הקלטת מסכים חיים אחרי התחברות וטעינה
+        env:
+          CAPTURE_VENDOR: ${{ matrix.vendor }}
+          JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
+          JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
+          SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
+          SQUAREDUP_LAB_PASSWORD: ${{ secrets.SQUAREDUP_LAB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$JFROG_LAB_USER" && test -n "$JFROG_LAB_PASSWORD"
+          test -n "$SQUAREDUP_LAB_USER" && test -n "$SQUAREDUP_LAB_PASSWORD"
+          node capture.mjs "$RUNNER_TEMP/lesson-live-captures"
+          for f in "$RUNNER_TEMP"/lesson-live-captures/*.webm; do ffprobe -v error -show_entries format=duration,size -of compact "$f"; done
+      - name: קבצי מקור להלחנה פרטית
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-clicks-${{ matrix.vendor }}
+          path: ${{ runner.temp }}/lesson-live-captures/*.webm
+          retention-days: 1

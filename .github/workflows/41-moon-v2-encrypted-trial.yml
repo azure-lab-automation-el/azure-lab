@@ -1,0 +1,56 @@
+name: 41 - encrypted Moon full-coverage v2 trial
+on: {workflow_dispatch: {}}
+permissions: {contents: read}
+jobs:
+  synth:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: {lesson: [jfrog-projects, squaredup-no-metrics]}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container:
+      image: ghcr.io/azure-lab-automation-el/synthetic-voice-runtime@sha256:d59bf349ff0baaf62d50ce0b87370a8d306a15d8e87d40022afaf3c87572cf66
+    defaults:
+      run: {shell: bash}
+    env:
+      LESSON: ${{ matrix.lesson }}
+      LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run verified encrypted source
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MOON_AGE_KEY: ${{ secrets.MOON_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail; umask 077
+          apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq age >/dev/null 2>&1
+          printf '%s  %s\n' 'df1ab2b2fb0d6643f09f4d516d82195648dda58dd39c7c7e528d8a427e1bdf9e' ./1-moon-v2-producer-v2-source-20260929.tar.gz.age | sha256sum -c - >/dev/null
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lab.key
+          age -d -i /tmp/lab.key -o /tmp/source.tar.gz ./1-moon-v2-producer-v2-source-20260929.tar.gz.age
+          shred -u /tmp/lab.key 2>/dev/null || rm -f /tmp/lab.key
+          printf '%s  %s\n' '76df8f733b9fb89aea6770bc1f6786df1725c812d35a60b318b6564e859c3864' /tmp/source.tar.gz | sha256sum -c - >/dev/null
+          tar -xzf /tmp/source.tar.gz -C /tmp
+          printf '%s  %s\n' 'eafbea88024bca518fe0dfa0016690e59e7f405bb7cde1a8e6bb1db0fee80b36' /tmp/run.sh | sha256sum -c - >/dev/null
+          bash /tmp/run.sh
+      - name: Encrypt reviewer results, including failure log
+        if: always()
+        run: |
+          set -euo pipefail; umask 077
+          mkdir -p "$RUNNER_TEMP/private-voice" /tmp/reviewer
+          test ! -f /tmp/voice-private.log || cp /tmp/voice-private.log /tmp/reviewer/
+          test ! -f /tmp/private-transfer.log || cp /tmp/private-transfer.log /tmp/reviewer/
+          test ! -d /tmp/audio || cp -a /tmp/audio /tmp/reviewer/
+          test -n "$(ls -A /tmp/reviewer)" || echo 'No synthesis files' >/tmp/reviewer/status.txt
+          tar -czf /tmp/reviewer.tar.gz -C /tmp/reviewer .
+          age -r "$LAB_AGE_RECIPIENT" -o "$RUNNER_TEMP/private-voice/$LESSON.tar.gz.age" /tmp/reviewer.tar.gz
+          rm -rf /tmp/reviewer /tmp/reviewer.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: encrypted-v2-voice-${{ matrix.lesson }}
+          path: ${{ runner.temp }}/private-voice/*.age
+          if-no-files-found: error
+          retention-days: 1

@@ -1,0 +1,27 @@
+name: 44 - encrypted matrix private reviewer transfer
+on: {workflow_dispatch: {}}
+permissions: {contents: read, actions: read}
+jobs:
+  utility:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+      MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify and run encrypted private utility
+        run: |
+          set -euo pipefail; umask 077
+          printf '%s  %s\n' '7389c844694d3f912ab6fc09292a2903ca2325980c3b0ba6d9c5f7c064bc9dff' ./1-moon-v2-matrix-review-source-20260929.tar.gz.age | sha256sum -c - >/dev/null
+          sudo apt-get update -qq >/dev/null 2>&1
+          sudo apt-get install -y -qq age >/dev/null 2>&1
+          printf '%s' "$LAB_AGE_KEY" >/tmp/lesson-age.key
+          age -d -i /tmp/lesson-age.key -o /tmp/private-utility.tar.gz ./1-moon-v2-matrix-review-source-20260929.tar.gz.age
+          shred -u /tmp/lesson-age.key 2>/dev/null || rm -f /tmp/lesson-age.key
+          printf '%s  %s\n' '6c526a73c843eedee9f8b7cb10bc97a03b840ad22f610728afc245a4f388eea6' /tmp/private-utility.tar.gz | sha256sum -c - >/dev/null
+          tar -xzf /tmp/private-utility.tar.gz -C /tmp review-transfer.sh
+          printf '%s  %s\n' '787033f2686b6b72dfc970d502e6f907e266ea3c3ce82781d2d18b0530100b66' /tmp/review-transfer.sh | sha256sum -c - >/dev/null
+          bash /tmp/review-transfer.sh

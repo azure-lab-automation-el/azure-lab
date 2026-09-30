@@ -1,39 +1,4 @@
 name: Lesson pipeline - parallel rails
-true:
-  workflow_dispatch:
-    inputs:
-      browser_url:
-        required: false
-        type: string
-      package_path:
-        required: false
-        default: packages/lesson-v3.tar.gz.age
-        type: string
-      package_id:
-        required: false
-        default: 20260929-source-v3-capture-dsl
-        type: string
-      mode:
-        required: false
-        default: production
-        type: choice
-        options:
-        - production
-        - fixture
-      rails:
-        required: true
-        default: all
-        type: choice
-        options:
-        - all
-        - validate
-        - audio
-        - capture
-        - simulation
-        - metric
-        - discover
-        - recipient-proof
-        - browser
 permissions:
   contents: read
 concurrency:
@@ -541,3 +506,38 @@ jobs:
         path: /tmp/browser-cipher/*.age
         if-no-files-found: error
         retention-days: 1
+'on':
+  workflow_dispatch:
+    inputs:
+      browser_url:
+        required: false
+        type: string
+      package_path:
+        required: false
+        default: packages/lesson-v3.tar.gz.age
+        type: string
+      package_id:
+        required: false
+        default: 20260929-source-v3-capture-dsl
+        type: string
+      mode:
+        required: false
+        default: production
+        type: choice
+        options:
+        - production
+        - fixture
+      rails:
+        required: true
+        default: all
+        type: choice
+        options:
+        - all
+        - validate
+        - audio
+        - capture
+        - simulation
+        - metric
+        - discover
+        - recipient-proof
+        - browser

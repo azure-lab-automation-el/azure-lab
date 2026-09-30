@@ -138,3 +138,38 @@ jobs:
           PYAZ
           gh issue comment 2 --repo "$GH_REPO" --body-file "$RUNNER_TEMP/azure-safe.txt"
           while IFS= read -r line; do printf '::notice title=Azure read-only probe::%s\n' "$line"; done < "$RUNNER_TEMP/azure-safe.txt"
+
+  azure-cost:
+    if: github.event.issue.number == 2 && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/azure-cost'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions: {contents: write, id-token: write, issues: write}
+    steps:
+      - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Private read-only current cost and inventory
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          umask 077
+          p="$RUNNER_TEMP/private-cost"; mkdir -p "$p"
+          sid=$(az account show --query id -o tsv)
+          printf '%s' '{"type":"ActualCost","timeframe":"MonthToDate","dataset":{"granularity":"None","aggregation":{"cost":{"name":"Cost","function":"Sum"}},"grouping":[{"type":"Dimension","name":"ServiceName"},{"type":"Dimension","name":"ResourceId"}]}}' > "$p/request.json"
+          az rest --method post --url "https://management.azure.com/subscriptions/$sid/providers/Microsoft.CostManagement/query?api-version=2025-03-01" --body @"$p/request.json" > "$p/cost.json" 2> "$p/cost-error.txt" || true
+          az resource list -o json > "$p/resources.json" 2> "$p/resources-error.txt" || true
+          az vm list -d -o json > "$p/vms.json" 2> "$p/vms-error.txt" || true
+          az disk list -o json > "$p/disks.json" 2> "$p/disks-error.txt" || true
+          az network public-ip list -o json > "$p/ips.json" 2> "$p/ips-error.txt" || true
+          az rest --method get --url "https://management.azure.com/subscriptions/$sid/providers/Microsoft.Billing/billingProperty/default?api-version=2024-04-01" > "$p/billing-property.json" 2> "$p/billing-property-error.txt" || true
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+          tar -czf "$RUNNER_TEMP/cost.tar.gz" -C "$p" .
+          age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/cost.age" "$RUNNER_TEMP/cost.tar.gz"
+          jq -n --rawfile data "$RUNNER_TEMP/cost.age" '{message:"Encrypted private read-only Azure cost result",content:($data|@base64),branch:"main"}' > "$RUNNER_TEMP/relay.json"
+          gh api -X PUT "repos/$GH_REPO/contents/packages/azure-cost-${{ github.run_id }}.age" --input "$RUNNER_TEMP/relay.json" >/dev/null
+          rm -rf "$p" "$RUNNER_TEMP/cost.tar.gz"
+          echo '::notice title=Private Azure cost relay::Encrypted result committed. No financial figures published. Individual API failures must be reviewed privately.'

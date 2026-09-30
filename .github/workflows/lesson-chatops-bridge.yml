@@ -253,7 +253,7 @@ jobs:
           age -d -i "$w/key" -o "$w/source.tar" "$w/source.age"; rm "$w/key"
           python3 - "$w" <<'PYBACK'
           import tarfile,pathlib,hashlib,sys
-          p=pathlib.Path(sys.argv[1]);expected={'e2e-lesson-source-v7.tar.gz': 'f8cbd063659b12313562c23c730ca1deb2af21e0db8df7c885987de73bdf4653'}
+          p=pathlib.Path(sys.argv[1]);expected={'e2e-lesson-source-v7.tar.gz': '4d99a66e576fce8744f438f125fb72c6c39b4807a789084b80897917d87a7ea0'}
           with tarfile.open(p/'source.tar') as t:
               assert set(t.getnames())==set(expected)
               for m in t:

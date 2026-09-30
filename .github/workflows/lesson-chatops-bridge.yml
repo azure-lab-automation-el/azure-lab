@@ -11,7 +11,7 @@ jobs:
       github.event.comment.user.login == 'azure-lab-automation-el' &&
       github.event.comment.author_association == 'OWNER' &&
       contains(github.event.issue.labels.*.name, 'lesson-chatops') &&
-      (startsWith(github.event.comment.body, '/run ') || startsWith(github.event.comment.body, '/apply ') || startsWith(github.event.comment.body, '/playwright '))
+      (startsWith(github.event.comment.body, '/run ') || startsWith(github.event.comment.body, '/apply ') || startsWith(github.event.comment.body, '/playwright ') || startsWith(github.event.comment.body, '/relay-audio '))
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency: {group: lesson-bridge-update, cancel-in-progress: false}
@@ -43,6 +43,33 @@ jobs:
           PYURL
               gh api -X POST "repos/$GH_REPO/actions/workflows/lesson-pipeline.yml/dispatches" --input "$RUNNER_TEMP/dispatch.json" >/dev/null
               echo 'Read-only browser rail dispatched. Private output encrypted; this is not QA approval.' > "$RUNNER_TEMP/status.txt"
+              ;;
+            '/relay-audio '*)
+              rid=${command#'/relay-audio '}
+              [[ "$rid" =~ ^[0-9]{8,15}$ ]]
+              w="$RUNNER_TEMP/audio-review";mkdir -p "$w/in" "$w/cipher"
+              gh api "repos/$GH_REPO/actions/runs/$rid" > "$w/run.json"
+              python3 - "$w/run.json" <<'PYREVIEW'
+          import json,sys
+          j=json.load(open(sys.argv[1]));assert j['path']=='.github/workflows/lesson-pipeline.yml' and j['event']=='workflow_dispatch' and j['status']=='completed'
+          PYREVIEW
+              gh run download "$rid" --repo "$GH_REPO" --name audio-20260930-docs-draft-v1 --dir "$w/in"
+              sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+              printf '%s' "$LAB_AGE_KEY" > "$w/key"
+              age -d -i "$w/key" -o "$w/audio.tar.gz" "$w/in/audio-20260930-docs-draft-v1.tar.gz.age"
+              rm -f "$w/key"
+              age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$w/cipher/audio.age" "$w/audio.tar.gz"
+              rm -f "$w/audio.tar.gz"
+              split -b 700000 -d -a 3 "$w/cipher/audio.age" "$w/cipher/part-"
+              for p in "$w/cipher"/part-*; do
+                suffix=${p##*/part-}
+                jq -n --rawfile data "$p" '{message:"Encrypted technical audio review, pending QA",content:($data|@base64),branch:"main"}' > "$w/upload.json"
+                gh api -X PUT "repos/$GH_REPO/contents/packages/audio-review-$rid-$suffix.age" --input "$w/upload.json" >/dev/null
+              done
+              count=$(find "$w/cipher" -name 'part-*' | wc -l)
+              echo "::notice title=Audio review relay::run=$rid parts=$count private_review_only=true"
+              printf 'Encrypted audio review relay complete: run=%s parts=%s. Not QA approval.\n' "$rid" "$count" > "$RUNNER_TEMP/status.txt"
+              rm -rf "$w"
               ;;
             '/run '*)
               payload=${command#'/run '}

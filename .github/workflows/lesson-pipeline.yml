@@ -510,6 +510,13 @@ jobs:
         rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
 
         '
+    - run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq ffmpeg >/dev/null
+
+        npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0 >/dev/null
+
+        python3 -m pip install --no-cache-dir azure-cognitiveservices-speech faster-whisper scipy huggingface_hub >/dev/null
+
+        '
     - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -518,39 +525,45 @@ jobs:
     - env:
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         GH_TOKEN: ${{ github.token }}
+        JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
+        JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
       run: 'set -euo pipefail
 
         umask 077
 
-        mkdir -p "$RUNNER_TEMP/ledger-code" "$RUNNER_TEMP/ledger-private"
+        mkdir -p "$RUNNER_TEMP/e2e-code" "$RUNNER_TEMP/e2e-private"
 
-        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/ledger.key"
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
 
-        age -d -i "$RUNNER_TEMP/ledger.key" -o "$RUNNER_TEMP/helpers.tar.gz" pipeline/updates-0930-v13.tar.gz.age
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/e2e-scene-source-v1.tar.gz.age
 
-        rm "$RUNNER_TEMP/ledger.key"
+        rm "$RUNNER_TEMP/code.key"
 
-        echo ''6e94c8df013d40330797758e57b4ebea463c3c73b0ea6897d9122932bd64feed  ''"$RUNNER_TEMP/helpers.tar.gz" | sha256sum -c - >/dev/null
+        echo ''b883d5404271045417c8a6c1ec505e107561800a03f545b98dba4eb9fa099fb0  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
 
-        tar -xzf "$RUNNER_TEMP/helpers.tar.gz" -C "$RUNNER_TEMP/ledger-code"
+        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
 
         set +e
 
-        python3 "$RUNNER_TEMP/ledger-code/initialize_ledger.py" > "$RUNNER_TEMP/ledger-private/log.txt" 2>&1
+        python3 "$RUNNER_TEMP/e2e-code/scene.py" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1
 
         rc=$?
 
         set -e
 
-        printf ''%s'' "$rc" > "$RUNNER_TEMP/ledger-private/exit-code.txt"
+        printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
 
-        tar -czf "$RUNNER_TEMP/ledger.tar.gz" -C "$RUNNER_TEMP/ledger-private" .
+        # No private raw screenshot/video needs to enter delivery package.
 
-        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/ledger.age" "$RUNNER_TEMP/ledger.tar.gz"
+        rm -f "$RUNNER_TEMP/e2e-private/live-click-private.mp4"
 
-        jq -n --rawfile d "$RUNNER_TEMP/ledger.age" ''{message:"Encrypted durable free-quota baseline proof",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json"
+        tar -czf "$RUNNER_TEMP/e2e.tar.gz" -C "$RUNNER_TEMP/e2e-private" .
 
-        gh api -X PUT "repos/${{ github.repository }}/contents/packages/ledger-${{ github.run_id }}.age" --input "$RUNNER_TEMP/put.json" >/dev/null
+        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/e2e.age" "$RUNNER_TEMP/e2e.tar.gz"
+
+        split -b 700000 -d -a 3 "$RUNNER_TEMP/e2e.age" "$RUNNER_TEMP/e2e-part-"
+
+        for part in "$RUNNER_TEMP"/e2e-part-*;do suffix=${part##*-};jq -n --rawfile d "$part" ''{message:"Encrypted end-to-end real lesson review",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/e2e-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null || { sleep 2;gh api -X PUT "repos/${{ github.repository }}/contents/packages/e2e-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null; };done
 
         exit "$rc"
 

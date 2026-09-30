@@ -411,7 +411,6 @@ jobs:
           path: ${{ runner.temp }}/lesson-cipher/qa/*.age
           if-no-files-found: error
           retention-days: 1
-
   recipient-proof:
     permissions: {contents: read, issues: write}
     if: github.event_name == 'workflow_dispatch' && inputs.rails == 'recipient-proof'
@@ -432,7 +431,6 @@ jobs:
           echo "::notice title=Public age recipient::$recipient"
           printf 'Public age recipient: `%s`\nRecipient proof only, not lesson QA approval.\n' "$recipient" > "$RUNNER_TEMP/recipient.txt"
           GH_TOKEN='${{ github.token }}' gh issue comment 2 --repo '${{ github.repository }}' --body-file "$RUNNER_TEMP/recipient.txt"
-
   report:
     needs: [metric, validate, audio, capture, simulation, timing, attach, compose, qa, discover, recipient-proof, browser]
     if: always()
@@ -469,8 +467,8 @@ jobs:
           PYCODE
           gh issue comment 2 --repo "$GH_REPO" --body-file "$RUNNER_TEMP/report.txt"
           while IFS= read -r line; do printf '::notice title=Lesson rail status::%s\n' "$line"; done < "$RUNNER_TEMP/report.txt"
-
   browser:
+    permissions: {contents: write}
     if: inputs.rails == 'browser'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
@@ -511,7 +509,10 @@ jobs:
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
           mkdir -p /tmp/browser-cipher
           tar -czf /tmp/browser-result.tar.gz -C /tmp/browser-private .
-          age -r "$LAB_AGE_RECIPIENT" -o /tmp/browser-cipher/result.tar.gz.age /tmp/browser-result.tar.gz
+          age -a -r "$LAB_AGE_RECIPIENT" -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o /tmp/browser-cipher/result.tar.gz.age /tmp/browser-result.tar.gz
+          file=/tmp/browser-cipher/result.tar.gz.age
+          jq -n --rawfile data "$file" '{message:"Encrypted private browser result",content:($data|@base64),branch:"main"}' > /tmp/relay.json
+          GH_TOKEN='${{ github.token }}' gh api -X PUT 'repos/${{ github.repository }}/contents/packages/browser-result-${{ github.run_id }}.age' --input /tmp/relay.json >/dev/null
           rm -rf /tmp/browser-private /tmp/browser-result.tar.gz
       - uses: actions/upload-artifact@v4
         if: always()

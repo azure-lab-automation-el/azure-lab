@@ -52,11 +52,17 @@ jobs:
     - &id001
       uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
     - &id002
-      run: 'command -v ffmpeg >/dev/null
+      run: 'set -euo pipefail
 
-        command -v fc-list >/dev/null
+        for bin in age ffmpeg fc-list; do command -v "$bin" || true; done
 
-        if ! command -v age >/dev/null; then timeout 120 sudo apt-get install -y -qq age >/dev/null; fi
+        timeout 120 sudo apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 -o Acquire::Retries=1 install -y -qq age ffmpeg fontconfig fonts-dejavu-core
+
+        command -v age
+
+        command -v ffmpeg
+
+        command -v fc-list
 
         '
     - &id003

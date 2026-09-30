@@ -64,11 +64,11 @@ jobs:
 
         printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
 
-        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/focused-lesson-source-v15.tar.gz.age
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/focused-lesson-source-v16.tar.gz.age
 
         rm "$RUNNER_TEMP/code.key"
 
-        echo ''181517e30d32eab22faaad6709209c1151a2086b245d1be27e5611d7eb3ec57c  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+        echo ''30a380a96cf51704f1c27935c2e7823feb25a5c16ca732c81ce67d72200b507c  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
 
         tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
 

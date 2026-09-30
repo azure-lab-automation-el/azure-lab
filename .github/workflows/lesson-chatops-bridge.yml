@@ -96,3 +96,42 @@ jobs:
             *) exit 2 ;;
           esac
           gh issue comment "$GH_ISSUE" --repo "$GH_REPO" --body-file "$RUNNER_TEMP/status.txt"
+
+  azure-read:
+    if: github.event.issue.number == 2 && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/azure-read'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions: {contents: read, id-token: write, issues: write}
+    steps:
+      - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Read only subscription policy and available small VM SKUs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          sid=$(az account show --query id -o tsv)
+          az rest --method get --url "https://management.azure.com/subscriptions/$sid?api-version=2022-12-01" --query '{state:state,quotaId:subscriptionPolicies.quotaId,spendingLimit:subscriptionPolicies.spendingLimit}' -o json > "$RUNNER_TEMP/policy.json"
+          az vm list-skus --location westeurope --resource-type virtualMachines --all -o json > "$RUNNER_TEMP/skus.json"
+          az vm list-usage --location westeurope -o json > "$RUNNER_TEMP/usage.json"
+          python3 - "$RUNNER_TEMP" <<'PYAZ'
+          import json,pathlib,sys,re
+          p=pathlib.Path(sys.argv[1]);lines=['Read-only Azure eligibility probe. No resources or billing settings changed.']
+          d=json.load(open(p/'policy.json'))
+          for k in ('state','quotaId','spendingLimit'):
+              v=str(d.get(k));v=v if re.fullmatch(r'[A-Za-z0-9_.-]{1,100}',v) else 'unverified';lines.append(k+'='+v)
+          for x in json.load(open(p/'skus.json')):
+              if x.get('name') in ('Standard_B1s','Standard_B2ats_v2','Standard_B2pts_v2'):
+                  lines.append(x['name']+': restrictions='+str(len(x.get('restrictions',[]))))
+          for x in json.load(open(p/'usage.json')):
+              if x.get('name',{}).get('value') in ('cores','virtualMachines','standardBSFamily','standardBsv2Family','standardBpsv2Family'):
+                  lines.append(x['name']['value']+': usage='+str(x['currentValue'])+', limit='+str(x['limit']))
+          lines.append('Free 12-month VM entitlement is NOT proven by quotaId or SKU availability. Exact offer expiry/free-meter allowance still required.')
+          (p/'azure-safe.txt').write_text('\n'.join(lines)+'\n')
+          PYAZ
+          gh issue comment 2 --repo "$GH_REPO" --body-file "$RUNNER_TEMP/azure-safe.txt"
+          while IFS= read -r line; do printf '::notice title=Azure read-only probe::%s\n' "$line"; done < "$RUNNER_TEMP/azure-safe.txt"

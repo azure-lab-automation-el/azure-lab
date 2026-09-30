@@ -176,3 +176,55 @@ jobs:
           gh api -X PUT "repos/$GH_REPO/contents/packages/azure-cost-${{ github.run_id }}.age" --input "$RUNNER_TEMP/relay.json" >/dev/null
           rm -rf "$p" "$RUNNER_TEMP/cost.tar.gz"
           echo '::notice title=Private Azure cost relay::Encrypted result committed. No financial figures published. Individual API failures must be reviewed privately.'
+
+  lesson-backup:
+    if: github.event.issue.number == 2 && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.author_association == 'OWNER' && startsWith(github.event.comment.body, '/backup ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    concurrency: {group: lesson-mega-backup, cancel-in-progress: false}
+    permissions: {contents: read, issues: write}
+    steps:
+      - name: Additive plaintext MEGA backup with downloaded SHA verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          echo "::add-mask::$MEGA_EMAIL"
+          echo "::add-mask::$MEGA_PASSWORD"
+          w="$RUNNER_TEMP/backup"; mkdir -p "$w/plain" "$w/readback"
+          gh api "repos/$GH_REPO/issues/comments/$COMMENT_ID" --jq .body > "$w/comment.txt"
+          python3 - "$w" <<'PYBACK'
+          import pathlib,base64,sys
+          p=pathlib.Path(sys.argv[1]);s=(p/'comment.txt').read_text();assert s.startswith('/backup ') and len(s)<=65000
+          (p/'source.age').write_bytes(base64.b64decode(s[8:],validate=True))
+          PYBACK
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+          printf '%s' "$LAB_AGE_KEY" > "$w/key"
+          age -d -i "$w/key" -o "$w/source.tar" "$w/source.age"; rm "$w/key"
+          python3 - "$w" <<'PYBACK'
+          import tarfile,pathlib,hashlib,sys
+          p=pathlib.Path(sys.argv[1]);expected={'candidate.tar.gz':'f508e2e6dcf77f1d6301ef1d35c45193efb59c3edf4256995248adba887b9bc6','source-20260930.tar.gz':'15039bb1aa47d2bc5ab69df0368520d48433ed433339960b63c6e57e84feaf30'}
+          with tarfile.open(p/'source.tar') as t:
+              assert set(t.getnames())==set(expected)
+              for m in t:
+                  assert m.isfile() and m.size<100000
+                  data=t.extractfile(m).read();assert hashlib.sha256(data).hexdigest()==expected[m.name]
+                  (p/'plain'/m.name).write_bytes(data)
+          PYBACK
+          curl -fsSL -o "$w/rc.zip" https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          echo "417e3da236f3a12d292da4e7287d67b1df558b8c2b280d092e563958ed724be7  $w/rc.zip" | sha256sum -c - >/dev/null
+          unzip -qj "$w/rc.zip" '*/rclone' -d "$w"
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$("$w/rclone" obscure "$MEGA_PASSWORD")"
+          "$w/rclone" copy "$w/plain" mega:JFrog/pipeline-20260930/source --immutable > "$w/upload.log" 2>&1
+          "$w/rclone" copy mega:JFrog/pipeline-20260930/source "$w/readback" > "$w/readback.log" 2>&1
+          cmp "$w/plain/candidate.tar.gz" "$w/readback/candidate.tar.gz"
+          cmp "$w/plain/source-20260930.tar.gz" "$w/readback/source-20260930.tar.gz"
+          echo '::notice title=MEGA backup proof::Candidate and Sept30 draft plaintext archives uploaded and downloaded byte-identically. No deletion.'
+          rm -rf "$w"

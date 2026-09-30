@@ -210,7 +210,7 @@ jobs:
           python3 - "$w" <<'PYBACK'
           import pathlib,base64,sys
           p=pathlib.Path(sys.argv[1]);s=(p/'comment.txt').read_text();assert s.startswith('/backup ') and len(s)<=65000
-          (p/'source.age').write_bytes(base64.b64decode(s[8:],validate=True))
+          (p/'source.age').write_bytes(base64.b64decode(s[8:].strip(),validate=True))
           PYBACK
           stage=age-install
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null

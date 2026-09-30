@@ -510,11 +510,11 @@ jobs:
         rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
 
         '
-    - run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq ffmpeg >/dev/null
+    - run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core tesseract-ocr tesseract-ocr-heb tesseract-ocr-eng >/dev/null
 
         npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0 >/dev/null
 
-        python3 -m pip install --no-cache-dir azure-cognitiveservices-speech faster-whisper scipy huggingface_hub >/dev/null
+        python3 -m pip install --no-cache-dir azure-cognitiveservices-speech faster-whisper scipy huggingface_hub Pillow >/dev/null
 
         '
     - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
@@ -535,11 +535,11 @@ jobs:
 
         printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
 
-        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/e2e-scene-source-v6.tar.gz.age
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/e2e-lesson-source-v7.tar.gz.age
 
         rm "$RUNNER_TEMP/code.key"
 
-        echo ''5228d6f0dc3fd4ed90761da69981246fbe2ace6466d976fba5e6527a6dd2fb53  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+        echo ''4d99a66e576fce8744f438f125fb72c6c39b4807a789084b80897917d87a7ea0  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
 
         tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
 

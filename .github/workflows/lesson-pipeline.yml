@@ -100,7 +100,7 @@ jobs:
         PACKAGE_ID: ${{ inputs.package_id }}
         PIPELINE_MODE: ${{ inputs.mode }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
       run: 'bash pipeline/validate.sh
 
         '
@@ -128,7 +128,7 @@ jobs:
         PACKAGE_ID: ${{ inputs.package_id }}
         PIPELINE_MODE: ${{ inputs.mode }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
         AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       run: 'umask 077
 
@@ -192,7 +192,7 @@ jobs:
         PIPELINE_MODE: ${{ inputs.mode }}
         TRACK_ID: ${{ matrix.track }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
         JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
         JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
         SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
@@ -220,7 +220,7 @@ jobs:
         PACKAGE_ID: ${{ inputs.package_id }}
         PIPELINE_MODE: ${{ inputs.mode }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
       run: 'bash pipeline/simulation.sh
 
         '
@@ -250,7 +250,7 @@ jobs:
         PACKAGE_ID: ${{ inputs.package_id }}
         PIPELINE_MODE: ${{ inputs.mode }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
       run: 'bash pipeline/timing.sh
 
         '
@@ -286,7 +286,7 @@ jobs:
         PIPELINE_MODE: ${{ inputs.mode }}
         TRACK_ID: ${{ matrix.track }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
         JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
         JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
         SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
@@ -324,7 +324,7 @@ jobs:
         PACKAGE_ID: ${{ inputs.package_id }}
         PIPELINE_MODE: ${{ inputs.mode }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
       run: 'bash pipeline/attach.sh
 
         '
@@ -349,7 +349,7 @@ jobs:
         PACKAGE_ID: ${{ inputs.package_id }}
         PIPELINE_MODE: ${{ inputs.mode }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
       run: 'bash pipeline/compose.sh
 
         '
@@ -374,7 +374,7 @@ jobs:
         PACKAGE_ID: ${{ inputs.package_id }}
         PIPELINE_MODE: ${{ inputs.mode }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
+        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
       run: 'bash pipeline/qa.sh
 
         '

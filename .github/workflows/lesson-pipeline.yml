@@ -387,7 +387,6 @@ jobs:
     - compose
     - qa
     - discover
-    - hila-cache-test
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5

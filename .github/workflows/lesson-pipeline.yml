@@ -52,17 +52,7 @@ jobs:
     - &id001
       uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
     - &id002
-      run: 'set -euo pipefail
-
-        for bin in age ffmpeg fc-list; do command -v "$bin" || true; done
-
-        timeout 120 sudo apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 -o Acquire::Retries=1 install -y -qq age ffmpeg fontconfig fonts-dejavu-core
-
-        command -v age
-
-        command -v ffmpeg
-
-        command -v fc-list
+      run: 'timeout 120 sudo apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 -o Acquire::Retries=1 install -y -qq age ffmpeg fontconfig fonts-dejavu-core
 
         '
     - &id003
@@ -74,11 +64,11 @@ jobs:
 
         printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
 
-        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/focused-lesson-source-v22.tar.gz.age
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/focused-lesson-source-v23.tar.gz.age
 
         rm "$RUNNER_TEMP/code.key"
 
-        echo ''30108d84b0c05e02a2c968a2d181cd02282080f050bd937ab81975720e3ccc68  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+        echo ''d60b0e061dac335421051a6f0703a6281f4d556d4cb2705f0f633d06b1c1b465  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
 
         tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
 
@@ -106,6 +96,8 @@ jobs:
         printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
 
         mkdir -p "$RUNNER_TEMP/delivery"
+
+        cp "$RUNNER_TEMP/e2e-private"/failure.txt "$RUNNER_TEMP/e2e-private"/*failure*.png "$RUNNER_TEMP/e2e-private"/*failure*.json "$RUNNER_TEMP/e2e-private"/capture-segments.json "$RUNNER_TEMP/e2e-private"/recording-proof.json "$RUNNER_TEMP/delivery/" 2>/dev/null || true
 
         cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/audio-stage.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
 
@@ -162,6 +154,8 @@ jobs:
 
         mkdir -p "$RUNNER_TEMP/delivery"
 
+        cp "$RUNNER_TEMP/e2e-private"/failure.txt "$RUNNER_TEMP/e2e-private"/*failure*.png "$RUNNER_TEMP/e2e-private"/*failure*.json "$RUNNER_TEMP/e2e-private"/capture-segments.json "$RUNNER_TEMP/e2e-private"/recording-proof.json "$RUNNER_TEMP/delivery/" 2>/dev/null || true
+
         cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/qa-stage.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
 
         cp "$RUNNER_TEMP/e2e-private/log.txt" "$RUNNER_TEMP/e2e-private/exit-code.txt" "$RUNNER_TEMP/delivery/"
@@ -208,6 +202,8 @@ jobs:
         printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
 
         mkdir -p "$RUNNER_TEMP/delivery"
+
+        cp "$RUNNER_TEMP/e2e-private"/failure.txt "$RUNNER_TEMP/e2e-private"/*failure*.png "$RUNNER_TEMP/e2e-private"/*failure*.json "$RUNNER_TEMP/e2e-private"/capture-segments.json "$RUNNER_TEMP/e2e-private"/recording-proof.json "$RUNNER_TEMP/delivery/" 2>/dev/null || true
 
         cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/focused-proof.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
 

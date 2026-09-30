@@ -13,6 +13,7 @@ jobs:
       contains(github.event.issue.labels.*.name, 'lesson-chatops')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    concurrency: {group: lesson-bridge-update, cancel-in-progress: false}
     permissions: {contents: write, actions: write, issues: write}
     env:
       GH_TOKEN: ${{ github.token }}
@@ -36,7 +37,7 @@ jobs:
           import json,sys,urllib.parse
           url=open(sys.argv[1]).read().strip();u=urllib.parse.urlsplit(url)
           assert u.scheme=='https' and u.hostname in ('example.com','docs.jfrog.com','docs.squaredup.com','playwright.dev')
-          assert not u.username and not u.password and u.port is None and len(url)<=2000
+          assert not u.username and not u.password and u.port is None and not u.query and not u.fragment and len(url)<=2000
           print(json.dumps({'ref':'main','inputs':{'package_path':'packages/recipient-test-20260930.age','package_id':'browser-public-read','rails':'browser','mode':'fixture','browser_url':url}}))
           PYURL
               gh api -X POST "repos/$GH_REPO/actions/workflows/lesson-pipeline.yml/dispatches" --input "$RUNNER_TEMP/dispatch.json" >/dev/null
@@ -163,9 +164,11 @@ jobs:
           az rest --method post --url "https://management.azure.com/subscriptions/$sid/providers/Microsoft.CostManagement/query?api-version=2025-03-01" --body @"$p/request.json" > "$p/cost.json" 2> "$p/cost-error.txt" || true
           az resource list -o json > "$p/resources.json" 2> "$p/resources-error.txt" || true
           az vm list -d -o json > "$p/vms.json" 2> "$p/vms-error.txt" || true
-          az disk list -o json > "$p/disks.json" 2> "$p/disks-error.txt" || true
+          az rest --method get --url "https://management.azure.com/subscriptions/$sid/providers/Microsoft.Compute/disks?api-version=2024-03-02" > "$p/disks.json" 2> "$p/disks-error.txt" || true
           az network public-ip list -o json > "$p/ips.json" 2> "$p/ips-error.txt" || true
           az rest --method get --url "https://management.azure.com/subscriptions/$sid/providers/Microsoft.Billing/billingProperty/default?api-version=2024-04-01" > "$p/billing-property.json" 2> "$p/billing-property-error.txt" || true
+          profile=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("properties",{}).get("billingProfileId",""))' "$p/billing-property.json")
+          if [ -n "$profile" ]; then az rest --method get --url "https://management.azure.com$profile/providers/Microsoft.Consumption/lots?api-version=2023-03-01" > "$p/credit-lots.json" 2> "$p/credit-lots-error.txt" || true; fi
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
           tar -czf "$RUNNER_TEMP/cost.tar.gz" -C "$p" .
           age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/cost.age" "$RUNNER_TEMP/cost.tar.gz"

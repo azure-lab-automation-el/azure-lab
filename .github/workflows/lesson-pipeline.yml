@@ -545,6 +545,16 @@ jobs:
 
         set +e
 
+        PYTHONPATH="$RUNNER_TEMP/e2e-code" python3 - <<''PYLEDGER''
+
+        import json,os,pathlib
+
+        from durable_cache import Durable
+
+        d=Durable();j,sha=d.ledger();p=pathlib.Path(os.environ[''RUNNER_TEMP''])/''e2e-private'';(p/''ledger-current.json'').write_text(json.dumps(j,indent=2))
+
+        PYLEDGER
+
         python3 "$RUNNER_TEMP/e2e-code/scene.py" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1
 
         rc=$?

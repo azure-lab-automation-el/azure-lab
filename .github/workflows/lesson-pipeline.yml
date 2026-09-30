@@ -535,11 +535,11 @@ jobs:
 
         printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
 
-        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/e2e-lesson-source-v12.tar.gz.age
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/e2e-lesson-source-v13.tar.gz.age
 
         rm "$RUNNER_TEMP/code.key"
 
-        echo ''b9c59ea31192c0497bf0a08ce59959850cdbd1f6df2f421192efbb1bf584fa04  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+        echo ''d859a29dc0329a1b35a43618d577b3b8e4340ffd51266dcc29451b55482d638b  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
 
         tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
 
@@ -557,7 +557,13 @@ jobs:
 
         rm -f "$RUNNER_TEMP/e2e-private/live-click-private.mp4" "$RUNNER_TEMP/e2e-private/caption-track.mkv"
 
-        tar -czf "$RUNNER_TEMP/e2e.tar.gz" -C "$RUNNER_TEMP/e2e-private" .
+        mkdir -p "$RUNNER_TEMP/delivery"
+
+        cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/e2e-proof.json" "$RUNNER_TEMP/e2e-private/audio-checks.json" "$RUNNER_TEMP/e2e-private/caption-rtl-pixel-proof.json" "$RUNNER_TEMP/e2e-private/recording-proof.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
+
+        cp "$RUNNER_TEMP/e2e-private/log.txt" "$RUNNER_TEMP/e2e-private/exit-code.txt" "$RUNNER_TEMP/delivery/"
+
+        tar -czf "$RUNNER_TEMP/e2e.tar.gz" -C "$RUNNER_TEMP/delivery" .
 
         age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/e2e.age" "$RUNNER_TEMP/e2e.tar.gz"
 

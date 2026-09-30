@@ -2,6 +2,10 @@ name: Lesson pipeline - parallel rails
 on:
   workflow_dispatch:
     inputs:
+      browser_url:
+        description: Allowlisted public read-only URL
+        required: false
+        type: string
       package_path:
         description: 'Encrypted package path assembled in runner (packages/lesson-v3.tar.gz.age)' 
         required: false
@@ -23,7 +27,7 @@ on:
         required: true
         default: all
         type: choice
-        options: [all, validate, audio, capture, simulation, metric, discover, recipient-proof]
+        options: [all, validate, audio, capture, simulation, metric, discover, recipient-proof, browser]
 permissions:
   contents: read
 concurrency:
@@ -430,7 +434,7 @@ jobs:
           GH_TOKEN='${{ github.token }}' gh issue comment 2 --repo '${{ github.repository }}' --body-file "$RUNNER_TEMP/recipient.txt"
 
   report:
-    needs: [metric, validate, audio, capture, simulation, timing, attach, compose, qa, discover, recipient-proof]
+    needs: [metric, validate, audio, capture, simulation, timing, attach, compose, qa, discover, recipient-proof, browser]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -447,7 +451,7 @@ jobs:
           gh api --paginate "repos/$GH_REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100" --jq '.jobs[]' > "$RUNNER_TEMP/jobs.jsonl"
           python3 - "$RUNNER_TEMP/jobs.jsonl" "$RUNNER_TEMP/report.txt" <<'PYCODE'
           import json,sys
-          allowed={'metric','validate','audio','capture','simulation','timing','attach','compose','qa','discover','recipient-proof'}
+          allowed={'metric','validate','audio','capture','simulation','timing','attach','compose','qa','discover','recipient-proof','browser'}
           states={'success','failure','cancelled','skipped','timed_out','action_required','neutral','stale','startup_failure','in_progress','queued','completed','pending','waiting'}
           lines=['Lesson pipeline diagnostics. Status only; not content or audiovisual QA approval.']
           for raw in open(sys.argv[1]):
@@ -465,3 +469,54 @@ jobs:
           PYCODE
           gh issue comment 2 --repo "$GH_REPO" --body-file "$RUNNER_TEMP/report.txt"
           while IFS= read -r line; do printf '::notice title=Lesson rail status::%s\n' "$line"; done < "$RUNNER_TEMP/report.txt"
+
+  browser:
+    if: inputs.rails == 'browser'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    container: mcr.microsoft.com/playwright:v1.63.0-noble
+    steps:
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/pw-deps
+          key: playwright-core-1.63.0-node24
+      - name: Prepare pinned client without browser installation
+        run: test -f /tmp/pw-deps/node_modules/playwright-core/package.json || npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0
+      - name: Read-only public navigation and private capture
+        env:
+          BROWSER_URL: ${{ inputs.browser_url }}
+        run: |
+          mkdir -p /tmp/browser-private
+          node <<'JS'
+          const fs=require('fs'); const {chromium}=require('/tmp/pw-deps/node_modules/playwright-core');
+          const allowed=new Set(['example.com','docs.jfrog.com','docs.squaredup.com','playwright.dev']);
+          function ok(raw){try {const u=new URL(raw); return u.protocol==='https:' && !u.username && !u.password && u.port==='' && allowed.has(u.hostname);}catch{return false;}}
+          (async()=>{
+            if(!ok(process.env.BROWSER_URL))process.exit(2);
+            const browser=await chromium.launch({headless:true}); const context=await browser.newContext({viewport:{width:1280,height:900}});
+            await context.route('**/*',route=>ok(route.request().url())?route.continue():route.abort());
+            const page=await context.newPage(); await page.goto(process.env.BROWSER_URL,{waitUntil:'domcontentloaded',timeout:45000});
+            if(!ok(page.url()))throw Error('navigation blocked');
+            await page.screenshot({path:'/tmp/browser-private/page.png',fullPage:true});
+            fs.writeFileSync('/tmp/browser-private/page.txt',await page.locator('body').innerText());
+            await browser.close();
+          })().catch(()=>process.exit(1));
+          JS
+      - name: Encrypt private output
+        if: always()
+        env:
+          LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
+        run: |
+          set -eu
+          apt-get update -qq >/dev/null && apt-get install -y -qq age >/dev/null
+          mkdir -p /tmp/browser-cipher
+          tar -czf /tmp/browser-result.tar.gz -C /tmp/browser-private .
+          age -r "$LAB_AGE_RECIPIENT" -o /tmp/browser-cipher/result.tar.gz.age /tmp/browser-result.tar.gz
+          rm -rf /tmp/browser-private /tmp/browser-result.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-private-${{ github.run_id }}
+          path: /tmp/browser-cipher/*.age
+          if-no-files-found: error
+          retention-days: 1

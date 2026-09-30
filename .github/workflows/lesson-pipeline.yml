@@ -52,7 +52,11 @@ jobs:
     - &id001
       uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
     - &id002
-      run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age ffmpeg fonts-dejavu-core >/dev/null
+      run: 'command -v ffmpeg >/dev/null
+
+        command -v fc-list >/dev/null
+
+        if ! command -v age >/dev/null; then timeout 120 sudo apt-get install -y -qq age >/dev/null; fi
 
         '
     - &id003

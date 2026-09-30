@@ -1,578 +1,4 @@
-name: Lesson pipeline - parallel rails
-permissions:
-  contents: read
-concurrency:
-  group: lesson-${{ inputs.package_id }}-${{ inputs.rails }}-${{ inputs.mode }}
-  cancel-in-progress: false
-jobs:
-  metric:
-    if: inputs.rails == 'all' || inputs.rails == 'metric' || inputs.rails == 'audio'
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-    - &id001
-      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-    - &id002
-      run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-
-        '
-    - &id003
-      env:
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-      run: 'set -euo pipefail
-
-        umask 077
-
-        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
-
-        age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
-
-        rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
-
-        bash "$RUNNER_TEMP/lesson-bootstrap.sh"
-
-        rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-
-        '
-    - &id004
-      uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
-      if: inputs.mode == 'production'
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-    - env:
-        PACKAGE_PATH: ${{ inputs.package_path }}
-        PACKAGE_ID: ${{ inputs.package_id }}
-        PIPELINE_MODE: ${{ inputs.mode }}
-        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      run: 'umask 077
-
-        set +e
-
-        python3 - <<''PYMETRIC''
-
-        from pathlib import Path
-
-        p=Path(''pipeline/metric.sh'');s=p.read_text().replace(''AudioSecondsTranscribed'',''SynthesizedCharacters'').replace(''18000'',''500000'')
-
-        s=s.replace("used=sum(vals);print", "used=sum(vals);assert used+8746+50000<500000, ''F0 TTS headroom insufficient'';print")
-
-        s=s.replace("metrics[0].get(''errorCode'')", "metrics[0].get(''errorCode'') not in (None, ''Success'')")
-
-        p.write_text(s)
-
-        PYMETRIC
-
-        bash pipeline/metric.sh > "$RUNNER_TEMP/metric-private.log" 2>&1
-
-        rc=$?
-
-        set -e
-
-        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/metric.age" "$RUNNER_TEMP/metric-private.log"
-
-        jq -n --rawfile data "$RUNNER_TEMP/metric.age" ''{message:"Encrypted F0 usage evidence",content:($data|@base64),branch:"main"}'' > "$RUNNER_TEMP/metric-relay.json"
-
-        GH_TOKEN=''${{ github.token }}'' gh api -X PUT ''repos/${{ github.repository }}/contents/packages/metric-${{ github.run_id }}.age'' --input "$RUNNER_TEMP/metric-relay.json" >/dev/null
-
-        rm -f "$RUNNER_TEMP/metric-private.log"
-
-        echo "::notice title=Metric status::read_only_rc=$rc"
-
-        exit "$rc"
-
-        '
-  validate:
-    if: inputs.rails == 'all' || inputs.rails == 'validate' || inputs.rails == 'audio' || inputs.rails == 'capture' || inputs.rails == 'simulation' || inputs.rails == 'discover'
-    runs-on: ubuntu-24.04
-    outputs:
-      tracks: ${{ steps.package.outputs.tracks }}
-    steps:
-    - *id001
-    - *id002
-    - *id003
-    - id: package
-      env:
-        PACKAGE_PATH: ${{ inputs.package_path }}
-        PACKAGE_ID: ${{ inputs.package_id }}
-        PIPELINE_MODE: ${{ inputs.mode }}
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
-      run: 'bash pipeline/validate.sh
-
-        '
-  audio:
-    needs:
-    - validate
-    - metric
-    timeout-minutes: 35
-    if: always() && needs.validate.result == 'success' && ((inputs.rails == 'audio' || inputs.rails == 'all') && needs.metric.result == 'success')
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-    - *id001
-    - *id002
-    - *id003
-    - *id004
-    - if: inputs.mode == 'production'
-      run: 'python3 -m pip install --no-cache-dir azure-cognitiveservices-speech faster-whisper
-
-        '
-    - env:
-        PACKAGE_PATH: ${{ inputs.package_path }}
-        PACKAGE_ID: ${{ inputs.package_id }}
-        PIPELINE_MODE: ${{ inputs.mode }}
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
-        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      run: 'umask 077
-
-        set +e
-
-        (
-
-        python3 - <<''PYFIX''
-
-        from pathlib import Path
-
-        p=Path(''pipeline/audio_sdk.py'');s=p.read_text();assert "encoding=''utf8-sig''" in s and ''max_workers=4'' in s
-
-        p.write_text(s.replace("encoding=''utf8-sig''","encoding=''utf-8-sig''").replace(''max_workers=4'',''max_workers=1''))
-
-        PYFIX
-
-        bash pipeline/audio.sh
-
-        ) > "$RUNNER_TEMP/audio-private.log" 2>&1
-
-        rc=$?
-
-        set -e
-
-        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/audio-debug.age" "$RUNNER_TEMP/audio-private.log"
-
-        jq -n --rawfile data "$RUNNER_TEMP/audio-debug.age" ''{message:"Encrypted diagnostic",content:($data|@base64),branch:"main"}'' > "$RUNNER_TEMP/debug.json"
-
-        GH_TOKEN=''${{ github.token }}'' gh api -X PUT ''repos/${{ github.repository }}/contents/packages/audio-debug-${{ github.run_id }}.age'' --input "$RUNNER_TEMP/debug.json" >/dev/null
-
-        rm -f "$RUNNER_TEMP/audio-private.log"
-
-        echo "::notice title=Audio status::rc=$rc pending_qa=true"
-
-        exit "$rc"
-
-        '
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      if: always()
-      with:
-        name: audio-${{ inputs.package_id }}
-        path: ${{ runner.temp }}/lesson-cipher/audio/*.age
-        if-no-files-found: error
-        retention-days: 1
-    concurrency:
-      group: hila-f0-synthesis-resource
-      cancel-in-progress: false
-  capture:
-    needs: validate
-    if: always() && needs.validate.result == 'success' && (inputs.rails == 'all' || inputs.rails == 'capture')
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        track: ${{ fromJSON(needs.validate.outputs.tracks) }}
-    steps:
-    - *id001
-    - *id002
-    - *id003
-    - env:
-        PACKAGE_PATH: ${{ inputs.package_path }}
-        PACKAGE_ID: ${{ inputs.package_id }}
-        PIPELINE_MODE: ${{ inputs.mode }}
-        TRACK_ID: ${{ matrix.track }}
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
-        JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
-        JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
-        SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
-        SQUAREDUP_LAB_PASSWORD: ${{ secrets.SQUAREDUP_LAB_PASSWORD }}
-      run: 'bash pipeline/capture.sh
-
-        '
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      if: always()
-      with:
-        name: capture-${{ matrix.track }}-${{ inputs.package_id }}
-        path: ${{ runner.temp }}/lesson-cipher/capture/*.age
-        if-no-files-found: error
-        retention-days: 1
-  simulation:
-    needs: validate
-    if: always() && needs.validate.result == 'success' && (inputs.rails == 'all' || inputs.rails == 'simulation')
-    runs-on: ubuntu-24.04
-    steps:
-    - *id001
-    - *id002
-    - *id003
-    - env:
-        PACKAGE_PATH: ${{ inputs.package_path }}
-        PACKAGE_ID: ${{ inputs.package_id }}
-        PIPELINE_MODE: ${{ inputs.mode }}
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
-      run: 'bash pipeline/simulation.sh
-
-        '
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      if: always()
-      with:
-        name: simulation-${{ inputs.package_id }}
-        path: ${{ runner.temp }}/lesson-cipher/simulation/*.age
-        if-no-files-found: error
-        retention-days: 1
-  timing:
-    needs:
-    - validate
-    - audio
-    if: always() && inputs.rails == 'all' && needs.validate.result == 'success' && needs.audio.result == 'success'
-    runs-on: ubuntu-24.04
-    steps:
-    - *id001
-    - *id002
-    - *id003
-    - uses: actions/download-artifact@v4
-      with:
-        name: audio-${{ inputs.package_id }}
-        path: ${{ runner.temp }}/lesson-cipher/incoming
-    - env:
-        PACKAGE_PATH: ${{ inputs.package_path }}
-        PACKAGE_ID: ${{ inputs.package_id }}
-        PIPELINE_MODE: ${{ inputs.mode }}
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
-      run: 'bash pipeline/timing.sh
-
-        '
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      if: always()
-      with:
-        name: timing-${{ inputs.package_id }}
-        path: ${{ runner.temp }}/lesson-cipher/timing/*.age
-        if-no-files-found: error
-        retention-days: 1
-  discover:
-    if: inputs.rails == 'discover'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 8
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        track:
-        - squaredup
-    steps:
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-    - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq ffmpeg age >/dev/null
-    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
-      with:
-        path: /tmp/pw-deps
-        key: playwright-core-1.63.0-node24
-    - run: test -f /tmp/pw-deps/node_modules/playwright-core/package.json || npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0
-    - env:
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        TRACK_ID: ${{ matrix.track }}
-        JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
-        JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
-        SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
-        SQUAREDUP_LAB_PASSWORD: ${{ secrets.SQUAREDUP_LAB_PASSWORD }}
-      run: "set -euo pipefail\numask 077\nsudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null\nw=\"$RUNNER_TEMP/helpers\";mkdir -p \"$w\"\nprintf '%s' \"$LAB_AGE_KEY\" > \"$w/key\"\nage -d -i \"$w/key\" -o \"$w/source.tar.gz\" pipeline/updates-0930-v14.tar.gz.age\nrm -f \"$w/key\"\necho '06ba23c61bb5accc84d03937021ee905e8e5b1f76f49bab122514c4f1ca3f66e  '\"$w/source.tar.gz\" | sha256sum -c - >/dev/null\ntar -xzf \"$w/source.tar.gz\" -C \"$w\"\nset +e\nnode \"$w/discover-current.mjs\" > \"$w/private.log\" 2>&1\nrc=$?\nset -e\nmkdir -p \"$RUNNER_TEMP/discovery-private\"\ncp \"$w/private.log\" \"$RUNNER_TEMP/discovery-private/diagnostic.txt\"\ntar -czf \"$w/discovery.tar.gz\" -C \"$RUNNER_TEMP/discovery-private\" .\nage -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o \"$w/review.age\" \"$w/discovery.tar.gz\"\nsplit -b 700000 -d -a 3 \"$w/review.age\" \"$w/part-\"\nfor p in \"$w\"/part-*; do\n suffix=${p##*/part-}\n jq -n --rawfile data \"$p\" '{message:\"Encrypted current vendor UI research\",content:($data|@base64),branch:\"main\"}' > \"$w/upload.json\"\n GH_TOKEN='${{ github.token }}' gh api -X PUT 'repos/${{ github.repository }}/contents/packages/discovery-${{ github.run_id }}-${{ matrix.track }}-'\"$suffix.age\" --input \"$w/upload.json\" >/dev/null || { sleep 2; GH_TOKEN='${{ github.token }}' gh api -X PUT 'repos/${{ github.repository }}/contents/packages/discovery-${{ github.run_id }}-${{ matrix.track }}-'\"$suffix.age\" --input \"$w/upload.json\" >/dev/null; }\ndone\ncount=$(find \"$w\" -name 'part-*' | wc -l)\necho \"::notice title=Private discovery::track=$TRACK_ID rc=$rc parts=$count selector_review_pending=true\"\nrm -rf \"$w\" \"$RUNNER_TEMP/discovery-private\"\nexit \"$rc\"\n"
-  attach:
-    needs:
-    - validate
-    - audio
-    - capture
-    - simulation
-    - timing
-    if: always() && inputs.rails == 'all' && needs.validate.result == 'success' && needs.audio.result == 'success' && needs.capture.result == 'success' && needs.simulation.result == 'success' && needs.timing.result == 'success'
-    runs-on: ubuntu-24.04
-    steps:
-    - *id001
-    - *id002
-    - *id003
-    - uses: actions/download-artifact@v4
-      with:
-        pattern: '*-${{ inputs.package_id }}'
-        path: ${{ runner.temp }}/lesson-cipher/incoming
-    - env:
-        PACKAGE_PATH: ${{ inputs.package_path }}
-        PACKAGE_ID: ${{ inputs.package_id }}
-        PIPELINE_MODE: ${{ inputs.mode }}
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
-      run: 'bash pipeline/attach.sh
-
-        '
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      with:
-        name: attached-${{ inputs.package_id }}
-        path: ${{ runner.temp }}/lesson-cipher/attached/*.age
-        if-no-files-found: error
-        retention-days: 1
-  compose:
-    needs: attach
-    runs-on: ubuntu-24.04
-    steps:
-    - *id001
-    - *id002
-    - *id003
-    - uses: actions/download-artifact@v4
-      with:
-        name: attached-${{ inputs.package_id }}
-        path: ${{ runner.temp }}/lesson-cipher/incoming
-    - env:
-        PACKAGE_ID: ${{ inputs.package_id }}
-        PIPELINE_MODE: ${{ inputs.mode }}
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
-      run: 'bash pipeline/compose.sh
-
-        '
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      with:
-        name: composed-${{ inputs.package_id }}
-        path: ${{ runner.temp }}/lesson-cipher/composed/*.age
-        if-no-files-found: error
-        retention-days: 1
-  qa:
-    needs: compose
-    runs-on: ubuntu-24.04
-    steps:
-    - *id001
-    - *id002
-    - *id003
-    - uses: actions/download-artifact@v4
-      with:
-        name: composed-${{ inputs.package_id }}
-        path: ${{ runner.temp }}/lesson-cipher/incoming
-    - env:
-        PACKAGE_ID: ${{ inputs.package_id }}
-        PIPELINE_MODE: ${{ inputs.mode }}
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
-      run: 'bash pipeline/qa.sh
-
-        '
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      if: always()
-      with:
-        name: qa-${{ inputs.package_id }}
-        path: ${{ runner.temp }}/lesson-cipher/qa/*.age
-        if-no-files-found: error
-        retention-days: 1
-  report:
-    needs:
-    - metric
-    - validate
-    - audio
-    - capture
-    - simulation
-    - timing
-    - attach
-    - compose
-    - qa
-    - discover
-    if: always()
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      actions: read
-      issues: write
-    steps:
-    - env:
-        GH_TOKEN: ${{ github.token }}
-        GH_REPO: ${{ github.repository }}
-        RUN_ID: ${{ github.run_id }}
-        RUN_ATTEMPT: ${{ github.run_attempt }}
-      run: "set -euo pipefail\ngh api --paginate \"repos/$GH_REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100\" --jq '.jobs[]' > \"$RUNNER_TEMP/jobs.jsonl\"\npython3 - \"$RUNNER_TEMP/jobs.jsonl\" \"$RUNNER_TEMP/report.txt\" <<'PYCODE'\nimport json,sys\nallowed={'metric','validate','audio','capture','simulation','timing','attach','compose','qa','discover','recipient-proof','browser'}\nstates={'success','failure','cancelled','skipped','timed_out','action_required','neutral','stale','startup_failure','in_progress','queued','completed','pending','waiting'}\nlines=['Rail status only; not audiovisual QA approval.']\nfor raw in open(sys.argv[1]):\n    j=json.loads(raw); name=j['name'];base=name.split(' (',1)[0]\n    if base not in allowed: continue\n    status=j.get('conclusion') or j.get('status')\n    if status not in states: status='unknown'\n    lines.append(f'{base}: {status}')\n    for step in j.get('steps',[]):\n        status=step.get('conclusion') or step.get('status')\n        if status not in states: status='unknown'\n        if status not in ('success','skipped'): lines.append(f\"  step {int(step['number'])}: {status}\")\nlines.append('Private logs and media are not copied to public comments.')\nopen(sys.argv[2],'w').write('\\n'.join(lines)+'\\n')\nPYCODE\ntrue\nwhile IFS= read -r line; do printf '::notice title=Lesson rail status::%s\\n' \"$line\"; done < \"$RUNNER_TEMP/report.txt\"\n"
-  cache-migration:
-    if: inputs.rails == 'recipient-proof' && inputs.mode == 'fixture'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    permissions:
-      contents: write
-    concurrency:
-      group: hila-f0-synthesis-resource
-      cancel-in-progress: false
-    steps:
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-    - run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-
-        '
-    - env:
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-      run: 'set -euo pipefail
-
-        umask 077
-
-        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
-
-        age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
-
-        rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
-
-        bash "$RUNNER_TEMP/lesson-bootstrap.sh"
-
-        rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-
-        '
-    - env:
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        GH_TOKEN: ${{ github.token }}
-        CACHE_MIGRATION_MODE: ${{ startsWith(inputs.package_id, 'cache-readback') && 'readback' || 'import' }}
-      run: 'set -euo pipefail
-
-        umask 077
-
-        mkdir -p "$RUNNER_TEMP/migrate-code" "$RUNNER_TEMP/migrate-audio" "$RUNNER_TEMP/migration-private"
-
-        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/migrate.key"
-
-        age -d -i "$RUNNER_TEMP/migrate.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/automatic-pronunciation-source-v2.tar.gz.age
-
-        echo ''a0df99bdb6d0c858bf1adb71dbee692faac584c7624e5b3541d5eab8eea83fd4  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
-
-        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/migrate-code"
-
-        for n in 000 001 002 003 004 005 006;do gh api "repos/${{ github.repository }}/contents/packages/hila-pronunciation-36679196296-$n.age" --jq .content | base64 -d >> "$RUNNER_TEMP/saved.age";done
-
-        age -d -i "$RUNNER_TEMP/migrate.key" -o "$RUNNER_TEMP/saved.tar.gz" "$RUNNER_TEMP/saved.age"
-
-        rm "$RUNNER_TEMP/migrate.key"
-
-        tar -xzf "$RUNNER_TEMP/saved.tar.gz" -C "$RUNNER_TEMP/migrate-audio"
-
-        set +e
-
-        EXISTING_CACHE_ROOT="$RUNNER_TEMP/migrate-audio" python3 "$RUNNER_TEMP/migrate-code/migrate_existing.py" > "$RUNNER_TEMP/migration-private/log.txt" 2>&1
-
-        rc=$?
-
-        set -e
-
-        printf ''%s'' "$rc" > "$RUNNER_TEMP/migration-private/exit-code.txt"
-
-        tar -czf "$RUNNER_TEMP/migration.tar.gz" -C "$RUNNER_TEMP/migration-private" .
-
-        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/migration.age" "$RUNNER_TEMP/migration.tar.gz"
-
-        split -b 700000 -d -a 3 "$RUNNER_TEMP/migration.age" "$RUNNER_TEMP/migration-part-"
-
-        for part in "$RUNNER_TEMP"/migration-part-*;do suffix=${part##*-};jq -n --rawfile d "$part" ''{message:"Encrypted cache migration evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/cache-migration-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
-
-        exit "$rc"
-
-        '
-  ledger-baseline:
-    if: inputs.rails == 'benchmark'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      contents: write
-      id-token: write
-    concurrency:
-      group: hila-f0-synthesis-resource
-      cancel-in-progress: false
-    steps:
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-    - run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-
-        '
-    - env:
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-      run: 'set -euo pipefail
-
-        umask 077
-
-        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
-
-        age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
-
-        rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
-
-        bash "$RUNNER_TEMP/lesson-bootstrap.sh"
-
-        rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-
-        '
-    - run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core tesseract-ocr tesseract-ocr-heb tesseract-ocr-eng >/dev/null
-
-        npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0 >/dev/null
-
-        python3 -m pip install --no-cache-dir azure-cognitiveservices-speech faster-whisper scipy huggingface_hub Pillow >/dev/null
-
-        '
-    - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-    - env:
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        GH_TOKEN: ${{ github.token }}
-        JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
-        JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
-      run: 'set -euo pipefail
-
-        umask 077
-
-        mkdir -p "$RUNNER_TEMP/e2e-code" "$RUNNER_TEMP/e2e-private"
-
-        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
-
-        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/e2e-lesson-source-v14.tar.gz.age
-
-        rm "$RUNNER_TEMP/code.key"
-
-        echo ''96eaeb18ca99ad2864d8b644117b6595cfb050fbc79039a800b19f73b383e1f9  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
-
-        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
-
-        set +e
-
-        python3 "$RUNNER_TEMP/e2e-code/scene.py" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1
-
-        rc=$?
-
-        set -e
-
-        printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
-
-        # No private raw screenshot/video needs to enter delivery package.
-
-        rm -f "$RUNNER_TEMP/e2e-private/live-click-private.mp4" "$RUNNER_TEMP/e2e-private/caption-track.mkv"
-
-        mkdir -p "$RUNNER_TEMP/delivery"
-
-        cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/e2e-proof.json" "$RUNNER_TEMP/e2e-private/audio-checks.json" "$RUNNER_TEMP/e2e-private/caption-rtl-pixel-proof.json" "$RUNNER_TEMP/e2e-private/recording-proof.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
-
-        cp "$RUNNER_TEMP/e2e-private/log.txt" "$RUNNER_TEMP/e2e-private/exit-code.txt" "$RUNNER_TEMP/delivery/"
-
-        tar -czf "$RUNNER_TEMP/e2e.tar.gz" -C "$RUNNER_TEMP/delivery" .
-
-        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/e2e.age" "$RUNNER_TEMP/e2e.tar.gz"
-
-        split -b 700000 -d -a 3 "$RUNNER_TEMP/e2e.age" "$RUNNER_TEMP/e2e-part-"
-
-        for part in "$RUNNER_TEMP"/e2e-part-*;do suffix=${part##*-};jq -n --rawfile d "$part" ''{message:"Encrypted end-to-end real lesson review",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/e2e-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null || { sleep 2;gh api -X PUT "repos/${{ github.repository }}/contents/packages/e2e-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null; };done
-
-        exit "$rc"
-
-        '
+name: Focused permissions lesson
 'on':
   workflow_dispatch:
     inputs:
@@ -609,3 +35,178 @@ jobs:
         - recipient-proof
         - browser
         - benchmark
+permissions:
+  contents: read
+jobs:
+  audio:
+    if: inputs.rails == 'benchmark'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: write
+      id-token: write
+    concurrency:
+      group: hila-f0-synthesis-resource
+      cancel-in-progress: false
+    steps:
+    - &id001
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+    - &id002
+      run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age ffmpeg fonts-dejavu-core >/dev/null
+
+        '
+    - &id003
+      env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'umask 077
+
+        mkdir -p "$RUNNER_TEMP/e2e-code" "$RUNNER_TEMP/e2e-private"
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
+
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/focused-lesson-source-v15.tar.gz.age
+
+        rm "$RUNNER_TEMP/code.key"
+
+        echo ''181517e30d32eab22faaad6709209c1151a2086b245d1be27e5611d7eb3ec57c  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+
+        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
+
+        '
+    - run: 'python3 -m pip install azure-cognitiveservices-speech numpy >/dev/null
+
+        '
+    - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        GH_TOKEN: ${{ github.token }}
+        FOCUSED_MODE: audio
+      run: 'set +e
+
+        python3 "$RUNNER_TEMP/e2e-code/focused.py" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1
+
+        rc=$?
+
+        set -e
+
+        printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
+
+        mkdir -p "$RUNNER_TEMP/delivery"
+
+        cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/audio-stage.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
+
+        cp "$RUNNER_TEMP/e2e-private/log.txt" "$RUNNER_TEMP/e2e-private/exit-code.txt" "$RUNNER_TEMP/delivery/"
+
+        tar -czf "$RUNNER_TEMP/result.tar.gz" -C "$RUNNER_TEMP/delivery" .
+
+        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/result.tar.gz"
+
+        split -b 700000 -d -a 3 "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/part-"
+
+        for f in "$RUNNER_TEMP"/part-*;do suffix=${f##*-};jq -n --rawfile d "$f" ''{message:"Encrypted focused lesson evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/focused-${{ github.run_id }}-audio-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
+
+        exit "$rc"
+
+        '
+  qa:
+    needs: audio
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        section:
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+    steps:
+    - *id001
+    - *id002
+    - *id003
+    - run: 'python3 -m pip install faster-whisper scipy huggingface_hub numpy >/dev/null
+
+        '
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        GH_TOKEN: ${{ github.token }}
+        FOCUSED_MODE: qa
+        SECTION_INDEX: ${{ matrix.section }}
+      run: 'set +e
+
+        python3 "$RUNNER_TEMP/e2e-code/focused.py" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1
+
+        rc=$?
+
+        set -e
+
+        printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
+
+        mkdir -p "$RUNNER_TEMP/delivery"
+
+        cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/qa-stage.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
+
+        cp "$RUNNER_TEMP/e2e-private/log.txt" "$RUNNER_TEMP/e2e-private/exit-code.txt" "$RUNNER_TEMP/delivery/"
+
+        tar -czf "$RUNNER_TEMP/result.tar.gz" -C "$RUNNER_TEMP/delivery" .
+
+        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/result.tar.gz"
+
+        split -b 700000 -d -a 3 "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/part-"
+
+        for f in "$RUNNER_TEMP"/part-*;do suffix=${f##*-};jq -n --rawfile d "$f" ''{message:"Encrypted focused lesson evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/focused-${{ github.run_id }}-qa-${{ matrix.section }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
+
+        exit "$rc"
+
+        '
+  render:
+    needs: audio
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: write
+    steps:
+    - *id001
+    - *id002
+    - *id003
+    - run: 'python3 -m pip install Pillow >/dev/null
+
+        '
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        GH_TOKEN: ${{ github.token }}
+      run: 'set +e
+
+        python3 "$RUNNER_TEMP/e2e-code/render.py" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1
+
+        rc=$?
+
+        set -e
+
+        printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
+
+        mkdir -p "$RUNNER_TEMP/delivery"
+
+        cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/focused-proof.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
+
+        cp "$RUNNER_TEMP/e2e-private/log.txt" "$RUNNER_TEMP/e2e-private/exit-code.txt" "$RUNNER_TEMP/delivery/"
+
+        tar -czf "$RUNNER_TEMP/result.tar.gz" -C "$RUNNER_TEMP/delivery" .
+
+        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/result.tar.gz"
+
+        split -b 700000 -d -a 3 "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/part-"
+
+        for f in "$RUNNER_TEMP"/part-*;do suffix=${f##*-};jq -n --rawfile d "$f" ''{message:"Encrypted focused lesson evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/focused-${{ github.run_id }}-render-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
+
+        exit "$rc"
+
+        '

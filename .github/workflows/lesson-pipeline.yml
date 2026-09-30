@@ -299,6 +299,8 @@ jobs:
         - squaredup
     steps:
     - *id001
+    - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq ffmpeg
+        age >/dev/null
     - &id005
       uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
@@ -316,8 +318,8 @@ jobs:
       run: "set -euo pipefail\numask 077\nsudo apt-get update -qq >/dev/null && sudo\
         \ apt-get install -y -qq age >/dev/null\nw=\"$RUNNER_TEMP/helpers\";mkdir\
         \ -p \"$w\"\nprintf '%s' \"$LAB_AGE_KEY\" > \"$w/key\"\nage -d -i \"$w/key\"\
-        \ -o \"$w/source.tar.gz\" pipeline/updates-0930-v7.tar.gz.age\nrm -f \"$w/key\"\
-        \necho 'ed274405553abe90ace607b3073abecb29503725a601a5621325b18a3ebfecd6 \
+        \ -o \"$w/source.tar.gz\" pipeline/updates-0930-v8.tar.gz.age\nrm -f \"$w/key\"\
+        \necho '65f9e6dd70c052c55b150839a90cd60d0e91d62edb19159fc8d51a0a2a9d8c7f \
         \ '\"$w/source.tar.gz\" | sha256sum -c - >/dev/null\ntar -xzf \"$w/source.tar.gz\"\
         \ -C \"$w\"\nset +e\nnode \"$w/discover-current.mjs\" > \"$w/private.log\"\
         \ 2>&1\nrc=$?\nset -e\nmkdir -p \"$RUNNER_TEMP/discovery-private\"\ncp \"\

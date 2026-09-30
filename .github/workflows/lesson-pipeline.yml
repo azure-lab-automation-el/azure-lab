@@ -313,8 +313,8 @@ jobs:
       run: "set -euo pipefail\numask 077\nsudo apt-get update -qq >/dev/null && sudo\
         \ apt-get install -y -qq age >/dev/null\nw=\"$RUNNER_TEMP/helpers\";mkdir\
         \ -p \"$w\"\nprintf '%s' \"$LAB_AGE_KEY\" > \"$w/key\"\nage -d -i \"$w/key\"\
-        \ -o \"$w/source.tar.gz\" pipeline/updates-0930-v6.tar.gz.age\nrm -f \"$w/key\"\
-        \necho '71c4f0a9e27a04efc793d348a56b6f494af8f22634f951fb961914900866ebc9 \
+        \ -o \"$w/source.tar.gz\" pipeline/updates-0930-v7.tar.gz.age\nrm -f \"$w/key\"\
+        \necho 'ed274405553abe90ace607b3073abecb29503725a601a5621325b18a3ebfecd6 \
         \ '\"$w/source.tar.gz\" | sha256sum -c - >/dev/null\ntar -xzf \"$w/source.tar.gz\"\
         \ -C \"$w\"\nset +e\nnode \"$w/discover-current.mjs\" > \"$w/private.log\"\
         \ 2>&1\nrc=$?\nset -e\nmkdir -p \"$RUNNER_TEMP/discovery-private\"\ncp \"\

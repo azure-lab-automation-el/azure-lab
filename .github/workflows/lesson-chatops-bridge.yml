@@ -127,6 +127,9 @@ jobs:
           for x in json.load(open(p/'skus.json')):
               if x.get('name') in ('Standard_B1s','Standard_B2ats_v2','Standard_B2pts_v2'):
                   lines.append(x['name']+': restrictions='+str(len(x.get('restrictions',[]))))
+                  for r in x.get('restrictions',[]):
+                      reason=str(r.get('reasonCode','unknown'));typ=str(r.get('type','unknown'))
+                      if re.fullmatch(r'[A-Za-z0-9_-]{1,80}',reason) and re.fullmatch(r'[A-Za-z0-9_-]{1,80}',typ):lines.append(x['name']+': '+typ+'='+reason)
           for x in json.load(open(p/'usage.json')):
               if x.get('name',{}).get('value') in ('cores','virtualMachines','standardBSFamily','standardBsv2Family','standardBpsv2Family'):
                   lines.append(x['name']['value']+': usage='+str(x['currentValue'])+', limit='+str(x['limit']))

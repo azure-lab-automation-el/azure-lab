@@ -279,8 +279,7 @@ jobs:
     steps:
     - *id001
     - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq ffmpeg age >/dev/null
-    - &id005
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
         path: /tmp/pw-deps
         key: playwright-core-1.63.0-node24
@@ -376,38 +375,6 @@ jobs:
         path: ${{ runner.temp }}/lesson-cipher/qa/*.age
         if-no-files-found: error
         retention-days: 1
-  recipient-proof:
-    permissions:
-      contents: read
-      issues: write
-    if: inputs.rails == 'recipient-proof' && inputs.mode == 'fixture'
-    runs-on: ubuntu-24.04
-    steps:
-    - env:
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-      run: 'set -euo pipefail
-
-        umask 077
-
-        sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-
-        test -n "$LAB_AGE_KEY"
-
-        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/age.key"
-
-        recipient=$(age-keygen -y "$RUNNER_TEMP/age.key")
-
-        rm -f "$RUNNER_TEMP/age.key"
-
-        [[ $recipient =~ ^age1[0-9a-z]{58}$ ]]
-
-        echo "::notice title=Public age recipient::$recipient"
-
-        printf ''Public age recipient: `%s`\nRecipient proof only, not lesson QA approval.\n'' "$recipient" > "$RUNNER_TEMP/recipient.txt"
-
-        GH_TOKEN=''${{ github.token }}'' gh issue comment 2 --repo ''${{ github.repository }}'' --body-file "$RUNNER_TEMP/recipient.txt"
-
-        '
   report:
     needs:
     - metric
@@ -420,8 +387,6 @@ jobs:
     - compose
     - qa
     - discover
-    - recipient-proof
-    - browser
     - hila-cache-test
     if: always()
     runs-on: ubuntu-24.04
@@ -436,59 +401,12 @@ jobs:
         RUN_ID: ${{ github.run_id }}
         RUN_ATTEMPT: ${{ github.run_attempt }}
       run: "set -euo pipefail\ngh api --paginate \"repos/$GH_REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100\" --jq '.jobs[]' > \"$RUNNER_TEMP/jobs.jsonl\"\npython3 - \"$RUNNER_TEMP/jobs.jsonl\" \"$RUNNER_TEMP/report.txt\" <<'PYCODE'\nimport json,sys\nallowed={'metric','validate','audio','capture','simulation','timing','attach','compose','qa','discover','recipient-proof','browser'}\nstates={'success','failure','cancelled','skipped','timed_out','action_required','neutral','stale','startup_failure','in_progress','queued','completed','pending','waiting'}\nlines=['Rail status only; not audiovisual QA approval.']\nfor raw in open(sys.argv[1]):\n    j=json.loads(raw); name=j['name'];base=name.split(' (',1)[0]\n    if base not in allowed: continue\n    status=j.get('conclusion') or j.get('status')\n    if status not in states: status='unknown'\n    lines.append(f'{base}: {status}')\n    for step in j.get('steps',[]):\n        status=step.get('conclusion') or step.get('status')\n        if status not in states: status='unknown'\n        if status not in ('success','skipped'): lines.append(f\"  step {int(step['number'])}: {status}\")\nlines.append('Private logs and media are not copied to public comments.')\nopen(sys.argv[2],'w').write('\\n'.join(lines)+'\\n')\nPYCODE\ntrue\nwhile IFS= read -r line; do printf '::notice title=Lesson rail status::%s\\n' \"$line\"; done < \"$RUNNER_TEMP/report.txt\"\n"
-  browser:
-    concurrency:
-      group: playwright-public-read
-      cancel-in-progress: false
-    permissions:
-      contents: write
-    if: inputs.rails == 'browser'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 8
-    steps:
-    - *id005
-    - run: 'test -f /tmp/pw-deps/node_modules/playwright-core/package.json || npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0
-
-        '
-    - env:
-        BROWSER_URL: ${{ inputs.browser_url }}
-      run: "mkdir -p /tmp/browser-private\nnode <<'JS'\nconst fs=require('fs'); const {chromium}=require('/tmp/pw-deps/node_modules/playwright-core');\nconst allowed=new Set(['example.com','docs.jfrog.com','docs.squaredup.com','playwright.dev']);\nfunction ok(raw){try {const u=new URL(raw); return u.protocol==='https:' && !u.username && !u.password && u.port==='' && u.search==='' && u.hash==='' && raw.length<=2000 && allowed.has(u.hostname);}catch{return false;}}\n(async()=>{\n  if(!ok(process.env.BROWSER_URL))process.exit(2);\n  const started=Date.now(); const browser=await chromium.launch({headless:true,channel:'chrome',chromiumSandbox:true}); const context=await browser.newContext({viewport:{width:1280,height:900}});\n  await context.route('**/*',route=>ok(route.request().url())?route.continue():route.abort());\n  const page=await context.newPage(); await page.goto(process.env.BROWSER_URL,{waitUntil:'domcontentloaded',timeout:45000});\n  if(!ok(page.url()))throw Error('navigation blocked');\n  console.log('::notice title=Playwright timing::launch_to_navigation_ms='+String(Date.now()-started));\n  await page.screenshot({path:'/tmp/browser-private/page.png',fullPage:true});\n  fs.writeFileSync('/tmp/browser-private/page.txt',await page.locator('body').innerText());\n  await browser.close();\n})().catch(()=>process.exit(1));\nJS\n"
-    - if: always()
-      env:
-        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
-      run: 'set -eu
-
-        sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-
-        mkdir -p /tmp/browser-cipher
-
-        tar -czf /tmp/browser-result.tar.gz -C /tmp/browser-private .
-
-        age -a -r "$LAB_AGE_RECIPIENT" -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o /tmp/browser-cipher/result.tar.gz.age /tmp/browser-result.tar.gz
-
-        file=/tmp/browser-cipher/result.tar.gz.age
-
-        jq -n --rawfile data "$file" ''{message:"Encrypted private browser result",content:($data|@base64),branch:"main"}'' > /tmp/relay.json
-
-        GH_TOKEN=''${{ github.token }}'' gh api -X PUT ''repos/${{ github.repository }}/contents/packages/browser-result-${{ github.run_id }}.age'' --input /tmp/relay.json >/dev/null
-
-        rm -rf /tmp/browser-private /tmp/browser-result.tar.gz
-
-        '
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      if: always()
-      with:
-        name: browser-private-${{ github.run_id }}
-        path: /tmp/browser-cipher/*.age
-        if-no-files-found: error
-        retention-days: 1
   hila-cache-test:
-    if: inputs.rails == 'recipient-proof'
+    if: inputs.rails == 'recipient-proof' && (inputs.mode == 'fixture' || inputs.mode == 'production')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: write
-      id-token: write
     concurrency:
       group: hila-f0-synthesis-resource
       cancel-in-progress: false
@@ -496,11 +414,63 @@ jobs:
     - *id001
     - *id002
     - *id003
-    - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        GH_TOKEN: ${{ github.token }}
+        CACHE_MIGRATION_MODE: ${{ inputs.mode == 'production' && 'import' || 'readback' }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        mkdir -p "$RUNNER_TEMP/migrate-code" "$RUNNER_TEMP/migrate-audio" "$RUNNER_TEMP/migration-private"
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/migrate.key"
+
+        age -d -i "$RUNNER_TEMP/migrate.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/hila-cache-migration-source-v1.tar.gz.age
+
+        echo ''0276ccf4f01c2e964d3e9bd2e5c7ae6323d0d5ba617174b23d0a8aee8951fd06  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+
+        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/migrate-code"
+
+        for n in 000 001 002 003 004 005 006;do gh api "repos/${{ github.repository }}/contents/packages/hila-pronunciation-36679196296-$n.age" --jq .content | base64 -d >> "$RUNNER_TEMP/saved.age";done
+
+        age -d -i "$RUNNER_TEMP/migrate.key" -o "$RUNNER_TEMP/saved.tar.gz" "$RUNNER_TEMP/saved.age"
+
+        rm "$RUNNER_TEMP/migrate.key"
+
+        tar -xzf "$RUNNER_TEMP/saved.tar.gz" -C "$RUNNER_TEMP/migrate-audio"
+
+        set +e
+
+        EXISTING_CACHE_ROOT="$RUNNER_TEMP/migrate-audio" python3 "$RUNNER_TEMP/migrate-code/migrate_existing.py" > "$RUNNER_TEMP/migration-private/log.txt" 2>&1
+
+        rc=$?
+
+        set -e
+
+        printf ''%s'' "$rc" > "$RUNNER_TEMP/migration-private/exit-code.txt"
+
+        tar -czf "$RUNNER_TEMP/migration.tar.gz" -C "$RUNNER_TEMP/migration-private" .
+
+        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/migration.age" "$RUNNER_TEMP/migration.tar.gz"
+
+        split -b 700000 -d -a 3 "$RUNNER_TEMP/migration.age" "$RUNNER_TEMP/migration-part-"
+
+        for part in "$RUNNER_TEMP"/migration-part-*;do suffix=${part##*-};jq -n --rawfile d "$part" ''{message:"Encrypted cache migration evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/cache-migration-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
+
+        exit "$rc"
+
+        '
+  independent-asr:
+    if: inputs.rails == 'benchmark'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+    - *id001
+    - *id002
+    - *id003
     - env:
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         GH_TOKEN: ${{ github.token }}
@@ -508,37 +478,41 @@ jobs:
 
         umask 077
 
-        mkdir -p "$RUNNER_TEMP/variant-code" "$RUNNER_TEMP/variant-private"
+        mkdir -p "$RUNNER_TEMP/independent-code" "$RUNNER_TEMP/saved-variants" "$RUNNER_TEMP/independent-private"
 
-        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/variant.key"
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
 
-        age -d -i "$RUNNER_TEMP/variant.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/pronunciation-ab-source-v1.tar.gz.age
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/independent-asr-source-v1.tar.gz.age
 
-        rm "$RUNNER_TEMP/variant.key"
+        echo ''2c6ed4ef8aa6f1b0f832e84a1b978dd8966123ec8ce01a7a63b40025c72e09b2  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
 
-        echo ''fea05f4d8cf02648ae05d3c6213430cadf381dacc644ecc06b9113e383e6bfd7  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/independent-code"
 
-        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/variant-code"
+        for n in 000 001;do gh api "repos/${{ github.repository }}/contents/packages/pronunciation-ab-36682215524-$n.age" --jq .content | base64 -d >> "$RUNNER_TEMP/saved.age";done
 
-        python3 -m pip install --no-cache-dir azure-cognitiveservices-speech faster-whisper scipy huggingface_hub > "$RUNNER_TEMP/variant-private/install.log" 2>&1
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/saved.tar.gz" "$RUNNER_TEMP/saved.age"
+
+        rm "$RUNNER_TEMP/code.key"
+
+        tar -xzf "$RUNNER_TEMP/saved.tar.gz" -C "$RUNNER_TEMP/saved-variants"
+
+        python3 -m pip install --no-cache-dir faster-whisper scipy huggingface_hub > "$RUNNER_TEMP/independent-private/install.log" 2>&1
 
         set +e
 
-        timeout --signal=TERM --kill-after=30s 1500 python3 "$RUNNER_TEMP/variant-code/benchmark.py" > "$RUNNER_TEMP/variant-private/test.log" 2>&1
+        SAVED_VARIANTS_ROOT="$RUNNER_TEMP/saved-variants" timeout --signal=TERM --kill-after=30s 1500 python3 "$RUNNER_TEMP/independent-code/benchmark.py" > "$RUNNER_TEMP/independent-private/log.txt" 2>&1
 
         rc=$?
 
         set -e
 
-        printf ''%s'' "$rc" > "$RUNNER_TEMP/variant-private/exit-code.txt"
+        printf ''%s'' "$rc" > "$RUNNER_TEMP/independent-private/exit-code.txt"
 
-        tar -czf "$RUNNER_TEMP/variants.tar.gz" -C "$RUNNER_TEMP/variant-private" .
+        tar -czf "$RUNNER_TEMP/independent.tar.gz" -C "$RUNNER_TEMP/independent-private" .
 
-        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/variants.age" "$RUNNER_TEMP/variants.tar.gz"
+        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/independent.age" "$RUNNER_TEMP/independent.tar.gz"
 
-        split -b 700000 -d -a 3 "$RUNNER_TEMP/variants.age" "$RUNNER_TEMP/variant-part-"
-
-        for part in "$RUNNER_TEMP"/variant-part-*;do suffix=${part##*-};jq -n --rawfile d "$part" ''{message:"Encrypted pronunciation variants and ASR evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/variant-put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/pronunciation-ab-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/variant-put.json" >/dev/null;done
+        for field in result lexicon;do if [ "$field" = result ];then src="$RUNNER_TEMP/independent.age";else test -f "$RUNNER_TEMP/independent-private/selected-lexicon.json" || continue;age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -o "$RUNNER_TEMP/lexicon.age" "$RUNNER_TEMP/independent-private/selected-lexicon.json";src="$RUNNER_TEMP/lexicon.age";fi;jq -n --rawfile d "$src" ''{message:"Encrypted independent ASR or selected lexicon",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/independent-${{ github.run_id }}-$field.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
 
         exit "$rc"
 

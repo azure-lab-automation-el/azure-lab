@@ -253,7 +253,7 @@ jobs:
           age -d -i "$w/key" -o "$w/source.tar" "$w/source.age"; rm "$w/key"
           python3 - "$w" <<'PYBACK'
           import tarfile,pathlib,hashlib,sys
-          p=pathlib.Path(sys.argv[1]);expected={'focused-lesson-source-v18.tar.gz': 'f2bffc0065444b7bb6f07dce1f7be24ff743ecd02ae2a97c835fa4b661b09221'}
+          p=pathlib.Path(sys.argv[1]);expected={'focused-lesson-source-v19.tar.gz': '38f67ba39c819cd96025733bbe8f57a8f17a4e981d7e0587396eb1962c919220'}
           with tarfile.open(p/'source.tar') as t:
               assert set(t.getnames())==set(expected)
               for m in t:
@@ -270,8 +270,8 @@ jobs:
           stage=mega-upload
           "$w/rclone" copy "$w/plain" mega:JFrog/pipeline-20260930/source --immutable > "$w/upload.log" 2>&1
           stage=mega-readback
-          "$w/rclone" copyto mega:JFrog/pipeline-20260930/source/focused-lesson-source-v18.tar.gz "$w/readback/focused-lesson-source-v18.tar.gz" > "$w/readback.log" 2>&1
+          "$w/rclone" copyto mega:JFrog/pipeline-20260930/source/focused-lesson-source-v19.tar.gz "$w/readback/focused-lesson-source-v19.tar.gz" > "$w/readback.log" 2>&1
           stage=byte-compare
-          cmp "$w/plain/focused-lesson-source-v18.tar.gz" "$w/readback/focused-lesson-source-v18.tar.gz"
+          cmp "$w/plain/focused-lesson-source-v19.tar.gz" "$w/readback/focused-lesson-source-v19.tar.gz"
           echo '::notice title=MEGA backup proof::Additive Sept30 pipeline update plaintext archive downloaded byte-identically. No deletion.'
           rm -rf "$w"

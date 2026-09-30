@@ -401,85 +401,6 @@ jobs:
         RUN_ID: ${{ github.run_id }}
         RUN_ATTEMPT: ${{ github.run_attempt }}
       run: "set -euo pipefail\ngh api --paginate \"repos/$GH_REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100\" --jq '.jobs[]' > \"$RUNNER_TEMP/jobs.jsonl\"\npython3 - \"$RUNNER_TEMP/jobs.jsonl\" \"$RUNNER_TEMP/report.txt\" <<'PYCODE'\nimport json,sys\nallowed={'metric','validate','audio','capture','simulation','timing','attach','compose','qa','discover','recipient-proof','browser'}\nstates={'success','failure','cancelled','skipped','timed_out','action_required','neutral','stale','startup_failure','in_progress','queued','completed','pending','waiting'}\nlines=['Rail status only; not audiovisual QA approval.']\nfor raw in open(sys.argv[1]):\n    j=json.loads(raw); name=j['name'];base=name.split(' (',1)[0]\n    if base not in allowed: continue\n    status=j.get('conclusion') or j.get('status')\n    if status not in states: status='unknown'\n    lines.append(f'{base}: {status}')\n    for step in j.get('steps',[]):\n        status=step.get('conclusion') or step.get('status')\n        if status not in states: status='unknown'\n        if status not in ('success','skipped'): lines.append(f\"  step {int(step['number'])}: {status}\")\nlines.append('Private logs and media are not copied to public comments.')\nopen(sys.argv[2],'w').write('\\n'.join(lines)+'\\n')\nPYCODE\ntrue\nwhile IFS= read -r line; do printf '::notice title=Lesson rail status::%s\\n' \"$line\"; done < \"$RUNNER_TEMP/report.txt\"\n"
-  hila-cache-test:
-    if: inputs.rails == 'recipient-proof' && inputs.mode == 'production'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    permissions:
-      contents: write
-      id-token: write
-    concurrency:
-      group: hila-f0-synthesis-resource
-      cancel-in-progress: false
-    steps:
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-    - run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-
-        '
-    - env:
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-      run: 'set -euo pipefail
-
-        umask 077
-
-        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
-
-        age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
-
-        rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
-
-        bash "$RUNNER_TEMP/lesson-bootstrap.sh"
-
-        rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-
-        '
-    - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-    - env:
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        GH_TOKEN: ${{ github.token }}
-      run: 'set -euo pipefail
-
-        umask 077
-
-        mkdir -p "$RUNNER_TEMP/variant-code" "$RUNNER_TEMP/variant-private"
-
-        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/variant.key"
-
-        age -d -i "$RUNNER_TEMP/variant.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/automatic-pronunciation-source-v2.tar.gz.age
-
-        rm "$RUNNER_TEMP/variant.key"
-
-        echo ''a0df99bdb6d0c858bf1adb71dbee692faac584c7624e5b3541d5eab8eea83fd4  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
-
-        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/variant-code"
-
-        python3 -m pip install --no-cache-dir azure-cognitiveservices-speech faster-whisper scipy huggingface_hub > "$RUNNER_TEMP/variant-private/install.log" 2>&1
-
-        set +e
-
-        timeout --signal=TERM --kill-after=30s 1500 python3 "$RUNNER_TEMP/variant-code/benchmark.py" > "$RUNNER_TEMP/variant-private/test.log" 2>&1
-
-        rc=$?
-
-        set -e
-
-        printf ''%s'' "$rc" > "$RUNNER_TEMP/variant-private/exit-code.txt"
-
-        tar -czf "$RUNNER_TEMP/variants.tar.gz" -C "$RUNNER_TEMP/variant-private" .
-
-        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/variants.age" "$RUNNER_TEMP/variants.tar.gz"
-
-        split -b 700000 -d -a 3 "$RUNNER_TEMP/variants.age" "$RUNNER_TEMP/variant-part-"
-
-        for part in "$RUNNER_TEMP"/variant-part-*;do suffix=${part##*-};jq -n --rawfile d "$part" ''{message:"Encrypted pronunciation variants and ASR evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/variant-put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/automatic-v2-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/variant-put.json" >/dev/null;done
-
-        exit "$rc"
-
-        '
   cache-migration:
     if: inputs.rails == 'recipient-proof' && inputs.mode == 'fixture'
     runs-on: ubuntu-24.04
@@ -554,6 +475,83 @@ jobs:
         split -b 700000 -d -a 3 "$RUNNER_TEMP/migration.age" "$RUNNER_TEMP/migration-part-"
 
         for part in "$RUNNER_TEMP"/migration-part-*;do suffix=${part##*-};jq -n --rawfile d "$part" ''{message:"Encrypted cache migration evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/cache-migration-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
+
+        exit "$rc"
+
+        '
+  ledger-baseline:
+    if: inputs.rails == 'benchmark'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+    concurrency:
+      group: hila-f0-synthesis-resource
+      cancel-in-progress: false
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+    - run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+
+        '
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/lesson-bootstrap.key"
+
+        age -d -i "$RUNNER_TEMP/lesson-bootstrap.key" -o "$RUNNER_TEMP/lesson-bootstrap.sh" pipeline/bootstrap.sh.age
+
+        rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
+
+        bash "$RUNNER_TEMP/lesson-bootstrap.sh"
+
+        rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
+
+        '
+    - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        GH_TOKEN: ${{ github.token }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        mkdir -p "$RUNNER_TEMP/ledger-code" "$RUNNER_TEMP/ledger-private"
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/ledger.key"
+
+        age -d -i "$RUNNER_TEMP/ledger.key" -o "$RUNNER_TEMP/helpers.tar.gz" pipeline/updates-0930-v13.tar.gz.age
+
+        rm "$RUNNER_TEMP/ledger.key"
+
+        echo ''6e94c8df013d40330797758e57b4ebea463c3c73b0ea6897d9122932bd64feed  ''"$RUNNER_TEMP/helpers.tar.gz" | sha256sum -c - >/dev/null
+
+        tar -xzf "$RUNNER_TEMP/helpers.tar.gz" -C "$RUNNER_TEMP/ledger-code"
+
+        set +e
+
+        python3 "$RUNNER_TEMP/ledger-code/initialize_ledger.py" > "$RUNNER_TEMP/ledger-private/log.txt" 2>&1
+
+        rc=$?
+
+        set -e
+
+        printf ''%s'' "$rc" > "$RUNNER_TEMP/ledger-private/exit-code.txt"
+
+        tar -czf "$RUNNER_TEMP/ledger.tar.gz" -C "$RUNNER_TEMP/ledger-private" .
+
+        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/ledger.age" "$RUNNER_TEMP/ledger.tar.gz"
+
+        jq -n --rawfile d "$RUNNER_TEMP/ledger.age" ''{message:"Encrypted durable free-quota baseline proof",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json"
+
+        gh api -X PUT "repos/${{ github.repository }}/contents/packages/ledger-${{ github.run_id }}.age" --input "$RUNNER_TEMP/put.json" >/dev/null
 
         exit "$rc"
 

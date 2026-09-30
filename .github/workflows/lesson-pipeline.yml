@@ -289,7 +289,7 @@ jobs:
         SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
         SQUAREDUP_LAB_PASSWORD: ${{ secrets.SQUAREDUP_LAB_PASSWORD }}
       run: "set -euo pipefail\numask 077\nsudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null\nw=\"$RUNNER_TEMP/helpers\";mkdir -p \"$w\"\nprintf '%s' \"$LAB_AGE_KEY\" > \"\
-        $w/key\"\nage -d -i \"$w/key\" -o \"$w/source.tar.gz\" pipeline/updates-0930.tar.gz.age\nrm -f \"$w/key\"\necho '3f84157eb5fd1f7589e782dd3836fc68ed53a2af6221d1bf0fcb8ce4871919da  '\"$w/source.tar.gz\"\
+        $w/key\"\nage -d -i \"$w/key\" -o \"$w/source.tar.gz\" pipeline/updates-0930-v2.tar.gz.age\nrm -f \"$w/key\"\necho '4294199c3f98806fdf104814277fef05fc0688e894c5f3617f00f3b53eae5491  '\"$w/source.tar.gz\"\
         \ | sha256sum -c - >/dev/null\ntar -xzf \"$w/source.tar.gz\" -C \"$w\"\nset +e\nnode \"$w/discover-current.mjs\" > \"$w/private.log\" 2>&1\nrc=$?\nset -e\nmkdir -p \"$RUNNER_TEMP/discovery-private\"\
         \ncp \"$w/private.log\" \"$RUNNER_TEMP/discovery-private/diagnostic.txt\"\ntar -czf \"$w/discovery.tar.gz\" -C \"$RUNNER_TEMP/discovery-private\" .\nage -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl\
         \ -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o \"$w/review.age\" \"$w/discovery.tar.gz\"\nsplit -b 700000 -d -a 3 \"$w/review.age\" \"$w/part-\"\nfor p in \"$w\"/part-*;\

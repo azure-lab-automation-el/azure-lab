@@ -409,6 +409,7 @@ jobs:
           retention-days: 1
 
   recipient-proof:
+    permissions: {contents: read, issues: write}
     if: github.event_name == 'workflow_dispatch' && inputs.rails == 'recipient-proof'
     runs-on: ubuntu-24.04
     steps:
@@ -421,5 +422,46 @@ jobs:
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
           test -n "$LAB_AGE_KEY"
           printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/age.key"
-          age-keygen -y "$RUNNER_TEMP/age.key"
+          recipient=$(age-keygen -y "$RUNNER_TEMP/age.key")
           rm -f "$RUNNER_TEMP/age.key"
+          [[ $recipient =~ ^age1[0-9a-z]{58}$ ]]
+          echo "::notice title=Public age recipient::$recipient"
+          printf 'Public age recipient: `%s`\nRecipient proof only, not lesson QA approval.\n' "$recipient" > "$RUNNER_TEMP/recipient.txt"
+          GH_TOKEN='${{ github.token }}' gh issue comment 2 --repo '${{ github.repository }}' --body-file "$RUNNER_TEMP/recipient.txt"
+
+  report:
+    needs: [metric, validate, audio, capture, simulation, timing, attach, compose, qa, discover, recipient-proof]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {actions: read, issues: write}
+    steps:
+      - name: Report allowlisted job and step outcomes without raw logs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$GH_REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100" --jq '.jobs[]' > "$RUNNER_TEMP/jobs.jsonl"
+          python3 - "$RUNNER_TEMP/jobs.jsonl" "$RUNNER_TEMP/report.txt" <<'PYCODE'
+          import json,sys
+          allowed={'metric','validate','audio','capture','simulation','timing','attach','compose','qa','discover','recipient-proof'}
+          states={'success','failure','cancelled','skipped','timed_out','action_required','neutral','stale','startup_failure','in_progress','queued','completed','pending','waiting'}
+          lines=['Lesson pipeline diagnostics. Status only; not content or audiovisual QA approval.']
+          for raw in open(sys.argv[1]):
+              j=json.loads(raw); name=j['name'];base=name.split(' (',1)[0]
+              if base not in allowed: continue
+              status=j.get('conclusion') or j.get('status')
+              if status not in states: status='unknown'
+              lines.append(f'{base}: {status}')
+              for step in j.get('steps',[]):
+                  status=step.get('conclusion') or step.get('status')
+                  if status not in states: status='unknown'
+                  if status not in ('success','skipped'): lines.append(f"  step {int(step['number'])}: {status}")
+          lines.append('Raw logs, lesson source, account identifiers and media are not copied to public comments.')
+          open(sys.argv[2],'w').write('\n'.join(lines)+'\n')
+          PYCODE
+          gh issue comment 2 --repo "$GH_REPO" --body-file "$RUNNER_TEMP/report.txt"
+          while IFS= read -r line; do printf '::notice title=Lesson rail status::%s\n' "$line"; done < "$RUNNER_TEMP/report.txt"

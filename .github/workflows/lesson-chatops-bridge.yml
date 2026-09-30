@@ -81,7 +81,7 @@ jobs:
           assert x['workflow']=='lesson-pipeline.yml'
           assert re.fullmatch(r'packages/[A-Za-z0-9_./-]+\.age',x['package_path']) and '..' not in x['package_path'].split('/')
           assert re.fullmatch(r'[A-Za-z0-9_-]{1,100}',x['package_id'])
-          assert x['rails'] in ('all','metric','validate','audio','capture','simulation','discover','recipient-proof')
+          assert x['rails'] in ('all','metric','validate','audio','capture','simulation','discover','recipient-proof','benchmark')
           assert x['mode'] in ('production','fixture')
           print(json.dumps({'ref':'main','inputs':{k:x[k] for k in ('package_path','package_id','rails','mode')}}))
           PY
@@ -253,7 +253,7 @@ jobs:
           age -d -i "$w/key" -o "$w/source.tar" "$w/source.age"; rm "$w/key"
           python3 - "$w" <<'PYBACK'
           import tarfile,pathlib,hashlib,sys
-          p=pathlib.Path(sys.argv[1]);expected={'pipeline-updates-0930-v5.tar.gz':'5f784727dc3b3b46a9c11145da99fd597e610a2be6254c16f3dffc417b8c8ee9'}
+          p=pathlib.Path(sys.argv[1]);expected={'chatterbox-benchmark-source.tar.gz':'e4a6c1bb1d33c20a0bf0a54698538fabd0cbbe064209cd30ccc2df2065405256'}
           with tarfile.open(p/'source.tar') as t:
               assert set(t.getnames())==set(expected)
               for m in t:
@@ -272,6 +272,6 @@ jobs:
           stage=mega-readback
           "$w/rclone" copy mega:JFrog/pipeline-20260930/source "$w/readback" > "$w/readback.log" 2>&1
           stage=byte-compare
-          cmp "$w/plain/pipeline-updates-0930-v5.tar.gz" "$w/readback/pipeline-updates-0930-v5.tar.gz"
+          cmp "$w/plain/chatterbox-benchmark-source.tar.gz" "$w/readback/chatterbox-benchmark-source.tar.gz"
           echo '::notice title=MEGA backup proof::Additive Sept30 pipeline update plaintext archive downloaded byte-identically. No deletion.'
           rm -rf "$w"

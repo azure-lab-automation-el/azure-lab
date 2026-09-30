@@ -60,6 +60,12 @@ jobs:
         run: |
           umask 077
           set +e
+          python3 - <<'PYMETRIC'
+          from pathlib import Path
+          p=Path('pipeline/metric.sh');s=p.read_text().replace('AudioSecondsTranscribed','SynthesizedCharacters').replace('18000','500000')
+          s=s.replace("used=sum(vals);print", "used=sum(vals);assert used+8746+50000<500000, 'F0 TTS headroom insufficient';print")
+          p.write_text(s)
+          PYMETRIC
           bash pipeline/metric.sh > "$RUNNER_TEMP/metric-private.log" 2>&1
           rc=$?
           set -e
@@ -129,7 +135,13 @@ jobs:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
           LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: bash pipeline/audio.sh
+        run: |
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          p=Path('pipeline/audio_sdk.py');s=p.read_text();assert "encoding='utf8-sig'" in s and 'max_workers=4' in s
+          p.write_text(s.replace("encoding='utf8-sig'","encoding='utf-8-sig'").replace('max_workers=4','max_workers=1'))
+          PYFIX
+          bash pipeline/audio.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

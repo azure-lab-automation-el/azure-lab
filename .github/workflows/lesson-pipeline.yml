@@ -474,7 +474,6 @@ jobs:
     if: inputs.rails == 'browser'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
-    container: mcr.microsoft.com/playwright:v1.63.0-noble
     steps:
       - uses: actions/cache@v4
         with:
@@ -493,10 +492,11 @@ jobs:
           function ok(raw){try {const u=new URL(raw); return u.protocol==='https:' && !u.username && !u.password && u.port==='' && allowed.has(u.hostname);}catch{return false;}}
           (async()=>{
             if(!ok(process.env.BROWSER_URL))process.exit(2);
-            const browser=await chromium.launch({headless:true}); const context=await browser.newContext({viewport:{width:1280,height:900}});
+            const started=Date.now(); const browser=await chromium.launch({headless:true,channel:'chrome'}); const context=await browser.newContext({viewport:{width:1280,height:900}});
             await context.route('**/*',route=>ok(route.request().url())?route.continue():route.abort());
             const page=await context.newPage(); await page.goto(process.env.BROWSER_URL,{waitUntil:'domcontentloaded',timeout:45000});
             if(!ok(page.url()))throw Error('navigation blocked');
+            console.log('::notice title=Playwright timing::launch_to_navigation_ms='+String(Date.now()-started));
             await page.screenshot({path:'/tmp/browser-private/page.png',fullPage:true});
             fs.writeFileSync('/tmp/browser-private/page.txt',await page.locator('body').innerText());
             await browser.close();

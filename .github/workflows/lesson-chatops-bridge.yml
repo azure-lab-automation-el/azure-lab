@@ -30,6 +30,18 @@ jobs:
           umask 077
           command=$(cat "$RUNNER_TEMP/command.txt")
           case "$command" in
+            '/playwright '*)
+              printf '%s' "${command#'/playwright '}" > "$RUNNER_TEMP/browser-url.txt"
+              python3 - "$RUNNER_TEMP/browser-url.txt" > "$RUNNER_TEMP/dispatch.json" <<'PYURL'
+          import json,sys,urllib.parse
+          url=open(sys.argv[1]).read().strip();u=urllib.parse.urlsplit(url)
+          assert u.scheme=='https' and u.hostname in ('example.com','docs.jfrog.com','docs.squaredup.com','playwright.dev')
+          assert not u.username and not u.password and u.port is None and len(url)<=2000
+          print(json.dumps({'ref':'main','inputs':{'package_path':'packages/recipient-test-20260930.age','package_id':'browser-public-read','rails':'browser','mode':'fixture','browser_url':url}}))
+          PYURL
+              gh api -X POST "repos/$GH_REPO/actions/workflows/lesson-pipeline.yml/dispatches" --input "$RUNNER_TEMP/dispatch.json" >/dev/null
+              echo 'Read-only browser rail dispatched. Private output encrypted; this is not QA approval.' > "$RUNNER_TEMP/status.txt"
+              ;;
             '/run '*)
               payload=${command#'/run '}
               # JSON with exact keys only; parsed by Python, never eval'd.

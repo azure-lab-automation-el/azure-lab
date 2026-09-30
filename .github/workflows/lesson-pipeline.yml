@@ -74,13 +74,31 @@ jobs:
         tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
 
         '
-    - run: 'set -e
+    - run: 'set -euo pipefail
 
-        command -v google-chrome
+        stage=chrome-check
+
+        trap ''echo "::error title=Capture preparation::$stage failed"'' ERR
+
+        if command -v google-chrome >/dev/null; then echo ''::notice title=Chrome check::present'';else echo ''::error title=Chrome check::missing'';exit 3;fi
+
+        stage=encoder-install
+
+        if ! command -v ffmpeg >/dev/null;then timeout 120 sudo apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 -o Acquire::Retries=1 install -y -qq ffmpeg;fi
+
+        stage=encoder-check
 
         command -v ffmpeg
 
-        timeout 120 npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0 >/dev/null
+        stage=playwright-install
+
+        timeout 120 npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0
+
+        stage=playwright-import
+
+        node --input-type=module -e "await import(''/tmp/pw-deps/node_modules/playwright-core/index.mjs'')"
+
+        echo ''::notice title=Capture preparation::Chrome, encoder and Playwright verified''
 
         '
     - env:

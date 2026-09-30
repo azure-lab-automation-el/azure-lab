@@ -49,14 +49,19 @@ jobs:
       group: hila-f0-synthesis-resource
       cancel-in-progress: false
     steps:
-    - &id001
-      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-    - &id002
-      run: 'timeout 120 sudo apt-get -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 -o Acquire::Retries=1 install -y -qq age ffmpeg fontconfig fonts-dejavu-core
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+    - run: 'set -euo pipefail
+
+        curl --max-time 90 -fsSL -o "$RUNNER_TEMP/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+
+        echo ''cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  ''"$RUNNER_TEMP/age.tgz" | sha256sum -c -
+
+        tar -xzf "$RUNNER_TEMP/age.tgz" -C "$RUNNER_TEMP"
+
+        echo "$RUNNER_TEMP/age" >> "$GITHUB_PATH"
 
         '
-    - &id003
-      env:
+    - env:
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
       run: 'umask 077
 
@@ -76,11 +81,6 @@ jobs:
     - run: 'python3 -m pip install azure-cognitiveservices-speech numpy >/dev/null
 
         '
-    - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     - env:
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         GH_TOKEN: ${{ github.token }}
@@ -99,6 +99,8 @@ jobs:
 
         cp "$RUNNER_TEMP/e2e-private"/failure.txt "$RUNNER_TEMP/e2e-private"/*failure*.png "$RUNNER_TEMP/e2e-private"/*failure*.json "$RUNNER_TEMP/e2e-private"/capture-segments.json "$RUNNER_TEMP/e2e-private"/recording-proof.json "$RUNNER_TEMP/delivery/" 2>/dev/null || true
 
+        cp -r "$RUNNER_TEMP/e2e-private"/section-* "$RUNNER_TEMP/delivery/" 2>/dev/null || true
+
         cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/audio-stage.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
 
         cp "$RUNNER_TEMP/e2e-private/log.txt" "$RUNNER_TEMP/e2e-private/exit-code.txt" "$RUNNER_TEMP/delivery/"
@@ -110,108 +112,6 @@ jobs:
         split -b 700000 -d -a 3 "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/part-"
 
         for f in "$RUNNER_TEMP"/part-*;do suffix=${f##*-};jq -n --rawfile d "$f" ''{message:"Encrypted focused lesson evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/focused-${{ github.run_id }}-audio-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
-
-        exit "$rc"
-
-        '
-  qa:
-    needs: audio
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        section:
-        - 0
-        - 1
-        - 2
-        - 3
-        - 4
-        - 5
-    steps:
-    - *id001
-    - *id002
-    - *id003
-    - run: 'python3 -m pip install faster-whisper scipy huggingface_hub numpy >/dev/null
-
-        '
-    - env:
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        GH_TOKEN: ${{ github.token }}
-        FOCUSED_MODE: qa
-        SECTION_INDEX: ${{ matrix.section }}
-      run: 'set +e
-
-        python3 "$RUNNER_TEMP/e2e-code/focused.py" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1
-
-        rc=$?
-
-        set -e
-
-        printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
-
-        mkdir -p "$RUNNER_TEMP/delivery"
-
-        cp "$RUNNER_TEMP/e2e-private"/failure.txt "$RUNNER_TEMP/e2e-private"/*failure*.png "$RUNNER_TEMP/e2e-private"/*failure*.json "$RUNNER_TEMP/e2e-private"/capture-segments.json "$RUNNER_TEMP/e2e-private"/recording-proof.json "$RUNNER_TEMP/delivery/" 2>/dev/null || true
-
-        cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/qa-stage.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
-
-        cp "$RUNNER_TEMP/e2e-private/log.txt" "$RUNNER_TEMP/e2e-private/exit-code.txt" "$RUNNER_TEMP/delivery/"
-
-        tar -czf "$RUNNER_TEMP/result.tar.gz" -C "$RUNNER_TEMP/delivery" .
-
-        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/result.tar.gz"
-
-        split -b 700000 -d -a 3 "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/part-"
-
-        for f in "$RUNNER_TEMP"/part-*;do suffix=${f##*-};jq -n --rawfile d "$f" ''{message:"Encrypted focused lesson evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/focused-${{ github.run_id }}-qa-${{ matrix.section }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
-
-        exit "$rc"
-
-        '
-  render:
-    needs: audio
-    runs-on: ubuntu-24.04
-    timeout-minutes: 12
-    permissions:
-      contents: write
-    steps:
-    - *id001
-    - *id002
-    - *id003
-    - run: 'python3 -m pip install Pillow >/dev/null
-
-        '
-    - env:
-        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        GH_TOKEN: ${{ github.token }}
-      run: 'set +e
-
-        python3 "$RUNNER_TEMP/e2e-code/render.py" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1
-
-        rc=$?
-
-        set -e
-
-        printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
-
-        mkdir -p "$RUNNER_TEMP/delivery"
-
-        cp "$RUNNER_TEMP/e2e-private"/failure.txt "$RUNNER_TEMP/e2e-private"/*failure*.png "$RUNNER_TEMP/e2e-private"/*failure*.json "$RUNNER_TEMP/e2e-private"/capture-segments.json "$RUNNER_TEMP/e2e-private"/recording-proof.json "$RUNNER_TEMP/delivery/" 2>/dev/null || true
-
-        cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/focused-proof.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
-
-        cp "$RUNNER_TEMP/e2e-private/log.txt" "$RUNNER_TEMP/e2e-private/exit-code.txt" "$RUNNER_TEMP/delivery/"
-
-        tar -czf "$RUNNER_TEMP/result.tar.gz" -C "$RUNNER_TEMP/delivery" .
-
-        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/result.tar.gz"
-
-        split -b 700000 -d -a 3 "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/part-"
-
-        for f in "$RUNNER_TEMP"/part-*;do suffix=${f##*-};jq -n --rawfile d "$f" ''{message:"Encrypted focused lesson evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/focused-${{ github.run_id }}-render-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
 
         exit "$rc"
 

@@ -64,11 +64,11 @@ jobs:
 
         printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
 
-        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/focused-lesson-source-v23.tar.gz.age
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/focused-lesson-source-v25.tar.gz.age
 
         rm "$RUNNER_TEMP/code.key"
 
-        echo ''d60b0e061dac335421051a6f0703a6281f4d556d4cb2705f0f633d06b1c1b465  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+        echo ''cf5c7f7d12448da5a75d7068f6380dfc159ec10f18c66c1fc16e4c8eede496ea  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
 
         tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
 
@@ -183,14 +183,10 @@ jobs:
     - *id003
     - run: 'python3 -m pip install Pillow >/dev/null
 
-        npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0 >/dev/null
-
         '
     - env:
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         GH_TOKEN: ${{ github.token }}
-        JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
-        JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
       run: 'set +e
 
         python3 "$RUNNER_TEMP/e2e-code/render.py" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1

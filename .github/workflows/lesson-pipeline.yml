@@ -64,6 +64,7 @@ jobs:
           from pathlib import Path
           p=Path('pipeline/metric.sh');s=p.read_text().replace('AudioSecondsTranscribed','SynthesizedCharacters').replace('18000','500000')
           s=s.replace("used=sum(vals);print", "used=sum(vals);assert used+8746+50000<500000, 'F0 TTS headroom insufficient';print")
+          s=s.replace("metrics[0].get('errorCode')", "metrics[0].get('errorCode') not in (None, 'Success')")
           p.write_text(s)
           PYMETRIC
           bash pipeline/metric.sh > "$RUNNER_TEMP/metric-private.log" 2>&1
@@ -436,7 +437,7 @@ jobs:
           import json,sys
           allowed={'metric','validate','audio','capture','simulation','timing','attach','compose','qa','discover','recipient-proof','browser'}
           states={'success','failure','cancelled','skipped','timed_out','action_required','neutral','stale','startup_failure','in_progress','queued','completed','pending','waiting'}
-          lines=['Lesson pipeline diagnostics. Status only; not content or audiovisual QA approval.']
+          lines=['Rail status only; not audiovisual QA approval.']
           for raw in open(sys.argv[1]):
               j=json.loads(raw); name=j['name'];base=name.split(' (',1)[0]
               if base not in allowed: continue
@@ -447,7 +448,7 @@ jobs:
                   status=step.get('conclusion') or step.get('status')
                   if status not in states: status='unknown'
                   if status not in ('success','skipped'): lines.append(f"  step {int(step['number'])}: {status}")
-          lines.append('Raw logs, lesson source, account identifiers and media are not copied to public comments.')
+          lines.append('Private logs and media are not copied to public comments.')
           open(sys.argv[2],'w').write('\n'.join(lines)+'\n')
           PYCODE
           gh issue comment 2 --repo "$GH_REPO" --body-file "$RUNNER_TEMP/report.txt"

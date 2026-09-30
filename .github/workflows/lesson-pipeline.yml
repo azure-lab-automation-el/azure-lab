@@ -508,7 +508,7 @@ jobs:
           LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
         run: |
           set -eu
-          apt-get update -qq >/dev/null && apt-get install -y -qq age >/dev/null
+          sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
           mkdir -p /tmp/browser-cipher
           tar -czf /tmp/browser-result.tar.gz -C /tmp/browser-private .
           age -r "$LAB_AGE_RECIPIENT" -o /tmp/browser-cipher/result.tar.gz.age /tmp/browser-result.tar.gz

@@ -39,7 +39,7 @@ jobs:
     - &id004
       uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
       if: inputs.mode == 'production'
-      with: &id006
+      with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -485,10 +485,9 @@ jobs:
   hila-cache-test:
     if: inputs.rails == 'recipient-proof'
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions:
       contents: write
-      id-token: write
     concurrency:
       group: hila-f0-synthesis-resource
       cancel-in-progress: false
@@ -496,15 +495,52 @@ jobs:
     - *id001
     - *id002
     - *id003
-    - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
-      if: inputs.mode == 'production'
-      with: *id006
     - env:
-        PACKAGE_PATH: ${{ inputs.package_path }}
-        PACKAGE_ID: ${{ inputs.package_id }}
-        PIPELINE_MODE: ${{ inputs.mode }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-      run: "set -euo pipefail\numask 077\nmkdir -p \"$RUNNER_TEMP/hila-cache-code\" \"$RUNNER_TEMP/sentence-cache-private\"\nprintf '%s' \"$LAB_AGE_KEY\" > \"$RUNNER_TEMP/hila-cache.key\"\nage -d -i \"$RUNNER_TEMP/hila-cache.key\" -o \"$RUNNER_TEMP/hila-cache-source.tar.gz\" pipeline/hila-pronunciation-source-v2.tar.gz.age\nrm \"$RUNNER_TEMP/hila-cache.key\"\necho '294c27b46496cf704cad29dd8bfc96e2954e08ecd48f515507bdb4acfc39cffc  '\"$RUNNER_TEMP/hila-cache-source.tar.gz\" | sha256sum -c - >/dev/null\ntar -xzf \"$RUNNER_TEMP/hila-cache-source.tar.gz\" -C \"$RUNNER_TEMP/hila-cache-code\"\nsource pipeline/common.sh\npython3 pipeline/audio-ssml.py --package \"$PACKAGE_ROOT\" --out \"$RUNNER_TEMP/lesson-ssml\"\npython3 -m pip install --no-cache-dir azure-cognitiveservices-speech > \"$RUNNER_TEMP/sentence-cache-private/install.log\" 2>&1\nset +e\npython3 \"$RUNNER_TEMP/hila-cache-code/benchmark.py\" > \"$RUNNER_TEMP/sentence-cache-private/test.log\" 2>&1\nrc=$?\nset -e\nprintf '%s' \"$rc\" > \"$RUNNER_TEMP/sentence-cache-private/exit-code.txt\"\ntar -czf \"$RUNNER_TEMP/hila-cache-test.tar.gz\" -C \"$RUNNER_TEMP/sentence-cache-private\" .\nage -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o \"$RUNNER_TEMP/hila-cache-test.age\" \"$RUNNER_TEMP/hila-cache-test.tar.gz\"\nsplit -b 700000 -d -a 3 \"$RUNNER_TEMP/hila-cache-test.age\" \"$RUNNER_TEMP/hila-part-\"\nfor part in \"$RUNNER_TEMP\"/hila-part-*;do\n suffix=${part##*-};jq -n --rawfile d \"$part\" '{message:\"Encrypted authorized Hila sentence cache and guard test\",content:($d|@base64),branch:\"main\"}' > \"$RUNNER_TEMP/hila-put.json\"\n GH_TOKEN='${{ github.token }}' gh api -X PUT \"repos/${{ github.repository }}/contents/packages/hila-pronunciation-${{ github.run_id }}-$suffix.age\" --input \"$RUNNER_TEMP/hila-put.json\" >/dev/null\ndone\necho \"::notice title=Hila cache test::rc=$rc; listening/seam review pending\"\nexit \"$rc\"\n"
+        GH_TOKEN: ${{ github.token }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        mkdir -p "$RUNNER_TEMP/asr-code" "$RUNNER_TEMP/asr-audio" "$RUNNER_TEMP/asr-private"
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/asr.key"
+
+        age -d -i "$RUNNER_TEMP/asr.key" -o "$RUNNER_TEMP/asr-source.tar.gz" pipeline/hebrew-asr-source-v1.tar.gz.age
+
+        tar -xzf "$RUNNER_TEMP/asr-source.tar.gz" -C "$RUNNER_TEMP/asr-code"
+
+        for n in 000 001 002 003 004 005 006; do gh api "repos/${{ github.repository }}/contents/packages/hila-pronunciation-36679196296-$n.age" --jq .content | base64 -d >> "$RUNNER_TEMP/saved-audio.age";done
+
+        age -d -i "$RUNNER_TEMP/asr.key" -o "$RUNNER_TEMP/saved-audio.tar.gz" "$RUNNER_TEMP/saved-audio.age"
+
+        rm "$RUNNER_TEMP/asr.key"
+
+        tar -xzf "$RUNNER_TEMP/saved-audio.tar.gz" -C "$RUNNER_TEMP/asr-audio"
+
+        python3 -m pip install --no-cache-dir faster-whisper scipy huggingface_hub > "$RUNNER_TEMP/asr-private/install.log" 2>&1
+
+        set +e
+
+        ASR_AUDIO_ROOT="$RUNNER_TEMP/asr-audio" timeout --signal=TERM --kill-after=30s 1500 python3 "$RUNNER_TEMP/asr-code/benchmark.py" > "$RUNNER_TEMP/asr-private/test.log" 2>&1
+
+        rc=$?
+
+        set -e
+
+        printf ''%s'' "$rc" > "$RUNNER_TEMP/asr-private/exit-code.txt"
+
+        tar -czf "$RUNNER_TEMP/asr-result.tar.gz" -C "$RUNNER_TEMP/asr-private" .
+
+        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/asr-result.age" "$RUNNER_TEMP/asr-result.tar.gz"
+
+        split -b 700000 -d -a 3 "$RUNNER_TEMP/asr-result.age" "$RUNNER_TEMP/asr-part-"
+
+        for part in "$RUNNER_TEMP"/asr-part-*;do suffix=${part##*-};jq -n --rawfile d "$part" ''{message:"Encrypted stronger Hebrew ASR benchmark evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/asr-put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/hebrew-asr-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/asr-put.json" >/dev/null;done
+
+        exit "$rc"
+
+        '
 'on':
   workflow_dispatch:
     inputs:

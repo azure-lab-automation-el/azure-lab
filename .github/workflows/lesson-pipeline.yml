@@ -535,11 +535,11 @@ jobs:
 
         printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
 
-        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/e2e-lesson-source-v10.tar.gz.age
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/e2e-lesson-source-v11.tar.gz.age
 
         rm "$RUNNER_TEMP/code.key"
 
-        echo ''233a31193e8d54c637f5e6c0d1ef28e387f8cce790162e37d6f4f9b207037843  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+        echo ''6dd25dcf42caab83eb54e09c1a00e9f27f876831ad7f9e81bef985259099f7eb  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
 
         tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
 

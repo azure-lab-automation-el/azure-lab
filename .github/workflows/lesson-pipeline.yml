@@ -3,27 +3,22 @@ on:
   workflow_dispatch:
     inputs:
       browser_url:
-        description: Allowlisted public read-only URL
         required: false
         type: string
       package_path:
-        description: 'Encrypted package path assembled in runner (packages/lesson-v3.tar.gz.age)' 
         required: false
         default: packages/lesson-v3.tar.gz.age
         type: string
       package_id:
-        description: 'Immutable package ID, checked against decrypted package'
         required: false
         default: 20260929-source-v3-capture-dsl
         type: string
       mode:
-        description: 'production or synthetic fixture; fixture never publishes'
         required: false
         default: production
         type: choice
         options: [production, fixture]
       rails:
-        description: 'all, validate, audio, capture, simulation, metric, discover, or recipient-proof'
         required: true
         default: all
         type: choice
@@ -39,10 +34,10 @@ jobs:
     runs-on: ubuntu-24.04
     permissions: {contents: read, id-token: write}
     steps:
-      - uses: actions/checkout@v4
-      - name: Install age
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Pipeline step
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Decrypt verified pipeline bundle and package in runner only
+      - name: Pipeline step
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
@@ -59,7 +54,7 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Read only F0 usage
+      - name: Pipeline step
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
@@ -72,10 +67,10 @@ jobs:
     outputs:
       tracks: ${{ steps.package.outputs.tracks }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Install age
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Pipeline step
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Decrypt verified pipeline bundle and package in runner only
+      - name: Pipeline step
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
@@ -86,7 +81,7 @@ jobs:
           rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
           bash "$RUNNER_TEMP/lesson-bootstrap.sh"
           rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-      - name: Decrypt and validate immutable package
+      - name: Pipeline step
         id: package
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
@@ -102,10 +97,10 @@ jobs:
     runs-on: ubuntu-24.04
     permissions: {contents: read, id-token: write}
     steps:
-      - uses: actions/checkout@v4
-      - name: Install age
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Pipeline step
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Decrypt verified pipeline bundle and package in runner only
+      - name: Pipeline step
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
@@ -122,10 +117,10 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Install Azure Speech SDK and local ASR
+      - name: Pipeline step
         if: inputs.mode == 'production'
         run: python3 -m pip install --no-cache-dir azure-cognitiveservices-speech faster-whisper
-      - name: Synthesize private WAVs and capture word boundaries for review
+      - name: Pipeline step
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
@@ -134,7 +129,7 @@ jobs:
           LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: bash pipeline/audio.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: audio-${{ inputs.package_id }}
@@ -150,10 +145,10 @@ jobs:
       matrix:
         track: ${{ fromJSON(needs.validate.outputs.tracks) }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Install age
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Pipeline step
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Decrypt verified pipeline bundle and package in runner only
+      - name: Pipeline step
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
@@ -164,7 +159,7 @@ jobs:
           rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
           bash "$RUNNER_TEMP/lesson-bootstrap.sh"
           rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-      - name: Capture package-driven read-only live scenes or fail closed
+      - name: Pipeline step
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
@@ -177,7 +172,7 @@ jobs:
           SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
           SQUAREDUP_LAB_PASSWORD: ${{ secrets.SQUAREDUP_LAB_PASSWORD }}
         run: bash pipeline/capture.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: capture-${{ matrix.track }}-${{ inputs.package_id }}
@@ -189,10 +184,10 @@ jobs:
     if: always() && needs.validate.result == 'success' && (inputs.rails == 'all' || inputs.rails == 'simulation')
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - name: Install age
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Pipeline step
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Decrypt verified pipeline bundle and package in runner only
+      - name: Pipeline step
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
@@ -203,7 +198,7 @@ jobs:
           rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
           bash "$RUNNER_TEMP/lesson-bootstrap.sh"
           rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-      - name: Render labeled conceptual and simulation shots without vendor login
+      - name: Pipeline step
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
@@ -211,7 +206,7 @@ jobs:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
           LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
         run: bash pipeline/simulation.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: simulation-${{ inputs.package_id }}
@@ -223,10 +218,10 @@ jobs:
     if: always() && inputs.rails == 'all' && needs.validate.result == 'success' && needs.audio.result == 'success'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - name: Install age
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Pipeline step
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Decrypt verified pipeline bundle and package in runner only
+      - name: Pipeline step
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
@@ -241,7 +236,7 @@ jobs:
         with:
           name: audio-${{ inputs.package_id }}
           path: ${{ runner.temp }}/lesson-cipher/incoming
-      - name: Align final audio to exact script and review captions
+      - name: Pipeline step
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
@@ -249,7 +244,7 @@ jobs:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
           LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
         run: bash pipeline/timing.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: timing-${{ inputs.package_id }}
@@ -266,13 +261,13 @@ jobs:
       matrix:
         track: ${{ fromJSON(needs.validate.outputs.tracks) }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Install private discovery dependencies
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Pipeline step
         run: |
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
           npm install --prefix "$RUNNER_TEMP" --no-audit --no-fund playwright@1.63.0
           "$RUNNER_TEMP/node_modules/.bin/playwright" install --with-deps chromium
-      - name: Decrypt verified pipeline bundle and package in runner only
+      - name: Pipeline step
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
@@ -283,7 +278,7 @@ jobs:
           rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
           bash "$RUNNER_TEMP/lesson-bootstrap.sh"
           rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-      - name: Read-only DOM discovery, ciphertext output only
+      - name: Pipeline step
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
@@ -296,7 +291,7 @@ jobs:
           SQUAREDUP_LAB_USER: ${{ secrets.SQUAREDUP_LAB_USER }}
           SQUAREDUP_LAB_PASSWORD: ${{ secrets.SQUAREDUP_LAB_PASSWORD }}
         run: bash pipeline/discover-dom.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: discovery-${{ matrix.track }}-${{ inputs.package_id }}
@@ -308,10 +303,10 @@ jobs:
     if: always() && inputs.rails == 'all' && needs.validate.result == 'success' && needs.audio.result == 'success' && needs.capture.result == 'success' && needs.simulation.result == 'success' && needs.timing.result == 'success'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - name: Install age
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Pipeline step
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Decrypt verified pipeline bundle and package in runner only
+      - name: Pipeline step
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
@@ -326,7 +321,7 @@ jobs:
         with:
           pattern: '*-${{ inputs.package_id }}'
           path: ${{ runner.temp }}/lesson-cipher/incoming
-      - name: Join exact package, track, scene and hashes; produce timings
+      - name: Pipeline step
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
@@ -334,7 +329,7 @@ jobs:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
           LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
         run: bash pipeline/attach.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: attached-${{ inputs.package_id }}
           path: ${{ runner.temp }}/lesson-cipher/attached/*.age
@@ -344,10 +339,10 @@ jobs:
     needs: attach
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - name: Install age
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Pipeline step
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Decrypt verified pipeline bundle and package in runner only
+      - name: Pipeline step
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
@@ -362,14 +357,14 @@ jobs:
         with:
           name: attached-${{ inputs.package_id }}
           path: ${{ runner.temp }}/lesson-cipher/incoming
-      - name: Render independent scenes and compose
+      - name: Pipeline step
         env:
           PACKAGE_ID: ${{ inputs.package_id }}
           PIPELINE_MODE: ${{ inputs.mode }}
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
           LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
         run: bash pipeline/compose.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: composed-${{ inputs.package_id }}
           path: ${{ runner.temp }}/lesson-cipher/composed/*.age
@@ -379,10 +374,10 @@ jobs:
     needs: compose
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - name: Install age
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Pipeline step
         run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Decrypt verified pipeline bundle and package in runner only
+      - name: Pipeline step
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
@@ -397,14 +392,14 @@ jobs:
         with:
           name: composed-${{ inputs.package_id }}
           path: ${{ runner.temp }}/lesson-cipher/incoming
-      - name: Inspect final encoded pixels, audio and QA packet; no auto-publication
+      - name: Pipeline step
         env:
           PACKAGE_ID: ${{ inputs.package_id }}
           PIPELINE_MODE: ${{ inputs.mode }}
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
           LAB_AGE_RECIPIENT: ${{ vars.LAB_AGE_RECIPIENT }}
         run: bash pipeline/qa.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: qa-${{ inputs.package_id }}
@@ -416,7 +411,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.rails == 'recipient-proof'
     runs-on: ubuntu-24.04
     steps:
-      - name: Print public age recipient only
+      - name: Pipeline step
         env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
@@ -438,7 +433,7 @@ jobs:
     timeout-minutes: 5
     permissions: {actions: read, issues: write}
     steps:
-      - name: Report allowlisted job and step outcomes without raw logs
+      - name: Pipeline step
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -468,18 +463,19 @@ jobs:
           gh issue comment 2 --repo "$GH_REPO" --body-file "$RUNNER_TEMP/report.txt"
           while IFS= read -r line; do printf '::notice title=Lesson rail status::%s\n' "$line"; done < "$RUNNER_TEMP/report.txt"
   browser:
+    concurrency: {group: playwright-public-read, cancel-in-progress: false}
     permissions: {contents: write}
     if: inputs.rails == 'browser'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: /tmp/pw-deps
           key: playwright-core-1.63.0-node24
-      - name: Prepare pinned client without browser installation
+      - name: Pipeline step
         run: test -f /tmp/pw-deps/node_modules/playwright-core/package.json || npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0
-      - name: Read-only public navigation and private capture
+      - name: Pipeline step
         env:
           BROWSER_URL: ${{ inputs.browser_url }}
         run: |
@@ -487,10 +483,10 @@ jobs:
           node <<'JS'
           const fs=require('fs'); const {chromium}=require('/tmp/pw-deps/node_modules/playwright-core');
           const allowed=new Set(['example.com','docs.jfrog.com','docs.squaredup.com','playwright.dev']);
-          function ok(raw){try {const u=new URL(raw); return u.protocol==='https:' && !u.username && !u.password && u.port==='' && allowed.has(u.hostname);}catch{return false;}}
+          function ok(raw){try {const u=new URL(raw); return u.protocol==='https:' && !u.username && !u.password && u.port==='' && u.search==='' && u.hash==='' && raw.length<=2000 && allowed.has(u.hostname);}catch{return false;}}
           (async()=>{
             if(!ok(process.env.BROWSER_URL))process.exit(2);
-            const started=Date.now(); const browser=await chromium.launch({headless:true,channel:'chrome'}); const context=await browser.newContext({viewport:{width:1280,height:900}});
+            const started=Date.now(); const browser=await chromium.launch({headless:true,channel:'chrome',chromiumSandbox:true}); const context=await browser.newContext({viewport:{width:1280,height:900}});
             await context.route('**/*',route=>ok(route.request().url())?route.continue():route.abort());
             const page=await context.newPage(); await page.goto(process.env.BROWSER_URL,{waitUntil:'domcontentloaded',timeout:45000});
             if(!ok(page.url()))throw Error('navigation blocked');
@@ -500,7 +496,7 @@ jobs:
             await browser.close();
           })().catch(()=>process.exit(1));
           JS
-      - name: Encrypt private output
+      - name: Pipeline step
         if: always()
         env:
           LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
@@ -514,7 +510,7 @@ jobs:
           jq -n --rawfile data "$file" '{message:"Encrypted private browser result",content:($data|@base64),branch:"main"}' > /tmp/relay.json
           GH_TOKEN='${{ github.token }}' gh api -X PUT 'repos/${{ github.repository }}/contents/packages/browser-result-${{ github.run_id }}.age' --input /tmp/relay.json >/dev/null
           rm -rf /tmp/browser-private /tmp/browser-result.tar.gz
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: browser-private-${{ github.run_id }}

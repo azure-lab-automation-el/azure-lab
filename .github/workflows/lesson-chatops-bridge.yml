@@ -200,14 +200,19 @@ jobs:
           echo "::add-mask::$MEGA_PASSWORD"
           stage=setup
           trap 'echo "::error title=Backup phase::$stage failed"' ERR
+          if [ -n "$MEGA_EMAIL" ]; then echo '::notice title=Backup credentials::MEGA_EMAIL_PRESENT=true'; else echo '::notice title=Backup credentials::MEGA_EMAIL_PRESENT=false'; fi
+          if [ -n "$MEGA_PASSWORD" ]; then echo '::notice title=Backup credentials::MEGA_PASSWORD_PRESENT=true'; else echo '::notice title=Backup credentials::MEGA_PASSWORD_PRESENT=false'; fi
+          stage=credential-presence
           test -n "$MEGA_EMAIL" && test -n "$MEGA_PASSWORD"
           w="$RUNNER_TEMP/backup"; mkdir -p "$w/plain" "$w/readback"
+          stage=comment-read
           gh api "repos/$GH_REPO/issues/comments/$COMMENT_ID" --jq .body > "$w/comment.txt"
           python3 - "$w" <<'PYBACK'
           import pathlib,base64,sys
           p=pathlib.Path(sys.argv[1]);s=(p/'comment.txt').read_text();assert s.startswith('/backup ') and len(s)<=65000
           (p/'source.age').write_bytes(base64.b64decode(s[8:],validate=True))
           PYBACK
+          stage=age-install
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
           printf '%s' "$LAB_AGE_KEY" > "$w/key"
           stage=decrypt

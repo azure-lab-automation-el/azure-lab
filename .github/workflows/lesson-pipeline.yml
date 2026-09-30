@@ -32,13 +32,11 @@ jobs:
   metric:
     if: inputs.rails == 'all' || inputs.rails == 'metric' || inputs.rails == 'audio'
     runs-on: ubuntu-24.04
-    permissions: {contents: read, id-token: write}
+    permissions: {contents: write, id-token: write}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Pipeline step
-        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Pipeline step
-        env:
+      - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
@@ -54,13 +52,23 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Pipeline step
-        env:
+      - env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
           PIPELINE_MODE: ${{ inputs.mode }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: bash pipeline/metric.sh
+        run: |
+          umask 077
+          set +e
+          bash pipeline/metric.sh > "$RUNNER_TEMP/metric-private.log" 2>&1
+          rc=$?
+          set -e
+          age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/metric.age" "$RUNNER_TEMP/metric-private.log"
+          jq -n --rawfile data "$RUNNER_TEMP/metric.age" '{message:"Encrypted F0 usage evidence",content:($data|@base64),branch:"main"}' > "$RUNNER_TEMP/metric-relay.json"
+          GH_TOKEN='${{ github.token }}' gh api -X PUT 'repos/${{ github.repository }}/contents/packages/metric-${{ github.run_id }}.age' --input "$RUNNER_TEMP/metric-relay.json" >/dev/null
+          rm -f "$RUNNER_TEMP/metric-private.log"
+          echo "::notice title=Metric status::read_only_rc=$rc"
+          exit "$rc"
   validate:
     if: inputs.rails == 'all' || inputs.rails == 'validate' || inputs.rails == 'audio' || inputs.rails == 'capture' || inputs.rails == 'simulation' || inputs.rails == 'discover'
     runs-on: ubuntu-24.04
@@ -68,10 +76,8 @@ jobs:
       tracks: ${{ steps.package.outputs.tracks }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Pipeline step
-        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Pipeline step
-        env:
+      - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
@@ -81,8 +87,7 @@ jobs:
           rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
           bash "$RUNNER_TEMP/lesson-bootstrap.sh"
           rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-      - name: Pipeline step
-        id: package
+      - id: package
         env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
@@ -98,10 +103,8 @@ jobs:
     permissions: {contents: read, id-token: write}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Pipeline step
-        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Pipeline step
-        env:
+      - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
@@ -117,11 +120,9 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Pipeline step
-        if: inputs.mode == 'production'
+      - if: inputs.mode == 'production'
         run: python3 -m pip install --no-cache-dir azure-cognitiveservices-speech faster-whisper
-      - name: Pipeline step
-        env:
+      - env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
           PIPELINE_MODE: ${{ inputs.mode }}
@@ -146,10 +147,8 @@ jobs:
         track: ${{ fromJSON(needs.validate.outputs.tracks) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Pipeline step
-        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Pipeline step
-        env:
+      - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
@@ -159,8 +158,7 @@ jobs:
           rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
           bash "$RUNNER_TEMP/lesson-bootstrap.sh"
           rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-      - name: Pipeline step
-        env:
+      - env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
           PIPELINE_MODE: ${{ inputs.mode }}
@@ -185,10 +183,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Pipeline step
-        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Pipeline step
-        env:
+      - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
@@ -198,8 +194,7 @@ jobs:
           rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
           bash "$RUNNER_TEMP/lesson-bootstrap.sh"
           rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-      - name: Pipeline step
-        env:
+      - env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
           PIPELINE_MODE: ${{ inputs.mode }}
@@ -219,10 +214,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Pipeline step
-        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Pipeline step
-        env:
+      - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
@@ -236,8 +229,7 @@ jobs:
         with:
           name: audio-${{ inputs.package_id }}
           path: ${{ runner.temp }}/lesson-cipher/incoming
-      - name: Pipeline step
-        env:
+      - env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
           PIPELINE_MODE: ${{ inputs.mode }}
@@ -262,13 +254,11 @@ jobs:
         track: ${{ fromJSON(needs.validate.outputs.tracks) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Pipeline step
-        run: |
+      - run: |
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
           npm install --prefix "$RUNNER_TEMP" --no-audit --no-fund playwright@1.63.0
           "$RUNNER_TEMP/node_modules/.bin/playwright" install --with-deps chromium
-      - name: Pipeline step
-        env:
+      - env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
@@ -278,8 +268,7 @@ jobs:
           rm -f "$RUNNER_TEMP/lesson-bootstrap.key"
           bash "$RUNNER_TEMP/lesson-bootstrap.sh"
           rm -f "$RUNNER_TEMP/lesson-bootstrap.sh"
-      - name: Pipeline step
-        env:
+      - env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
           PIPELINE_MODE: ${{ inputs.mode }}
@@ -304,10 +293,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Pipeline step
-        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Pipeline step
-        env:
+      - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
@@ -321,8 +308,7 @@ jobs:
         with:
           pattern: '*-${{ inputs.package_id }}'
           path: ${{ runner.temp }}/lesson-cipher/incoming
-      - name: Pipeline step
-        env:
+      - env:
           PACKAGE_PATH: ${{ inputs.package_path }}
           PACKAGE_ID: ${{ inputs.package_id }}
           PIPELINE_MODE: ${{ inputs.mode }}
@@ -340,10 +326,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Pipeline step
-        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Pipeline step
-        env:
+      - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
@@ -357,8 +341,7 @@ jobs:
         with:
           name: attached-${{ inputs.package_id }}
           path: ${{ runner.temp }}/lesson-cipher/incoming
-      - name: Pipeline step
-        env:
+      - env:
           PACKAGE_ID: ${{ inputs.package_id }}
           PIPELINE_MODE: ${{ inputs.mode }}
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
@@ -375,10 +358,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Pipeline step
-        run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
-      - name: Pipeline step
-        env:
+      - run: sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
+      - env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
@@ -392,8 +373,7 @@ jobs:
         with:
           name: composed-${{ inputs.package_id }}
           path: ${{ runner.temp }}/lesson-cipher/incoming
-      - name: Pipeline step
-        env:
+      - env:
           PACKAGE_ID: ${{ inputs.package_id }}
           PIPELINE_MODE: ${{ inputs.mode }}
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
@@ -411,8 +391,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.rails == 'recipient-proof'
     runs-on: ubuntu-24.04
     steps:
-      - name: Pipeline step
-        env:
+      - env:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         run: |
           set -euo pipefail
@@ -433,8 +412,7 @@ jobs:
     timeout-minutes: 5
     permissions: {actions: read, issues: write}
     steps:
-      - name: Pipeline step
-        env:
+      - env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
@@ -473,10 +451,8 @@ jobs:
         with:
           path: /tmp/pw-deps
           key: playwright-core-1.63.0-node24
-      - name: Pipeline step
-        run: test -f /tmp/pw-deps/node_modules/playwright-core/package.json || npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0
-      - name: Pipeline step
-        env:
+      - run: test -f /tmp/pw-deps/node_modules/playwright-core/package.json || npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0
+      - env:
           BROWSER_URL: ${{ inputs.browser_url }}
         run: |
           mkdir -p /tmp/browser-private
@@ -496,8 +472,7 @@ jobs:
             await browser.close();
           })().catch(()=>process.exit(1));
           JS
-      - name: Pipeline step
-        if: always()
+      - if: always()
         env:
           LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
         run: |

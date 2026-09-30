@@ -85,34 +85,4 @@ jobs:
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         GH_TOKEN: ${{ github.token }}
         FOCUSED_MODE: audio
-      run: 'set +e
-
-        python3 "$RUNNER_TEMP/e2e-code/focused.py" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1
-
-        rc=$?
-
-        set -e
-
-        printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
-
-        mkdir -p "$RUNNER_TEMP/delivery"
-
-        cp "$RUNNER_TEMP/e2e-private"/failure.txt "$RUNNER_TEMP/e2e-private"/*failure*.png "$RUNNER_TEMP/e2e-private"/*failure*.json "$RUNNER_TEMP/e2e-private"/capture-segments.json "$RUNNER_TEMP/e2e-private"/recording-proof.json "$RUNNER_TEMP/delivery/" 2>/dev/null || true
-
-        cp -r "$RUNNER_TEMP/e2e-private"/section-* "$RUNNER_TEMP/delivery/" 2>/dev/null || true
-
-        cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/audio-stage.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
-
-        cp "$RUNNER_TEMP/e2e-private/log.txt" "$RUNNER_TEMP/e2e-private/exit-code.txt" "$RUNNER_TEMP/delivery/"
-
-        tar -czf "$RUNNER_TEMP/result.tar.gz" -C "$RUNNER_TEMP/delivery" .
-
-        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/result.tar.gz"
-
-        split -b 700000 -d -a 3 "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/part-"
-
-        for f in "$RUNNER_TEMP"/part-*;do suffix=${f##*-};jq -n --rawfile d "$f" ''{message:"Encrypted focused lesson evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/focused-${{ github.run_id }}-audio-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
-
-        exit "$rc"
-
-        '
+      run: "set +e\npython3 \"$RUNNER_TEMP/e2e-code/focused.py\" > \"$RUNNER_TEMP/e2e-private/log.txt\" 2>&1\nrc=$?\nexport PYTHONPATH=\"$RUNNER_TEMP/e2e-code\"\npython3 - <<'PYCHECK'\nimport json,pathlib,os\nfrom durable_cache import Durable\np=pathlib.Path(os.environ['RUNNER_TEMP'])/'e2e-private';d=Durable();r=json.loads((p/'audio-stage.json').read_text());checks=[]\nfor k in r['keys']:\n data,_=d.read('packages/focused-qa-'+k+'.age',missing=True)\n if data is not None:checks.append(json.loads(data))\n(p/'all-cached-checks.json').write_text(json.dumps(checks,ensure_ascii=False))\nPYCHECK\nset -e\nprintf '%s' \"$rc\" > \"$RUNNER_TEMP/e2e-private/exit-code.txt\"\nmkdir -p \"$RUNNER_TEMP/delivery\"\ncp \"$RUNNER_TEMP/e2e-private/all-cached-checks.json\" \"$RUNNER_TEMP/delivery/\"\ncp \"$RUNNER_TEMP/e2e-private\"/failure.txt \"$RUNNER_TEMP/e2e-private\"/*failure*.png \"$RUNNER_TEMP/e2e-private\"/*failure*.json \"$RUNNER_TEMP/e2e-private\"/capture-segments.json \"$RUNNER_TEMP/e2e-private\"/recording-proof.json \"$RUNNER_TEMP/delivery/\" 2>/dev/null || true\ncp -r \"$RUNNER_TEMP/e2e-private\"/section-* \"$RUNNER_TEMP/delivery/\" 2>/dev/null || true\ncp \"$RUNNER_TEMP/e2e-private/lesson.mp4\" \"$RUNNER_TEMP/e2e-private/audio-stage.json\" \"$RUNNER_TEMP/delivery/\" 2>/dev/null || true\ncp \"$RUNNER_TEMP/e2e-private/log.txt\" \"$RUNNER_TEMP/e2e-private/exit-code.txt\" \"$RUNNER_TEMP/delivery/\"\ntar -czf \"$RUNNER_TEMP/result.tar.gz\" -C \"$RUNNER_TEMP/delivery\" .\nage -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o \"$RUNNER_TEMP/result.age\" \"$RUNNER_TEMP/result.tar.gz\"\nsplit -b 700000 -d -a 3 \"$RUNNER_TEMP/result.age\" \"$RUNNER_TEMP/part-\"\nfor f in \"$RUNNER_TEMP\"/part-*;do suffix=${f##*-};jq -n --rawfile d \"$f\" '{message:\"Encrypted focused lesson evidence\",content:($d|@base64),branch:\"main\"}' > \"$RUNNER_TEMP/put.json\";gh api -X PUT \"repos/${{ github.repository }}/contents/packages/focused-${{ github.run_id }}-audio-$suffix.age\" --input \"$RUNNER_TEMP/put.json\" >/dev/null;done\nexit \"$rc\"\n"

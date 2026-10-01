@@ -253,7 +253,7 @@ jobs:
           age -d -i "$w/key" -o "$w/source.tar" "$w/source.age"; rm "$w/key"
           python3 - "$w" <<'PYBACK'
           import tarfile,pathlib,hashlib,sys
-          p=pathlib.Path(sys.argv[1]);expected={'oct1-two-track-audio-source.tar.gz': 'e420285d014d810e667712d7916a6077a6517f410f8e1603ea8818be0ee31d92'}
+          p=pathlib.Path(sys.argv[1]);expected={'focused-capture-source-v30.tar.gz': '59f6ce88f558a2a3563dcce67c3b57601fefe5201a41b510e10d46243c641f6a'}
           with tarfile.open(p/'source.tar') as t:
               assert set(t.getnames())==set(expected)
               for m in t:
@@ -270,8 +270,8 @@ jobs:
           stage=mega-upload
           "$w/rclone" copy "$w/plain" mega:JFrog/pipeline-20260930/source --immutable > "$w/upload.log" 2>&1
           stage=mega-readback
-          "$w/rclone" copyto mega:JFrog/pipeline-20260930/source/oct1-two-track-audio-source.tar.gz "$w/readback/oct1-two-track-audio-source.tar.gz" > "$w/readback.log" 2>&1
+          "$w/rclone" copyto mega:JFrog/pipeline-20260930/source/focused-capture-source-v30.tar.gz "$w/readback/focused-capture-source-v30.tar.gz" > "$w/readback.log" 2>&1
           stage=byte-compare
-          cmp "$w/plain/oct1-two-track-audio-source.tar.gz" "$w/readback/oct1-two-track-audio-source.tar.gz"
+          cmp "$w/plain/focused-capture-source-v30.tar.gz" "$w/readback/focused-capture-source-v30.tar.gz"
           echo '::notice title=MEGA backup proof::Additive Sept30 pipeline update plaintext archive downloaded byte-identically. No deletion.'
           rm -rf "$w"

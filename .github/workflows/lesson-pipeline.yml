@@ -1,4 +1,4 @@
-name: Joined private lesson stages
+name: Isolated polish support
 'on':
   workflow_dispatch:
     inputs:
@@ -35,6 +35,9 @@ name: Joined private lesson stages
         - recipient-proof
         - browser
         - benchmark
+        - rail3-discover
+        - rail4-visuals
+        - audio-verify
 permissions:
   contents: read
 jobs:
@@ -202,7 +205,7 @@ jobs:
         '
     - name: Provision bounded render dependencies
       run: "set -euo pipefail\nif ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null || ! python3 -c 'from PIL import Image' 2>/dev/null; then\n  timeout 150 sudo apt-get update -qq >/dev/null\n  timeout 150 sudo apt-get install -y -qq ffmpeg python3-pil fonts-dejavu-core >/dev/null\nfi\ncommand -v ffmpeg >/dev/null || { echo '::error title=Bootstrap::ffmpeg missing'; exit 3; }\ncommand -v ffprobe >/dev/null || { echo '::error title=Bootstrap::ffprobe missing'; exit 3; }\npython3 -c 'from PIL import Image,features; assert features.check(\"raqm\"), \"RTL text dependency missing\"'\necho '::notice title=Bootstrap::Render dependencies verified'\n"
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
       with:
         name: private-audio
         path: ${{ runner.temp }}/in-audio
@@ -288,7 +291,7 @@ jobs:
         '
     - name: Provision bounded render dependencies
       run: "set -euo pipefail\nif ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null || ! python3 -c 'from PIL import Image' 2>/dev/null; then\n  timeout 150 sudo apt-get update -qq >/dev/null\n  timeout 150 sudo apt-get install -y -qq ffmpeg python3-pil fonts-dejavu-core >/dev/null\nfi\ncommand -v ffmpeg >/dev/null || { echo '::error title=Bootstrap::ffmpeg missing'; exit 3; }\ncommand -v ffprobe >/dev/null || { echo '::error title=Bootstrap::ffprobe missing'; exit 3; }\npython3 -c 'from PIL import Image,features; assert features.check(\"raqm\"), \"RTL text dependency missing\"'\necho '::notice title=Bootstrap::Render dependencies verified'\n"
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
       with:
         name: private-audio
         path: ${{ runner.temp }}/in-audio
@@ -309,7 +312,7 @@ jobs:
         tar -xzf "$RUNNER_TEMP/in-audio/stage.tar.gz" -C "$RUNNER_TEMP/audio"
 
         '
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
       with:
         name: private-visual
         path: ${{ runner.temp }}/in-visual
@@ -330,7 +333,7 @@ jobs:
         tar -xzf "$RUNNER_TEMP/in-visual/stage.tar.gz" -C "$RUNNER_TEMP/visual"
 
         '
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
       with:
         name: private-captions
         path: ${{ runner.temp }}/in-captions
@@ -394,3 +397,76 @@ jobs:
     - audio
     - visual
     - captions
+  rail3_discovery:
+    if: inputs.rails == 'rail3-discover' && inputs.mode == 'production' && inputs.package_id == 'rail3-discovery-v33' && inputs.package_path == 'packages/rail3-discovery-v33.tar.gz.age'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+    - run: 'set -euo pipefail
+
+        curl --max-time 90 -fsSL -o "$RUNNER_TEMP/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+
+        echo ''cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  ''"$RUNNER_TEMP/age.tgz" | sha256sum -c -
+
+        tar -xzf "$RUNNER_TEMP/age.tgz" -C "$RUNNER_TEMP"
+
+        echo "$RUNNER_TEMP/age" >> "$GITHUB_PATH"
+
+        '
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        mkdir -p "$RUNNER_TEMP/e2e-code" "$RUNNER_TEMP/e2e-private"
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
+
+        test "$(age-keygen -y "$RUNNER_TEMP/code.key")" = ''age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl''
+
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" packages/rail3-discovery-v33.tar.gz.age
+
+        rm "$RUNNER_TEMP/code.key"
+
+        echo ''50a703bc6efb03eefa8e279c0194c2fdc47cbc6f9cc9c2c43384ab92f60ccf1f  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+
+        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
+
+        '
+    - name: Policy tests and dependency provision with no secrets
+      run: 'set -euo pipefail
+
+        node --test "$RUNNER_TEMP/e2e-code/gates.test.mjs" "$RUNNER_TEMP/e2e-code/dom-probe.test.mjs" > "$RUNNER_TEMP/policy-tests-private.log" 2>&1
+
+        python3 "$RUNNER_TEMP/e2e-code/wrapper.test.py" > "$RUNNER_TEMP/wrapper-tests-private.log" 2>&1
+
+        bash "$RUNNER_TEMP/e2e-code/provision-no-secrets.sh"
+
+        '
+    - name: Execute isolated tested read-only discovery
+      env:
+        LAB_AGE_RECIPIENT: age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl
+        JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
+        JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        bash "$RUNNER_TEMP/e2e-code/run-private.sh"
+
+        '
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: rail3-private-discovery
+        path: ${{ runner.temp }}/rail3-cipher-only/*.age
+        if-no-files-found: error
+        retention-days: 1
+concurrency:
+  group: lesson-isolated-polish-serialized
+  cancel-in-progress: false
+run-name: ${{ inputs.rails }}:${{ inputs.package_id }}

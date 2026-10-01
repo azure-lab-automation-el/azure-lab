@@ -42,7 +42,7 @@ jobs:
           print(json.dumps({'ref':'main','inputs':{'package_path':'packages/recipient-test-20260930.age','package_id':'browser-public-read','rails':'browser','mode':'fixture','browser_url':url}}))
           PYURL
               gh api -X POST "repos/$GH_REPO/actions/workflows/lesson-pipeline.yml/dispatches" --input "$RUNNER_TEMP/dispatch.json" >/dev/null
-              echo 'Read-only browser rail dispatched. Private output encrypted; this is not QA approval.' > "$RUNNER_TEMP/status.txt"
+              echo 'Read-only browser dispatched; not QA approval.' > "$RUNNER_TEMP/status.txt"
               ;;
             '/relay-audio '*)
               rid=${command#'/relay-audio '}
@@ -63,12 +63,12 @@ jobs:
               split -b 700000 -d -a 3 "$w/cipher/audio.age" "$w/cipher/part-"
               for p in "$w/cipher"/part-*; do
                 suffix=${p##*/part-}
-                jq -n --rawfile data "$p" '{message:"Encrypted technical audio review, pending QA",content:($data|@base64),branch:"main"}' > "$w/upload.json"
+                jq -n --rawfile data "$p" '{message:"Encrypted audio, pending QA",content:($data|@base64),branch:"main"}' > "$w/upload.json"
                 gh api -X PUT "repos/$GH_REPO/contents/packages/audio-review-$rid-$suffix.age" --input "$w/upload.json" >/dev/null
               done
               count=$(find "$w/cipher" -name 'part-*' | wc -l)
               echo "::notice title=Audio review relay::run=$rid parts=$count private_review_only=true"
-              printf 'Encrypted audio review relay complete: run=%s parts=%s. Not QA approval.\n' "$rid" "$count" > "$RUNNER_TEMP/status.txt"
+              printf 'Audio relay run=%s parts=%s; not QA approval.\n' "$rid" "$count" > "$RUNNER_TEMP/status.txt"
               rm -rf "$w"
               ;;
             '/relay-polish '*)
@@ -289,7 +289,7 @@ jobs:
           age -d -i "$w/key" -o "$w/source.tar" "$w/source.age"; rm "$w/key"
           python3 - "$w" <<'PYBACK'
           import tarfile,pathlib,hashlib,sys
-          p=pathlib.Path(sys.argv[1]);expected={'oct1-joined-assembly-v2.tar.gz': 'f14b28bddbf08efd7671e393cd3033187af70a663d804b65a9d149bd165c5d88', 'rail3-discovery-v33.tar.gz': '50a703bc6efb03eefa8e279c0194c2fdc47cbc6f9cc9c2c43384ab92f60ccf1f', 'rail3-discovery-v34.tar.gz': 'b20b325b5b9a1e0a2d3ad48e1ab6b7260ac9f6988635ff63516ad57e2257f1e7'}
+          p=pathlib.Path(sys.argv[1]);expected={"oct1-joined-assembly-v2.tar.gz":"f14b28bddbf08efd7671e393cd3033187af70a663d804b65a9d149bd165c5d88","rail3-discovery-v33.tar.gz":"50a703bc6efb03eefa8e279c0194c2fdc47cbc6f9cc9c2c43384ab92f60ccf1f","rail3-discovery-v34.tar.gz":"b20b325b5b9a1e0a2d3ad48e1ab6b7260ac9f6988635ff63516ad57e2257f1e7","audio-isolated-verifier-v1.tar.gz":"8c2548def6e4e9f3c7a414a5f3bf139f7f67672c2ddc2277e92be51b1e5d4c56"}
           with tarfile.open(p/'source.tar') as t:
               assert t.getnames() and set(t.getnames()).issubset(expected) and len(t.getnames())==len(set(t.getnames()))
               for m in t:
@@ -312,5 +312,5 @@ jobs:
             stage=byte-compare
             cmp "$f" "$w/readback/$name"
           done
-          echo '::notice title=MEGA backup proof::Additive Sept30 pipeline update plaintext archive downloaded byte-identically. No deletion.'
+          echo '::notice title=MEGA backup proof::Plaintext archive downloaded byte-identically; no deletion.'
           rm -rf "$w"

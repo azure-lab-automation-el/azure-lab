@@ -38,13 +38,16 @@ name: Focused permissions lesson
 permissions:
   contents: read
 jobs:
-  metric:
-    if: inputs.rails == 'metric'
+  audio:
+    if: inputs.rails == 'benchmark'
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 12
     permissions:
       contents: write
       id-token: write
+    concurrency:
+      group: hila-f0-synthesis-resource
+      cancel-in-progress: false
     steps:
     - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
     - run: 'set -euo pipefail
@@ -58,57 +61,65 @@ jobs:
         echo "$RUNNER_TEMP/age" >> "$GITHUB_PATH"
 
         '
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'umask 077
+
+        mkdir -p "$RUNNER_TEMP/e2e-code" "$RUNNER_TEMP/e2e-private"
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
+
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/oct1-two-track-audio-source.tar.gz.age
+
+        rm "$RUNNER_TEMP/code.key"
+
+        echo ''e420285d014d810e667712d7916a6077a6517f410f8e1603ea8818be0ee31d92  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+
+        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
+
+        '
+    - run: 'timeout 120 python3 -m pip install azure-cognitiveservices-speech numpy >/dev/null
+
+        '
     - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     - env:
-        GH_TOKEN: ${{ github.token }}
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
-        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      run: 'set -euo pipefail
+        GH_TOKEN: ${{ github.token }}
+        FOCUSED_MODE: audio
+      run: 'set +e
 
-        umask 077
+        timeout 480 python3 "$RUNNER_TEMP/e2e-code/focused.py" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1
 
-        p="$RUNNER_TEMP/metric";mkdir -p "$p"
+        rc=$?
 
-        active=$(az account show --query id -o tsv)
 
-        test "$active" = "$AZURE_SUBSCRIPTION_ID"
+        set -e
 
-        az resource list --resource-type Microsoft.CognitiveServices/accounts --query "[?kind==''SpeechServices'' && sku.name==''F0''].{id:id,name:name,location:location,sku:sku.name}" -o json > "$p/resource.json"
+        printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
 
-        python3 - "$p/resource.json" > "$p/id" <<''CHECK''
+        mkdir -p "$RUNNER_TEMP/delivery"
 
-        import json,sys
 
-        r=json.load(open(sys.argv[1]));assert len(r)==1;print(r[0][''id''])
+        cp "$RUNNER_TEMP/e2e-private"/failure.txt "$RUNNER_TEMP/e2e-private"/*failure*.png "$RUNNER_TEMP/e2e-private"/*failure*.json "$RUNNER_TEMP/e2e-private"/capture-segments.json "$RUNNER_TEMP/e2e-private"/recording-proof.json "$RUNNER_TEMP/delivery/" 2>/dev/null || true
 
-        CHECK
+        cp -r "$RUNNER_TEMP/e2e-private"/section-* "$RUNNER_TEMP/delivery/" 2>/dev/null || true
 
-        rid=$(cat "$p/id")
+        cp "$RUNNER_TEMP/e2e-private/lesson.mp4" "$RUNNER_TEMP/e2e-private/audio-stage.json" "$RUNNER_TEMP/delivery/" 2>/dev/null || true
 
-        az monitor metrics list --resource "$rid" --metric SynthesizedCharacters --start-time "$(date -u +%Y-%m-01T00:00:00Z)" --end-time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --interval PT1H --aggregation Total -o json > "$p/usage.json"
+        cp "$RUNNER_TEMP/e2e-private/log.txt" "$RUNNER_TEMP/e2e-private/exit-code.txt" "$RUNNER_TEMP/delivery/"
 
-        az rest --method get --url "https://management.azure.com$rid/usages?api-version=2023-05-01" > "$p/allowances.json" 2> "$p/allowances-error.txt" || true
+        tar -czf "$RUNNER_TEMP/result.tar.gz" -C "$RUNNER_TEMP/delivery" .
 
-        gh api "repos/$GITHUB_REPOSITORY/contents/packages/hila-f0-quota-ledger.age" --jq .content | base64 -d > "$p/ledger.age"
+        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/result.tar.gz"
 
-        printf ''%s'' "$LAB_AGE_KEY" > "$p/key"
+        split -b 700000 -d -a 3 "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/part-"
 
-        age -d -i "$p/key" -o "$p/ledger.json" "$p/ledger.age"
+        for f in "$RUNNER_TEMP"/part-*;do suffix=${f##*-};jq -n --rawfile d "$f" ''{message:"Encrypted focused lesson evidence",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/oct1-audio-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
 
-        rm "$p/key" "$p/id"
-
-        date -u +%Y-%m-%dT%H:%M:%SZ > "$p/checked-at.txt"
-
-        tar -czf "$RUNNER_TEMP/metric.tar.gz" -C "$p" .
-
-        age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/metric.age" "$RUNNER_TEMP/metric.tar.gz"
-
-        jq -n --rawfile d "$RUNNER_TEMP/metric.age" ''{message:"Encrypted live F0 usage and conservative ledger read",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json"
-
-        gh api -X PUT "repos/$GITHUB_REPOSITORY/contents/packages/oct1-metric-${{ github.run_id }}.age" --input "$RUNNER_TEMP/put.json" >/dev/null
+        exit "$rc"
 
         '

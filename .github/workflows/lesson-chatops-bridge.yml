@@ -101,7 +101,26 @@ jobs:
               status=j.get('discovery_status');assert status in ('BLOCKED','PRIVATE_SELECTORS_AVAILABLE_FOR_REVIEW')
               allowed={'login','landing-discovery','repository-readiness'}
               stage=j.get('failedStage','none');stage=stage if stage in allowed else 'unknown'
+              causes={
+                  'Error: no unique inspected read-only Repositories link; discovery stops':'NO_UNIQUE_REPOSITORIES_LINK',
+                  'Error: not approved read-only navigation':'READ_ONLY_LINK_REJECTED',
+                  'Error: unverified origin':'ORIGIN_REJECTED',
+                  'Error: verification challenge: no retries':'CHALLENGE',
+                  'Error: ambiguous inspected anchor':'AMBIGUOUS_ANCHOR',
+                  'Error: repository panel not stable/populated: discovery stops':'PANEL_NOT_READY'
+              }
+              cause=causes.get(j.get('error'),'UNCLASSIFIED_PRIVATE_ERROR')
+              landing=[m for m in members if m.name.removeprefix('./')=='landing-private.json']
+              counts={'visible_links':0,'exact_repository_links':0,'loading_marker':False,'repository_word':False}
+              if len(landing)==1:
+                  d=json.load(t.extractfile(landing[0]));ls=d.get('links',[])
+                  counts['visible_links']=sum(x.get('visible') is True for x in ls)
+                  counts['exact_repository_links']=sum(x.get('visible') is True and str(x.get('text','')).strip().lower()=='repositories' and bool(x.get('href')) for x in ls)
+                  text=str(d.get('text','')).lower()
+                  counts['loading_marker']=any(x in text for x in ('loading','please wait'))
+                  counts['repository_word']='repositories' in text
               print('::notice title=Isolated discovery safe summary::status='+status+'; failed_stage='+stage+'; completed_stages='+str(len(j.get('stages',[])))+'; topic_proven=false; final_ready=false; raw_private_evidence_withheld=true')
+              print('::notice title=Isolated safe technical diagnosis::cause='+cause+'; visible_links='+str(counts['visible_links'])+'; exact_repository_links='+str(counts['exact_repository_links'])+'; loading_marker='+str(counts['loading_marker']).lower()+'; repository_word='+str(counts['repository_word']).lower())
           PYREVIEW
               cat "$w/safe-summary.txt"
               rm "$w/private.tar.gz"

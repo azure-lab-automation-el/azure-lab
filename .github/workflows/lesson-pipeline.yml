@@ -1,4 +1,4 @@
-name: Focused permissions lesson
+name: Joined private lesson stages
 'on':
   workflow_dispatch:
     inputs:
@@ -38,10 +38,246 @@ name: Focused permissions lesson
 permissions:
   contents: read
 jobs:
-  capture:
-    if: inputs.rails == 'benchmark'
+  audio:
+    if: inputs.rails == 'all' && inputs.package_id == 'oct1-joined-assembly-v1'
     runs-on: ubuntu-24.04
-    timeout-minutes: 8
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+    - run: 'set -euo pipefail
+
+        curl --max-time 90 -fsSL -o "$RUNNER_TEMP/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+
+        echo ''cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  ''"$RUNNER_TEMP/age.tgz" | sha256sum -c -
+
+        tar -xzf "$RUNNER_TEMP/age.tgz" -C "$RUNNER_TEMP"
+
+        echo "$RUNNER_TEMP/age" >> "$GITHUB_PATH"
+
+        '
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'umask 077
+
+        mkdir -p "$RUNNER_TEMP/e2e-code" "$RUNNER_TEMP/e2e-private"
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
+
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/oct1-joined-assembly-v1.tar.gz.age
+
+        rm "$RUNNER_TEMP/code.key"
+
+        echo ''d303938b1d751b9fa0e58d5c4aeeb9bca8f883dd63e19aeffcb8de08045d3ee5  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+
+        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
+
+        '
+    - name: Check local render tools
+      run: 'set -euo pipefail
+
+        command -v ffmpeg
+
+        command -v ffprobe
+
+        timeout 90 python3 -m pip install Pillow >/dev/null
+
+        '
+    - name: Run audio stage
+      env:
+        STAGE: ${{ runner.temp }}/audio
+        TRANSFER: ${{ runner.temp }}/out-audio
+        GH_TOKEN: ${{ github.token }}
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        AUDIO: ${{ runner.temp }}/audio
+        VISUAL: ${{ runner.temp }}/visual
+        CAPTIONS: ${{ runner.temp }}/captions
+      run: 'set -euo pipefail
+
+        umask 077
+
+        mkdir -p "$STAGE"
+
+        python3 "$RUNNER_TEMP/e2e-code/validate_audio.py" > "$RUNNER_TEMP/audio-private.log" 2>&1
+
+        python3 "$RUNNER_TEMP/e2e-code/pack-stage.py" >> "$RUNNER_TEMP/audio-private.log" 2>&1
+
+        '
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: private-audio
+        path: ${{ runner.temp }}/out-audio/stage.age
+        retention-days: 1
+  visual:
+    if: inputs.rails == 'all' && inputs.package_id == 'oct1-joined-assembly-v1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+    - run: 'set -euo pipefail
+
+        curl --max-time 90 -fsSL -o "$RUNNER_TEMP/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+
+        echo ''cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  ''"$RUNNER_TEMP/age.tgz" | sha256sum -c -
+
+        tar -xzf "$RUNNER_TEMP/age.tgz" -C "$RUNNER_TEMP"
+
+        echo "$RUNNER_TEMP/age" >> "$GITHUB_PATH"
+
+        '
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'umask 077
+
+        mkdir -p "$RUNNER_TEMP/e2e-code" "$RUNNER_TEMP/e2e-private"
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
+
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/oct1-joined-assembly-v1.tar.gz.age
+
+        rm "$RUNNER_TEMP/code.key"
+
+        echo ''d303938b1d751b9fa0e58d5c4aeeb9bca8f883dd63e19aeffcb8de08045d3ee5  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+
+        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
+
+        '
+    - name: Check local render tools
+      run: 'set -euo pipefail
+
+        command -v ffmpeg
+
+        command -v ffprobe
+
+        timeout 90 python3 -m pip install Pillow >/dev/null
+
+        '
+    - name: Run visual stage
+      env:
+        STAGE: ${{ runner.temp }}/visual
+        TRANSFER: ${{ runner.temp }}/out-visual
+        GH_TOKEN: ${{ github.token }}
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        AUDIO: ${{ runner.temp }}/audio
+        VISUAL: ${{ runner.temp }}/visual
+        CAPTIONS: ${{ runner.temp }}/captions
+      run: 'set -euo pipefail
+
+        umask 077
+
+        mkdir -p "$STAGE"
+
+        python3 "$RUNNER_TEMP/e2e-code/visuals.py" > "$RUNNER_TEMP/visual-private.log" 2>&1
+
+        python3 "$RUNNER_TEMP/e2e-code/pack-stage.py" >> "$RUNNER_TEMP/visual-private.log" 2>&1
+
+        '
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: private-visual
+        path: ${{ runner.temp }}/out-visual/stage.age
+        retention-days: 1
+  captions:
+    if: inputs.rails == 'all' && inputs.package_id == 'oct1-joined-assembly-v1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+    - run: 'set -euo pipefail
+
+        curl --max-time 90 -fsSL -o "$RUNNER_TEMP/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+
+        echo ''cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  ''"$RUNNER_TEMP/age.tgz" | sha256sum -c -
+
+        tar -xzf "$RUNNER_TEMP/age.tgz" -C "$RUNNER_TEMP"
+
+        echo "$RUNNER_TEMP/age" >> "$GITHUB_PATH"
+
+        '
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'umask 077
+
+        mkdir -p "$RUNNER_TEMP/e2e-code" "$RUNNER_TEMP/e2e-private"
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
+
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/oct1-joined-assembly-v1.tar.gz.age
+
+        rm "$RUNNER_TEMP/code.key"
+
+        echo ''d303938b1d751b9fa0e58d5c4aeeb9bca8f883dd63e19aeffcb8de08045d3ee5  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+
+        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
+
+        '
+    - name: Check local render tools
+      run: 'set -euo pipefail
+
+        command -v ffmpeg
+
+        command -v ffprobe
+
+        timeout 90 python3 -m pip install Pillow >/dev/null
+
+        '
+    - uses: actions/download-artifact@v4
+      with:
+        name: private-audio
+        path: ${{ runner.temp }}/in-audio
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/k"
+
+        age -d -i "$RUNNER_TEMP/k" -o "$RUNNER_TEMP/in-audio/stage.tar.gz" "$RUNNER_TEMP/in-audio/stage.age"
+
+        rm "$RUNNER_TEMP/k"
+
+        mkdir -p "$RUNNER_TEMP/audio"
+
+        tar -xzf "$RUNNER_TEMP/in-audio/stage.tar.gz" -C "$RUNNER_TEMP/audio"
+
+        '
+    - name: Run captions stage
+      env:
+        STAGE: ${{ runner.temp }}/captions
+        TRANSFER: ${{ runner.temp }}/out-captions
+        GH_TOKEN: ${{ github.token }}
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        AUDIO: ${{ runner.temp }}/audio
+        VISUAL: ${{ runner.temp }}/visual
+        CAPTIONS: ${{ runner.temp }}/captions
+      run: 'set -euo pipefail
+
+        umask 077
+
+        mkdir -p "$STAGE"
+
+        python3 "$RUNNER_TEMP/e2e-code/captions.py" > "$RUNNER_TEMP/captions-private.log" 2>&1
+
+        python3 "$RUNNER_TEMP/e2e-code/pack-stage.py" >> "$RUNNER_TEMP/captions-private.log" 2>&1
+
+        '
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: private-captions
+        path: ${{ runner.temp }}/out-captions/stage.age
+        retention-days: 1
+    needs:
+    - audio
+  assembly:
+    if: inputs.rails == 'all' && inputs.package_id == 'oct1-joined-assembly-v1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
@@ -65,47 +301,128 @@ jobs:
 
         printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
 
-        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/focused-capture-source-v30.tar.gz.age
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" pipeline/oct1-joined-assembly-v1.tar.gz.age
 
         rm "$RUNNER_TEMP/code.key"
 
-        echo ''59f6ce88f558a2a3563dcce67c3b57601fefe5201a41b510e10d46243c641f6a  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+        echo ''d303938b1d751b9fa0e58d5c4aeeb9bca8f883dd63e19aeffcb8de08045d3ee5  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
 
         tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
 
         '
-    - run: 'set -euo pipefail
+    - name: Check local render tools
+      run: 'set -euo pipefail
 
-        command -v google-chrome
+        command -v ffmpeg
 
-        timeout 120 npm install --prefix /tmp/pw-deps --no-audit --no-fund playwright-core@1.63.0
+        command -v ffprobe
 
-        node --input-type=module -e "await import(''/tmp/pw-deps/node_modules/playwright-core/index.mjs'')"
+        timeout 90 python3 -m pip install Pillow >/dev/null
 
         '
+    - uses: actions/download-artifact@v4
+      with:
+        name: private-audio
+        path: ${{ runner.temp }}/in-audio
     - env:
         LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/k"
+
+        age -d -i "$RUNNER_TEMP/k" -o "$RUNNER_TEMP/in-audio/stage.tar.gz" "$RUNNER_TEMP/in-audio/stage.age"
+
+        rm "$RUNNER_TEMP/k"
+
+        mkdir -p "$RUNNER_TEMP/audio"
+
+        tar -xzf "$RUNNER_TEMP/in-audio/stage.tar.gz" -C "$RUNNER_TEMP/audio"
+
+        '
+    - uses: actions/download-artifact@v4
+      with:
+        name: private-visual
+        path: ${{ runner.temp }}/in-visual
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/k"
+
+        age -d -i "$RUNNER_TEMP/k" -o "$RUNNER_TEMP/in-visual/stage.tar.gz" "$RUNNER_TEMP/in-visual/stage.age"
+
+        rm "$RUNNER_TEMP/k"
+
+        mkdir -p "$RUNNER_TEMP/visual"
+
+        tar -xzf "$RUNNER_TEMP/in-visual/stage.tar.gz" -C "$RUNNER_TEMP/visual"
+
+        '
+    - uses: actions/download-artifact@v4
+      with:
+        name: private-captions
+        path: ${{ runner.temp }}/in-captions
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/k"
+
+        age -d -i "$RUNNER_TEMP/k" -o "$RUNNER_TEMP/in-captions/stage.tar.gz" "$RUNNER_TEMP/in-captions/stage.age"
+
+        rm "$RUNNER_TEMP/k"
+
+        mkdir -p "$RUNNER_TEMP/captions"
+
+        tar -xzf "$RUNNER_TEMP/in-captions/stage.tar.gz" -C "$RUNNER_TEMP/captions"
+
+        '
+    - name: Run assembly stage
+      env:
+        STAGE: ${{ runner.temp }}/assembly
+        TRANSFER: ${{ runner.temp }}/out-assembly
         GH_TOKEN: ${{ github.token }}
-        JFROG_LAB_USER: ${{ secrets.JFROG_LAB_USER }}
-        JFROG_LAB_PASSWORD: ${{ secrets.JFROG_LAB_PASSWORD }}
-      run: 'set +e
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        AUDIO: ${{ runner.temp }}/audio
+        VISUAL: ${{ runner.temp }}/visual
+        CAPTIONS: ${{ runner.temp }}/captions
+      run: 'set -euo pipefail
 
-        timeout 150 node "$RUNNER_TEMP/e2e-code/capture.mjs" > "$RUNNER_TEMP/e2e-private/log.txt" 2>&1
+        umask 077
 
-        rc=$?
+        mkdir -p "$STAGE"
 
-        set -e
+        python3 "$RUNNER_TEMP/e2e-code/assemble.py" > "$RUNNER_TEMP/assembly-private.log" 2>&1
 
-        printf ''%s'' "$rc" > "$RUNNER_TEMP/e2e-private/exit-code.txt"
+        python3 "$RUNNER_TEMP/e2e-code/pack-stage.py" >> "$RUNNER_TEMP/assembly-private.log" 2>&1
 
-        tar -czf "$RUNNER_TEMP/result.tar.gz" -C "$RUNNER_TEMP/e2e-private" .
+        '
+    - name: Relay encrypted candidate only
+      env:
+        GH_TOKEN: ${{ github.token }}
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/k"
+
+        age -d -i "$RUNNER_TEMP/k" -o "$RUNNER_TEMP/result.tar.gz" "$RUNNER_TEMP/out-assembly/stage.age"
 
         age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/result.tar.gz"
 
         split -b 700000 -d -a 3 "$RUNNER_TEMP/result.age" "$RUNNER_TEMP/part-"
 
-        for f in "$RUNNER_TEMP"/part-*;do suffix=${f##*-};jq -n --rawfile d "$f" ''{message:"Encrypted live read-only lesson capture",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/capture-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
-
-        exit "$rc"
+        for f in "$RUNNER_TEMP"/part-*;do suffix=${f##*-};jq -n --rawfile d "$f" ''{message:"Encrypted joined lesson candidate; quality gates held",content:($d|@base64),branch:"main"}'' > "$RUNNER_TEMP/put.json";gh api -X PUT "repos/${{ github.repository }}/contents/packages/joined-${{ github.run_id }}-$suffix.age" --input "$RUNNER_TEMP/put.json" >/dev/null;done
 
         '
+    needs:
+    - audio
+    - visual
+    - captions

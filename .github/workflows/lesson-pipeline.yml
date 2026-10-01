@@ -398,7 +398,7 @@ jobs:
     - visual
     - captions
   rail3_discovery:
-    if: inputs.rails == 'rail3-discover' && inputs.mode == 'production' && inputs.package_id == 'rail3-discovery-v33' && inputs.package_path == 'packages/rail3-discovery-v33.tar.gz.age'
+    if: inputs.rails == 'rail3-discover' && inputs.mode == 'production' && inputs.package_id == 'rail3-discovery-v34' && inputs.package_path == 'packages/rail3-discovery-v34.tar.gz.age'
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     permissions:
@@ -428,11 +428,11 @@ jobs:
 
         test "$(age-keygen -y "$RUNNER_TEMP/code.key")" = ''age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl''
 
-        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" packages/rail3-discovery-v33.tar.gz.age
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" packages/rail3-discovery-v34.tar.gz.age
 
         rm "$RUNNER_TEMP/code.key"
 
-        echo ''50a703bc6efb03eefa8e279c0194c2fdc47cbc6f9cc9c2c43384ab92f60ccf1f  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+        echo ''b20b325b5b9a1e0a2d3ad48e1ab6b7260ac9f6988635ff63516ad57e2257f1e7  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
 
         tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
 
@@ -440,7 +440,7 @@ jobs:
     - name: Policy tests and dependency provision with no secrets
       run: 'set -euo pipefail
 
-        node --test "$RUNNER_TEMP/e2e-code/gates.test.mjs" "$RUNNER_TEMP/e2e-code/dom-probe.test.mjs" > "$RUNNER_TEMP/policy-tests-private.log" 2>&1
+        node --test "$RUNNER_TEMP/e2e-code/gates.test.mjs" "$RUNNER_TEMP/e2e-code/dom-probe.test.mjs" "$RUNNER_TEMP/e2e-code/landing.test.mjs" > "$RUNNER_TEMP/policy-tests-private.log" 2>&1
 
         python3 "$RUNNER_TEMP/e2e-code/wrapper.test.py" > "$RUNNER_TEMP/wrapper-tests-private.log" 2>&1
 

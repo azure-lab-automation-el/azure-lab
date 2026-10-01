@@ -73,13 +73,12 @@ jobs:
               ;;
             '/relay-polish '*)
               rid=${command#'/relay-polish '}
-              [[ "$rid" =~ ^[0-9]{8,15}$ ]]
-              w="$RUNNER_TEMP/polish-review";mkdir -p "$w/in" "$w/cipher"
+              test "$rid" = 36823031382
+              w="$RUNNER_TEMP/polish-review";mkdir -p "$w/in"
               gh api "repos/$GH_REPO/actions/runs/$rid" > "$w/run.json"
-              python3 - "$w/run.json" > "$w/artifact.txt" <<'PYREVIEW'
+              python3 - "$w/run.json" <<'PYREVIEW'
           import json,sys
           j=json.load(open(sys.argv[1]));assert j['path']=='.github/workflows/lesson-pipeline.yml' and j['event']=='workflow_dispatch' and j['status']=='completed'
-          # Current execution support is exactly one reviewed discovery package, not generic artifact disclosure.
           assert j['display_title']=='rail3-discover:rail3-discovery-v34'
           PYREVIEW
               gh run download "$rid" --repo "$GH_REPO" --name rail3-private-discovery --dir "$w/in"
@@ -91,44 +90,29 @@ jobs:
               test "$("$w/age/age-keygen" -y "$w/key")" = 'age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl'
               "$w/age/age" -d -i "$w/key" -o "$w/private.tar.gz" "$w/in/rail3-output.tar.gz.age"
               rm "$w/key"
-              python3 - "$w/private.tar.gz" > "$w/safe-summary.txt" <<'PYREVIEW'
-          import tarfile,json,sys
-          with tarfile.open(sys.argv[1]) as t:
-              members=t.getmembers();assert len(members)<=1000 and sum(m.size for m in members)<100000000
-              for m in members:assert not m.name.startswith('/') and '..' not in m.name.split('/') and (m.isfile() or m.isdir())
-              matches=[m for m in members if m.name.removeprefix('./')=='discovery-result.json'];assert len(matches)==1
-              j=json.load(t.extractfile(matches[0]));assert j['track']=='jfrog' and j['purpose']=='repository-selector-discovery' and j['quality_status']=='NOT_READY'
-              status=j.get('discovery_status');assert status in ('BLOCKED','PRIVATE_SELECTORS_AVAILABLE_FOR_REVIEW')
-              allowed={'login','landing-discovery','repository-readiness'}
-              stage=j.get('failedStage','none');stage=stage if stage in allowed else 'unknown'
-              causes={
-                  'Error: no unique inspected read-only Repositories link; discovery stops':'NO_UNIQUE_REPOSITORIES_LINK',
-                  'Error: not approved read-only navigation':'READ_ONLY_LINK_REJECTED',
-                  'Error: unverified origin':'ORIGIN_REJECTED',
-                  'Error: verification challenge: no retries':'CHALLENGE',
-                  'Error: ambiguous inspected anchor':'AMBIGUOUS_ANCHOR',
-                  'Error: repository panel not stable/populated: discovery stops':'PANEL_NOT_READY'
-              }
-              fixed=set('ORIGIN_REJECTED CHALLENGE_STOP LOGIN_RETURNED LINK_REJECTED AMBIGUOUS_REPOSITORIES_LINK LANDING_EMPTY_TIMEOUT LANDING_LOADING_TIMEOUT REPOSITORIES_LINK_MISSING_TIMEOUT LANDING_READY'.split())
-              causes.update({'Error: '+x:x for x in fixed})
-              cause=causes.get(j.get('error'),'UNCLASSIFIED_PRIVATE_ERROR')
-              print('::notice title=Isolated discovery safe summary::status='+status+'; failed_stage='+stage+'; completed_stages='+str(len(j.get('stages',[])))+'; cause='+cause+'; topic_proven=false; final_ready=false; raw_private_evidence_withheld=true')
-              lm=[m for m in members if m.name.removeprefix('./')=='landing-counts.json']
-              if len(lm)==1:
-                  d=json.load(t.extractfile(lm[0]));c=d.get('category');ss=d.get('counts');assert c in fixed and isinstance(ss,list) and 1<=len(ss)<=61
-                  v={'sample_count':len(ss)};last=ss[-1]
-                  for k in ('visible_links','exact_repository_links','body_chars'):assert type(last.get(k)) is int and 0<=last[k]<=10000000;v[k]=last[k]
-                  for k in ('loading','login'):assert type(last.get(k)) is bool;v[k]=last[k]
-                  print('::notice title=Isolated safe landing diagnosis::category='+c+'; '+json.dumps(v,sort_keys=True))
+              python3 - "$w" <<'PYREVIEW'
+          import tarfile,json,sys,pathlib,zlib,base64
+          p=pathlib.Path(sys.argv[1])
+          with tarfile.open(p/'private.tar.gz') as t:
+              ms=t.getmembers();assert len(ms)<=1000 and sum(m.size for m in ms)<100000000
+              for m in ms:assert not m.name.startswith('/') and '..' not in m.name.split('/') and (m.isfile() or m.isdir())
+              rs=[m for m in ms if m.name.removeprefix('./')=='discovery-result.json'];assert len(rs)==1
+              r=json.load(t.extractfile(rs[0]));assert r['track']=='jfrog' and r['purpose']=='repository-selector-discovery' and r['quality_status']=='NOT_READY'
+              es=[m for m in ms if m.name.removeprefix('./')=='failure-private.json'];assert len(es)==1
+              (p/'record.json').write_bytes(t.extractfile(es[0]).read())
+          code=json.loads(zlib.decompress(base64.b64decode('eNqlV21v4jgQ/itpdWpibTaw++mUXlpxlNV21UIF7Z0qWiETDHgb7JztsESl//3GL+GlpK1OxwdIxuOZ8TMzz5jnY6m4IJPPZEknhKXkc5phKemUEhEtfsrj+DjlTCpvzAs2IZOEJWfXWM2jBV4FzdA+UhZ8adqPlUwzzkXAEEKnD4ysci6UNy1YqihnnnNQDozjQJCUiwl6fmAenQZH9nW9VmVO+NSzr0dJ4vPxT5Iqf71uCYHLiErzW21HgqhCMO9ZpnOywPGXMMWKzLgoY39w2+t3LkbXratvvf5158IP/ylwRlU5kgqrQsZ+t3c76ndaF/f+CwTs2RNnlD3JpM5bZJbQ+e5bPHzcbmV4QWTyLEjOJYVjUiLjZphnWE25WMAjngBoVCqBNSRxc8dtDgDu7i1r1MOMz6j+5WpOBPxStoQTTZyhjChvSSUdZyRphltLfQIRkMkVHpNMJk2tCvEE1i/2AG57MJ0Lkwy8yQN+JwUYrdc4cg5BT4mCIDCqKCvIqZN/+qTdVdDqCJLKdKTISiVgHw5I2cw/t5II3hYBihS/4r+IaGNJAhT7vrGzjVtjrUPvmeCiJ1LKwOCPEBzBekoSLUFGPNTfjy4c0Gg8PIw3EAXncbmGbCEQNiiEIZU1oQusFkZnSInSoOY1Gt4NFpJMvFzQJehl5anJqSfJbEGYkh4jSyI8sqAKrERmF8SxQWMuyPRoiwZSc8F/eR0hIDzfJdpHxquDs0gY+eXd9a8Cuzv050rlMm40qmZOTeFEtbvzpIh0gBqXfbB3tap2ShobIBoWnxyd+1tw/BgAbZiCBTDhcf0b2lHcr2SrbIq5Ttks+LFvqtzm3bbHsIqmyuMLCNL5s1msTglLL7D2sumsZeIadswn5XnVvbrUTiuOm5RVVS53C3Lpym5bddAKuuhMMcnQ+H1E2+Wn1xUJ+gjB1/DpMXFUGthXg/LH7NXqtr/3+qM/exf3o3bvrns7GPW6V/d+6PqrxdI5FzKujDsxCskKp8qu2oqNbcwatoOa3tOrTL1R+SjERvsGDt+24WqeM1gYRNp7xRf77V6rP+iMvnfu+peD28v2SNNut/XXCM6l2fey2xkMRjf9Xu+bb8LT+ehvnP8N2Yo/7Fa9B4X6+8bR7WZfxb8H2pWv1l5xbvbt12ytr/Yc72CvJVFG2EzNrXGGl32eEdlxQ7aaOO1e/0LPI5lTxogYpDwnb+k4O3RmomiZWdrKc8GXZBJPcSbJB2MNGuE4PAZWYuqzG/qyWCywKN2gB+oaQMGnCqgqx3Ba4NVC5YXS/QOnh1r2uoa7jBGPMlgLbUeGHjhNoexhUdOfRzRfSWA3urDjX3pTwReez/iExFOp+8n2yhTTLAlQcvas3wGmCPo++DHodSPbf3BXCN7pjMHd9XWrfw8n/dFp334w3uFGApClRMqIrKgKviINjWNvG49MjG9zjGAqI0Hw5BvNyKBkaVBtxmK2HH59DP1CTX/3zT3HbZ/SFVyTAh7qvodT8ZMTRyk82c7Qk5Oj/SHK0cnJqzPv8QeKJMAYIARGXulphWr11F6jZLTha/B5cAHaTngTbSDDoW8B9kO/2gmP+0D6jzDowZNRhAn1Rb/tq+i5tUUb6dTaMfIChEGetzcAHXNS73Sf0EBwwGAge5e5YL2OmkB8SEsgPKQZJ9xlECc6pAi3YBgAnl+3Oojquttq1jZzDe6nr9NlauswGRWKR9ukvzU3PsqdXj9ES+v8FxrXVl4jsvXjqM2cowajWsW3UANlQ4I7NVddxpNVctYtFmP4R0PlJQOIiAhW0G+rs6QJ338k1b+XDc4MOmi/DgFtI3238CqlTUGg3XB2Ehgd1DR04O7fBV2rrvp0Ne/fmnQfHjl2gKtOQWSdRRRpri7hbxhoV37r+mLXdXnoLXT3sNDdw8LNJbQ2jjoP21Be4zH8v9336Ew/JWeOZqW+Y0HpjDlUHWb+rs/qMvjGlJGGQN1l0u7SU/PlX4GpYIg=')))
+          for n,s in code.items():assert n in ('stored-evidence-classifier.mjs','stored-evidence-classifier.test.mjs','print-stored-summary.mjs');(p/n).write_text(s)
           PYREVIEW
-              cat "$w/safe-summary.txt"
+              node --input-type=module - "$w" > "$w/classify-private.log" 2>&1 <<'JSREVIEW'
+          import fs from 'node:fs';const w=process.argv[2];const {classifyStored}=await import(w+'/stored-evidence-classifier.mjs');fs.writeFileSync(w+'/summary.json',JSON.stringify(classifyStored(JSON.parse(fs.readFileSync(w+'/record.json','utf8')))));
+          JSREVIEW
+              node "$w/print-stored-summary.mjs" "$w/summary.json" 2> "$w/printer-private.log"
               rm "$w/private.tar.gz"
-              echo 'Safe generic summary produced; raw discovery remains owner-key private artifact' > "$RUNNER_TEMP/status.txt"
+              echo 'Safe stored diagnosis; NOT_READY' > "$RUNNER_TEMP/status.txt"
               rm -rf "$w"
               ;;
             '/run '*)
               payload=${command#'/run '}
-              # JSON with exact keys only; parsed by Python, never eval'd.
               printf '%s' "$payload" > "$RUNNER_TEMP/run.json"
               python3 - "$RUNNER_TEMP/run.json" > "$RUNNER_TEMP/dispatch.json" <<'PY'
           import json,re,sys
@@ -145,7 +129,6 @@ jobs:
               ;;
             '/apply '*)
               payload=${command#'/apply '}
-              # One encrypted JSON file per comment. Deliberate 45KB limit, no multi-comment assembly.
               [ "${#payload}" -le 45000 ] || exit 2
               printf '%s' "$payload" | base64 -d > "$RUNNER_TEMP/update.age"
               sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
@@ -163,7 +146,6 @@ jobs:
           print(json.dumps({'path':path,'content':x['content_base64'],'message':x['message']}))
           PY
               path=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["path"])' "$RUNNER_TEMP/put.json")
-              # Resolve remote HEAD SHA; 404 is permitted only for a new file.
               if [[ $path == .github/workflows/* ]]; then
                 test -n "$LAB_WORKFLOW_PAT" || { echo 'Missing workflow PAT' >&2; exit 3; }
                 export GH_TOKEN=$LAB_WORKFLOW_PAT

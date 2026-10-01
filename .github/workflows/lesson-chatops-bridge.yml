@@ -11,7 +11,7 @@ jobs:
       github.event.comment.user.login == 'azure-lab-automation-el' &&
       github.event.comment.author_association == 'OWNER' &&
       contains(github.event.issue.labels.*.name, 'lesson-chatops') &&
-      (startsWith(github.event.comment.body, '/run ') || startsWith(github.event.comment.body, '/apply ') || startsWith(github.event.comment.body, '/playwright ') || startsWith(github.event.comment.body, '/relay-audio '))
+      (startsWith(github.event.comment.body, '/run ') || startsWith(github.event.comment.body, '/apply ') || startsWith(github.event.comment.body, '/playwright ') || startsWith(github.event.comment.body, '/relay-audio ') || startsWith(github.event.comment.body, '/relay-polish '))
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency: {group: lesson-bridge-update, cancel-in-progress: false}
@@ -71,6 +71,43 @@ jobs:
               printf 'Encrypted audio review relay complete: run=%s parts=%s. Not QA approval.\n' "$rid" "$count" > "$RUNNER_TEMP/status.txt"
               rm -rf "$w"
               ;;
+            '/relay-polish '*)
+              rid=${command#'/relay-polish '}
+              [[ "$rid" =~ ^[0-9]{8,15}$ ]]
+              w="$RUNNER_TEMP/polish-review";mkdir -p "$w/in" "$w/cipher"
+              gh api "repos/$GH_REPO/actions/runs/$rid" > "$w/run.json"
+              python3 - "$w/run.json" > "$w/artifact.txt" <<'PYREVIEW'
+          import json,sys
+          j=json.load(open(sys.argv[1]));assert j['path']=='.github/workflows/lesson-pipeline.yml' and j['event']=='workflow_dispatch' and j['status']=='completed'
+          # Current execution support is exactly one reviewed discovery package, not generic artifact disclosure.
+          assert j['display_title']=='rail3-discover:rail3-discovery-v33'
+          PYREVIEW
+              gh run download "$rid" --repo "$GH_REPO" --name rail3-private-discovery --dir "$w/in"
+              test -s "$w/in/rail3-output.tar.gz.age"
+              curl --max-time 90 -fsSL -o "$w/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+              echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$w/age.tgz" | sha256sum -c - >/dev/null
+              tar -xzf "$w/age.tgz" -C "$w"
+              printf '%s' "$LAB_AGE_KEY" > "$w/key"
+              test "$("$w/age/age-keygen" -y "$w/key")" = 'age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl'
+              "$w/age/age" -d -i "$w/key" -o "$w/private.tar.gz" "$w/in/rail3-output.tar.gz.age"
+              rm "$w/key"
+              python3 - "$w/private.tar.gz" > "$w/safe-summary.txt" <<'PYREVIEW'
+          import tarfile,json,sys
+          with tarfile.open(sys.argv[1]) as t:
+              members=t.getmembers();assert len(members)<=1000 and sum(m.size for m in members)<100000000
+              for m in members:assert not m.name.startswith('/') and '..' not in m.name.split('/') and (m.isfile() or m.isdir())
+              matches=[m for m in members if m.name.removeprefix('./')=='discovery-result.json'];assert len(matches)==1
+              j=json.load(t.extractfile(matches[0]));assert j['track']=='jfrog' and j['purpose']=='repository-selector-discovery' and j['quality_status']=='NOT_READY'
+              status=j.get('discovery_status');assert status in ('BLOCKED','PRIVATE_SELECTORS_AVAILABLE_FOR_REVIEW')
+              allowed={'login','landing-discovery','repository-readiness'}
+              stage=j.get('failedStage','none');stage=stage if stage in allowed else 'unknown'
+              print('::notice title=Isolated discovery safe summary::status='+status+'; failed_stage='+stage+'; completed_stages='+str(len(j.get('stages',[])))+'; topic_proven=false; final_ready=false; raw_private_evidence_withheld=true')
+          PYREVIEW
+              cat "$w/safe-summary.txt"
+              rm "$w/private.tar.gz"
+              echo 'Safe generic summary produced; raw discovery remains owner-key private artifact' > "$RUNNER_TEMP/status.txt"
+              rm -rf "$w"
+              ;;
             '/run '*)
               payload=${command#'/run '}
               # JSON with exact keys only; parsed by Python, never eval'd.
@@ -81,7 +118,7 @@ jobs:
           assert x['workflow']=='lesson-pipeline.yml'
           assert re.fullmatch(r'packages/[A-Za-z0-9_./-]+\.age',x['package_path']) and '..' not in x['package_path'].split('/')
           assert re.fullmatch(r'[A-Za-z0-9_-]{1,100}',x['package_id'])
-          assert x['rails'] in ('all','metric','validate','audio','capture','simulation','discover','recipient-proof','benchmark')
+          assert x['rails'] in ('all','metric','validate','audio','capture','simulation','discover','recipient-proof','benchmark','rail3-discover','rail4-visuals','audio-verify')
           assert x['mode'] in ('production','fixture')
           print(json.dumps({'ref':'main','inputs':{k:x[k] for k in ('package_path','package_id','rails','mode')}}))
           PY
@@ -253,9 +290,9 @@ jobs:
           age -d -i "$w/key" -o "$w/source.tar" "$w/source.age"; rm "$w/key"
           python3 - "$w" <<'PYBACK'
           import tarfile,pathlib,hashlib,sys
-          p=pathlib.Path(sys.argv[1]);expected={'oct1-joined-assembly-v2.tar.gz': 'f14b28bddbf08efd7671e393cd3033187af70a663d804b65a9d149bd165c5d88'}
+          p=pathlib.Path(sys.argv[1]);expected={'oct1-joined-assembly-v2.tar.gz': 'f14b28bddbf08efd7671e393cd3033187af70a663d804b65a9d149bd165c5d88', 'rail3-discovery-v33.tar.gz': '50a703bc6efb03eefa8e279c0194c2fdc47cbc6f9cc9c2c43384ab92f60ccf1f'}
           with tarfile.open(p/'source.tar') as t:
-              assert set(t.getnames())==set(expected)
+              assert t.getnames() and set(t.getnames()).issubset(expected) and len(t.getnames())==len(set(t.getnames()))
               for m in t:
                   assert m.isfile() and m.size<100000
                   data=t.extractfile(m).read();assert hashlib.sha256(data).hexdigest()==expected[m.name]
@@ -270,8 +307,11 @@ jobs:
           stage=mega-upload
           "$w/rclone" copy "$w/plain" mega:JFrog/pipeline-20260930/source --immutable > "$w/upload.log" 2>&1
           stage=mega-readback
-          "$w/rclone" copyto mega:JFrog/pipeline-20260930/source/oct1-joined-assembly-v2.tar.gz "$w/readback/oct1-joined-assembly-v2.tar.gz" > "$w/readback.log" 2>&1
-          stage=byte-compare
-          cmp "$w/plain/oct1-joined-assembly-v2.tar.gz" "$w/readback/oct1-joined-assembly-v2.tar.gz"
+          for f in "$w/plain"/*; do
+            name=$(basename "$f")
+            "$w/rclone" copyto "mega:JFrog/pipeline-20260930/source/$name" "$w/readback/$name" > "$w/readback.log" 2>&1
+            stage=byte-compare
+            cmp "$f" "$w/readback/$name"
+          done
           echo '::notice title=MEGA backup proof::Additive Sept30 pipeline update plaintext archive downloaded byte-identically. No deletion.'
           rm -rf "$w"

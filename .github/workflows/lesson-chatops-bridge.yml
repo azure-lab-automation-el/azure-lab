@@ -253,7 +253,7 @@ jobs:
           age -d -i "$w/key" -o "$w/source.tar" "$w/source.age"; rm "$w/key"
           python3 - "$w" <<'PYBACK'
           import tarfile,pathlib,hashlib,sys
-          p=pathlib.Path(sys.argv[1]);expected={'oct1-joined-assembly-v1.tar.gz': '777747bb288c4610f6318e8e34ccd3b66b73907c9718edb7c748feaa0e2ac8f5'}
+          p=pathlib.Path(sys.argv[1]);expected={'oct1-joined-assembly-v1.tar.gz': 'd303938b1d751b9fa0e58d5c4aeeb9bca8f883dd63e19aeffcb8de08045d3ee5'}
           with tarfile.open(p/'source.tar') as t:
               assert set(t.getnames())==set(expected)
               for m in t:

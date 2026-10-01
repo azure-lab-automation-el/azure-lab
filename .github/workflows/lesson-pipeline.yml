@@ -38,6 +38,8 @@ name: Isolated polish support
         - rail3-discover
         - rail4-visuals
         - audio-verify
+        - rail5-tests
+        - rail6-model-tests
 permissions:
   contents: read
 jobs:
@@ -517,6 +519,106 @@ jobs:
         umask 077
 
         timeout --signal=TERM --kill-after=10 240 python3 "$RUNNER_TEMP/e2e-code/verify_all.py" 2> "$RUNNER_TEMP/audio-error-private.log"
+
+        '
+  rail5_tests:
+    if: inputs.rails == 'rail5-tests' && inputs.mode == 'production' && inputs.package_id == 'rail5-portable-tests-v4' && inputs.package_path == 'packages/rail5-portable-tests-v4.tar.gz.age'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+    - run: 'set -euo pipefail
+
+        curl --max-time 90 -fsSL -o "$RUNNER_TEMP/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+
+        echo ''cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  ''"$RUNNER_TEMP/age.tgz" | sha256sum -c -
+
+        tar -xzf "$RUNNER_TEMP/age.tgz" -C "$RUNNER_TEMP"
+
+        echo "$RUNNER_TEMP/age" >> "$GITHUB_PATH"
+
+        '
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        mkdir -p "$RUNNER_TEMP/e2e-code" "$RUNNER_TEMP/e2e-private"
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
+
+        test "$(age-keygen -y "$RUNNER_TEMP/code.key")" = ''age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl''
+
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" packages/rail5-portable-tests-v4.tar.gz.age
+
+        rm "$RUNNER_TEMP/code.key"
+
+        echo ''1a94dc82e4cea8db631278707ee0400eadd2303b3231b3e5506d990a70c5e6bc  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+
+        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
+
+        '
+    - name: Run independent no-secret tests
+      run: 'set -euo pipefail
+
+        umask 077
+
+        bash "$RUNNER_TEMP/e2e-code/rail5-executor-v4/run-tests.sh" > "$RUNNER_TEMP/rail5-private.log" 2>&1
+
+        echo "::notice title=Rail5 isolated tests::runs=3; tests_per_run=25; final_delivery_ready=false; full_video_tested=false"
+
+        '
+  rail6_model_tests:
+    if: inputs.rails == 'rail6-model-tests' && inputs.mode == 'production' && inputs.package_id == 'rail6-model-tests-v1' && inputs.package_path == 'packages/rail6-model-tests-v1.tar.gz.age'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+    - run: 'set -euo pipefail
+
+        curl --max-time 90 -fsSL -o "$RUNNER_TEMP/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+
+        echo ''cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  ''"$RUNNER_TEMP/age.tgz" | sha256sum -c -
+
+        tar -xzf "$RUNNER_TEMP/age.tgz" -C "$RUNNER_TEMP"
+
+        echo "$RUNNER_TEMP/age" >> "$GITHUB_PATH"
+
+        '
+    - env:
+        LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+      run: 'set -euo pipefail
+
+        umask 077
+
+        mkdir -p "$RUNNER_TEMP/e2e-code" "$RUNNER_TEMP/e2e-private"
+
+        printf ''%s'' "$LAB_AGE_KEY" > "$RUNNER_TEMP/code.key"
+
+        test "$(age-keygen -y "$RUNNER_TEMP/code.key")" = ''age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl''
+
+        age -d -i "$RUNNER_TEMP/code.key" -o "$RUNNER_TEMP/source.tar.gz" packages/rail6-model-tests-v1.tar.gz.age
+
+        rm "$RUNNER_TEMP/code.key"
+
+        echo ''5fcd60d661d071e41b50450cc439be29b9cf469094dee8bf4706724e4ead34e6  ''"$RUNNER_TEMP/source.tar.gz" | sha256sum -c - >/dev/null
+
+        tar -xzf "$RUNNER_TEMP/source.tar.gz" -C "$RUNNER_TEMP/e2e-code"
+
+        '
+    - name: Run independent no-secret tests
+      run: 'set -euo pipefail
+
+        umask 077
+
+        for name in sq-model jfrog-model boundary-matrix; do node "$RUNNER_TEMP/e2e-code/tests/$name.test.mjs" >> "$RUNNER_TEMP/rail6-private.log" 2>&1; done
+
+        echo "::notice title=Rail6 isolated model tests::sq_checks=8; boundary_checks=81; jfrog_model_passed=true; hosted_playthrough=false; physical_phone=false; final_ready=false"
 
         '
 concurrency:

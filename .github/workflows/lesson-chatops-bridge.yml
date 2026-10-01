@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Read comment body from GitHub API without shell interpolation
         run: gh api "repos/$GH_REPO/issues/comments/$GH_COMMENT_ID" --jq .body > "$RUNNER_TEMP/command.txt"
-      - name: Apply allowlisted encrypted update or dispatch
+      - name: Allowlisted apply or dispatch
         run: |
           set -euo pipefail
           umask 077
@@ -42,7 +42,7 @@ jobs:
           print(json.dumps({'ref':'main','inputs':{'package_path':'packages/recipient-test-20260930.age','package_id':'browser-public-read','rails':'browser','mode':'fixture','browser_url':url}}))
           PYURL
               gh api -X POST "repos/$GH_REPO/actions/workflows/lesson-pipeline.yml/dispatches" --input "$RUNNER_TEMP/dispatch.json" >/dev/null
-              echo 'Read-only browser dispatched; not QA approval.' > "$RUNNER_TEMP/status.txt"
+              echo 'Browser dispatched; not QA.' > "$RUNNER_TEMP/status.txt"
               ;;
             '/relay-audio '*)
               rid=${command#'/relay-audio '}
@@ -68,7 +68,7 @@ jobs:
               done
               count=$(find "$w/cipher" -name 'part-*' | wc -l)
               echo "::notice title=Audio review relay::run=$rid parts=$count private_review_only=true"
-              printf 'Audio relay run=%s parts=%s; not QA approval.\n' "$rid" "$count" > "$RUNNER_TEMP/status.txt"
+              printf 'Audio run=%s parts=%s; not QA.\n' "$rid" "$count" > "$RUNNER_TEMP/status.txt"
               rm -rf "$w"
               ;;
             '/relay-polish '*)
@@ -124,7 +124,7 @@ jobs:
           print(json.dumps({'ref':'main','inputs':{k:x[k] for k in ('package_path','package_id','rails','mode')}}))
           PY
               gh api -X POST "repos/$GH_REPO/actions/workflows/lesson-pipeline.yml/dispatches" --input "$RUNNER_TEMP/dispatch.json" >/dev/null
-              echo 'Dispatch submitted. Inspect Actions for outcome; this is not QA approval.' > "$RUNNER_TEMP/status.txt"
+              echo 'Dispatched; check Actions. Not QA approval.' > "$RUNNER_TEMP/status.txt"
               ;;
             '/apply '*)
               payload=${command#'/apply '}
@@ -161,7 +161,6 @@ jobs:
             *) exit 2 ;;
           esac
           gh issue comment "$GH_ISSUE" --repo "$GH_REPO" --body-file "$RUNNER_TEMP/status.txt"
-
   azure-read:
     if: github.event.issue.number == 2 && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/azure-read'
     runs-on: ubuntu-24.04
@@ -203,7 +202,6 @@ jobs:
           PYAZ
           gh issue comment 2 --repo "$GH_REPO" --body-file "$RUNNER_TEMP/azure-safe.txt"
           while IFS= read -r line; do printf '::notice title=Azure read-only probe::%s\n' "$line"; done < "$RUNNER_TEMP/azure-safe.txt"
-
   azure-cost:
     if: github.event.issue.number == 2 && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/azure-cost'
     runs-on: ubuntu-24.04
@@ -243,11 +241,10 @@ jobs:
           sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq age >/dev/null
           tar -czf "$RUNNER_TEMP/cost.tar.gz" -C "$p" .
           age -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$RUNNER_TEMP/cost.age" "$RUNNER_TEMP/cost.tar.gz"
-          jq -n --rawfile data "$RUNNER_TEMP/cost.age" '{message:"Encrypted private read-only Azure cost result",content:($data|@base64),branch:"main"}' > "$RUNNER_TEMP/relay.json"
+          jq -n --rawfile data "$RUNNER_TEMP/cost.age" '{message:"Encrypted private cost",content:($data|@base64),branch:"main"}' > "$RUNNER_TEMP/relay.json"
           gh api -X PUT "repos/$GH_REPO/contents/packages/azure-cost-${{ github.run_id }}.age" --input "$RUNNER_TEMP/relay.json" >/dev/null
           rm -rf "$p" "$RUNNER_TEMP/cost.tar.gz"
-          echo '::notice title=Private Azure cost relay::Encrypted result committed. No financial figures published. Individual API failures must be reviewed privately.'
-
+          echo '::notice title=Private Azure cost relay::Encrypted result; no public figures. Review failures privately.'
   lesson-backup:
     if: github.event.issue.number == 2 && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.author_association == 'OWNER' && startsWith(github.event.comment.body, '/backup ')
     runs-on: ubuntu-24.04
@@ -255,7 +252,7 @@ jobs:
     concurrency: {group: lesson-mega-backup, cancel-in-progress: false}
     permissions: {contents: read, issues: write}
     steps:
-      - name: Additive plaintext MEGA backup with downloaded SHA verification
+      - name: MEGA backup byte check
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -289,7 +286,7 @@ jobs:
           age -d -i "$w/key" -o "$w/source.tar" "$w/source.age"; rm "$w/key"
           python3 - "$w" <<'PYBACK'
           import tarfile,pathlib,hashlib,sys
-          p=pathlib.Path(sys.argv[1]);expected={"oct1-joined-assembly-v2.tar.gz":"f14b28bddbf08efd7671e393cd3033187af70a663d804b65a9d149bd165c5d88","rail3-discovery-v33.tar.gz":"50a703bc6efb03eefa8e279c0194c2fdc47cbc6f9cc9c2c43384ab92f60ccf1f","rail3-discovery-v34.tar.gz":"b20b325b5b9a1e0a2d3ad48e1ab6b7260ac9f6988635ff63516ad57e2257f1e7","audio-isolated-verifier-v1.tar.gz":"8c2548def6e4e9f3c7a414a5f3bf139f7f67672c2ddc2277e92be51b1e5d4c56"}
+          p=pathlib.Path(sys.argv[1]);import json,zlib,base64;expected=json.loads(zlib.decompress(base64.b64decode('eNp9ksluFDEURf+l11Rkv8EDf/NGVKhDoe5KS4D4d4yUKFkgNt5YOtfnXv+6HHbW7euxfwvf5H6PZ73+2B7wdMrt6cvPy+dLVlIY6q5ZRqT31mvgRHMsiHV0yV6kNfRRSBvL9EpTvTY29jEuny432a+4+X634xG3hUd853ORXlCtRWrBiJQR0KeVOskg3ajbus1pNg2MEAeJTshWzLLmP/n0zlcoisDKOqVGEXAUpxFVtGmHVsRmtjlGQ85cR23i3AOAe9boiy8vvh/bfj+ucq6aVsaee9y2R32PGQZMwyNbUMxE60KVhBM1K87s2VZzYOBuAL3HBA2uWoOdjNurBm/fj9speo3tjPt53x4fVKpMchsQZCHDtWGFPnrpEYVKCXGHNcrSxaoYzKX5nH/7NY6m9prRtufD4/oW8EGC07wVb616WStTVS7Eq2fCqQFTpyW1WdYzIoYm9bKcaBmLI8WbBP1PAjiQeJRubbKUrHOtEzDa2ggIfBFJuudqH5E5Rw+bwctofYJO4/L7DyNqzP0=')))
           with tarfile.open(p/'source.tar') as t:
               assert t.getnames() and set(t.getnames()).issubset(expected) and len(t.getnames())==len(set(t.getnames()))
               for m in t:

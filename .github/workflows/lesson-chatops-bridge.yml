@@ -80,7 +80,7 @@ jobs:
           import json,sys
           j=json.load(open(sys.argv[1]));assert j['path']=='.github/workflows/lesson-pipeline.yml' and j['event']=='workflow_dispatch' and j['status']=='completed'
           # Current execution support is exactly one reviewed discovery package, not generic artifact disclosure.
-          assert j['display_title']=='rail3-discover:rail3-discovery-v33'
+          assert j['display_title']=='rail3-discover:rail3-discovery-v34'
           PYREVIEW
               gh run download "$rid" --repo "$GH_REPO" --name rail3-private-discovery --dir "$w/in"
               test -s "$w/in/rail3-output.tar.gz.age"
@@ -109,18 +109,17 @@ jobs:
                   'Error: ambiguous inspected anchor':'AMBIGUOUS_ANCHOR',
                   'Error: repository panel not stable/populated: discovery stops':'PANEL_NOT_READY'
               }
+              fixed=set('ORIGIN_REJECTED CHALLENGE_STOP LOGIN_RETURNED LINK_REJECTED AMBIGUOUS_REPOSITORIES_LINK LANDING_EMPTY_TIMEOUT LANDING_LOADING_TIMEOUT REPOSITORIES_LINK_MISSING_TIMEOUT LANDING_READY'.split())
+              causes.update({'Error: '+x:x for x in fixed})
               cause=causes.get(j.get('error'),'UNCLASSIFIED_PRIVATE_ERROR')
-              landing=[m for m in members if m.name.removeprefix('./')=='landing-private.json']
-              counts={'visible_links':0,'exact_repository_links':0,'loading_marker':False,'repository_word':False}
-              if len(landing)==1:
-                  d=json.load(t.extractfile(landing[0]));ls=d.get('links',[])
-                  counts['visible_links']=sum(x.get('visible') is True for x in ls)
-                  counts['exact_repository_links']=sum(x.get('visible') is True and str(x.get('text','')).strip().lower()=='repositories' and bool(x.get('href')) for x in ls)
-                  text=str(d.get('text','')).lower()
-                  counts['loading_marker']=any(x in text for x in ('loading','please wait'))
-                  counts['repository_word']='repositories' in text
-              print('::notice title=Isolated discovery safe summary::status='+status+'; failed_stage='+stage+'; completed_stages='+str(len(j.get('stages',[])))+'; topic_proven=false; final_ready=false; raw_private_evidence_withheld=true')
-              print('::notice title=Isolated safe technical diagnosis::cause='+cause+'; visible_links='+str(counts['visible_links'])+'; exact_repository_links='+str(counts['exact_repository_links'])+'; loading_marker='+str(counts['loading_marker']).lower()+'; repository_word='+str(counts['repository_word']).lower())
+              print('::notice title=Isolated discovery safe summary::status='+status+'; failed_stage='+stage+'; completed_stages='+str(len(j.get('stages',[])))+'; cause='+cause+'; topic_proven=false; final_ready=false; raw_private_evidence_withheld=true')
+              lm=[m for m in members if m.name.removeprefix('./')=='landing-counts.json']
+              if len(lm)==1:
+                  d=json.load(t.extractfile(lm[0]));c=d.get('category');ss=d.get('counts');assert c in fixed and isinstance(ss,list) and 1<=len(ss)<=61
+                  v={'sample_count':len(ss)};last=ss[-1]
+                  for k in ('visible_links','exact_repository_links','body_chars'):assert type(last.get(k)) is int and 0<=last[k]<=10000000;v[k]=last[k]
+                  for k in ('loading','login'):assert type(last.get(k)) is bool;v[k]=last[k]
+                  print('::notice title=Isolated safe landing diagnosis::category='+c+'; '+json.dumps(v,sort_keys=True))
           PYREVIEW
               cat "$w/safe-summary.txt"
               rm "$w/private.tar.gz"
@@ -309,7 +308,7 @@ jobs:
           age -d -i "$w/key" -o "$w/source.tar" "$w/source.age"; rm "$w/key"
           python3 - "$w" <<'PYBACK'
           import tarfile,pathlib,hashlib,sys
-          p=pathlib.Path(sys.argv[1]);expected={'oct1-joined-assembly-v2.tar.gz': 'f14b28bddbf08efd7671e393cd3033187af70a663d804b65a9d149bd165c5d88', 'rail3-discovery-v33.tar.gz': '50a703bc6efb03eefa8e279c0194c2fdc47cbc6f9cc9c2c43384ab92f60ccf1f'}
+          p=pathlib.Path(sys.argv[1]);expected={'oct1-joined-assembly-v2.tar.gz': 'f14b28bddbf08efd7671e393cd3033187af70a663d804b65a9d149bd165c5d88', 'rail3-discovery-v33.tar.gz': '50a703bc6efb03eefa8e279c0194c2fdc47cbc6f9cc9c2c43384ab92f60ccf1f', 'rail3-discovery-v34.tar.gz': 'b20b325b5b9a1e0a2d3ad48e1ab6b7260ac9f6988635ff63516ad57e2257f1e7'}
           with tarfile.open(p/'source.tar') as t:
               assert t.getnames() and set(t.getnames()).issubset(expected) and len(t.getnames())==len(set(t.getnames()))
               for m in t:

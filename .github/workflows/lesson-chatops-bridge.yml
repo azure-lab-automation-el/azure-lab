@@ -42,7 +42,7 @@ jobs:
           print(json.dumps({'ref':'main','inputs':{'package_path':'packages/recipient-test-20260930.age','package_id':'browser-public-read','rails':'browser','mode':'fixture','browser_url':url}}))
           PYURL
               gh api -X POST "repos/$GH_REPO/actions/workflows/lesson-pipeline.yml/dispatches" --input "$RUNNER_TEMP/dispatch.json" >/dev/null
-              echo 'Browser dispatched; not QA.' > "$RUNNER_TEMP/status.txt"
+              echo 'Browser dispatched; not QA' > "$RUNNER_TEMP/status.txt"
               ;;
             '/relay-audio '*)
               rid=${command#'/relay-audio '}
@@ -119,12 +119,12 @@ jobs:
           assert x['workflow']=='lesson-pipeline.yml'
           assert re.fullmatch(r'packages/[A-Za-z0-9_./-]+\.age',x['package_path']) and '..' not in x['package_path'].split('/')
           assert re.fullmatch(r'[A-Za-z0-9_-]{1,100}',x['package_id'])
-          assert x['rails'] in ('all','metric','validate','audio','capture','simulation','discover','recipient-proof','benchmark','rail3-discover','rail4-visuals','audio-verify')
+          assert x['rails'] in ('all','metric','validate','audio','capture','simulation','discover','recipient-proof','benchmark','rail3-discover','rail4-visuals','audio-verify','rail5-tests','rail6-model-tests')
           assert x['mode'] in ('production','fixture')
           print(json.dumps({'ref':'main','inputs':{k:x[k] for k in ('package_path','package_id','rails','mode')}}))
           PY
               gh api -X POST "repos/$GH_REPO/actions/workflows/lesson-pipeline.yml/dispatches" --input "$RUNNER_TEMP/dispatch.json" >/dev/null
-              echo 'Dispatched; check Actions. Not QA approval.' > "$RUNNER_TEMP/status.txt"
+              echo 'Dispatched; not QA.' > "$RUNNER_TEMP/status.txt"
               ;;
             '/apply '*)
               payload=${command#'/apply '}

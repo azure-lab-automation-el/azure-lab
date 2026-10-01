@@ -106,9 +106,8 @@ jobs:
               node --input-type=module - "$w" > "$w/classify-private.log" 2>&1 <<'JSREVIEW'
           import fs from 'node:fs';const w=process.argv[2];const {classifyStored}=await import(w+'/stored-evidence-classifier.mjs');fs.writeFileSync(w+'/summary.json',JSON.stringify(classifyStored(JSON.parse(fs.readFileSync(w+'/record.json','utf8')))));
           JSREVIEW
-              node "$w/print-stored-summary.mjs" "$w/summary.json" 2> "$w/printer-private.log"
-              rm "$w/private.tar.gz"
-              echo 'Safe stored diagnosis; NOT_READY' > "$RUNNER_TEMP/status.txt"
+              node "$w/print-stored-summary.mjs" "$w/summary.json" 2> "$w/printer-private.log" | sed 's/^/::notice title=Stored safe diagnosis::/'
+              echo NOT_READY > "$RUNNER_TEMP/status.txt"
               rm -rf "$w"
               ;;
             '/run '*)

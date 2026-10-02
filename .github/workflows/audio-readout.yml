@@ -16,7 +16,6 @@ jobs:
       GH_REPO: ${{ github.repository }}
       RUN_ID: ${{ github.run_id }}
       TARGET_RUN: '37003267191'
-      EXPDIR: ${{ runner.temp }}/exp
     steps:
       - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
         with:

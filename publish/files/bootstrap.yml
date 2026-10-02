@@ -1,0 +1,22 @@
+name: bootstrap-recipient
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  derive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Print the PUBLIC age recipient derived from the Secret
+        env:
+          BLUE_TOOLS_SOURCE_KEY: ${{ secrets.BLUE_TOOLS_SOURCE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          curl --max-time 90 -fsSL -o "$RUNNER_TEMP/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$RUNNER_TEMP/age.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/age.tgz" -C "$RUNNER_TEMP"
+          printf '%s' "$BLUE_TOOLS_SOURCE_KEY" > "$RUNNER_TEMP/k"
+          if "$RUNNER_TEMP/age/age-keygen" -y "$RUNNER_TEMP/k" > "$RUNNER_TEMP/pub" 2>/dev/null; then echo "RECIPIENT=$(cat "$RUNNER_TEMP/pub")"; else echo "KEY_NOT_AGE_IDENTITY"; fi
+          rm -f "$RUNNER_TEMP/k" "$RUNNER_TEMP/pub"

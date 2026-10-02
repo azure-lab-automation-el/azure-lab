@@ -1,4 +1,4 @@
-name: Audio cache-only recover (fixed run, no synthesis, no Azure)
+name: Audio cache-only recover v2 (punctuation patch, no synthesis, no Azure)
 on:
   issue_comment:
     types: [created]
@@ -49,10 +49,26 @@ jobs:
           d="$RUNNER_TEMP"
           if ! grep -qx 'gate=ok' "$d/r1.state" 2>/dev/null; then echo "::notice::R2 skipped (R1 gate not ok)"; exit 0; fi
           echo "$PACKET_SHA256  $d/p.tgz" | sha256sum -c - >/dev/null 2>&1 || { echo "::notice::R2 skipped (packet sha recheck failed)"; exit 0; }
+          cat > "$d/patch.py" <<'PPEOF'
+          import hashlib,pathlib,os
+          W=pathlib.Path(os.environ['RUNNER_TEMP'])
+          src=(W/'w'/'pk'/'sentence_join.py').read_text()
+          assert hashlib.sha256(src.encode()).hexdigest()=='a3a52b0eb89741b840e7ff1061b8f608c0d02495928d525f3b17c6b47748e85f'
+          old="start=e['start_ticks']/1e7;end=start+e['duration_ticks']/1e7;assert 0<=start<end<=m['frames']/24000+.1"
+          new="start=e['start_ticks']/1e7;end=start+e['duration_ticks']/1e7;assert 0<=start<=end<=m['frames']/24000+.1 and (end>start or e['boundary_type']=='Punctuation'),('event timing',e['boundary_type'],start,end)  # Punctuation may be zero-duration (measured, Azure SDK); Word and all other types must still have end>start"
+          assert src.count(old)==1
+          out=src.replace(old,new)
+          assert hashlib.sha256(out.encode()).hexdigest()=='69e39df34a1ba245c36b778446e3bd22ce0ab3f6a1040efdf3a74ceacca434b3'
+          (W/'patched').mkdir(exist_ok=True); (W/'patched'/'sentence_join.py').write_text(out)
+          PPEOF
+          sed -i 's/^          //' "$d/patch.py"
+          python3 -B "$d/patch.py" >/dev/null 2>&1; prc=$?
+          if [ "$prc" != 0 ]; then echo "::notice::R2 skipped (patch hash gate failed rc=$prc)"; exit 0; fi
+          echo "::notice::R2 patch_gate=ok"
           cat > "$d/rec.py" <<'PYEOF'
           import sys,os,json,hashlib,pathlib,traceback,collections
           W=pathlib.Path(os.environ['RUNNER_TEMP'])
-          sys.path.insert(0,str(W/'w'/'pk'))
+          sys.path.insert(0,str(W/'w'/'pk')); sys.path.insert(0,str(W/'patched'))
           res={}
           inp=json.loads((W/'w'/'pk'/'input.json').read_text())
           seg=[s for s in inp['segments'] if s['track']=='jfrog' and s['segment']=='07'][0]

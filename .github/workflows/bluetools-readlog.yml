@@ -10,6 +10,8 @@ jobs:
     if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/bluetools-readlog'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    env:
+      RL_STAGE: INIT
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -19,6 +21,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
+          st(){ echo "RL_STAGE=$1" >> "$GITHUB_ENV"; }
+          st L0
           OUT=$RUNNER_TEMP/out.txt; : > $OUT
           for RUN in 36992747054 36992887453; do
             echo "== run $RUN" >> $OUT
@@ -31,12 +35,36 @@ jobs:
               grep -oE '"push": ?(true|false)' $RUNNER_TEMP/l.txt >> $OUT
             else echo LOGS_READ_FAILED >> $OUT; fi
           done
-          curl --max-time 90 -fsSL -o $RUNNER_TEMP/age.tgz https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
-          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '$RUNNER_TEMP/age.tgz | sha256sum -c -
-          tar -xzf $RUNNER_TEMP/age.tgz -C $RUNNER_TEMP
-          $RUNNER_TEMP/age/age -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o packages/bluetools-readlog-${{ github.run_id }}.age $OUT
-          git config user.name azure-lab-automation-el
-          git config user.email "332180512+azure-lab-automation-el@users.noreply.github.com"
-          git add packages/bluetools-readlog-${{ github.run_id }}.age
-          git commit -q -m "Encrypted fixed-run log markers"
-          git push -q origin HEAD:main
+          [ -s $OUT ] || { st LFAIL; exit 1; }
+          st L1
+          curl --max-time 90 -fsSL -o $RUNNER_TEMP/age.tgz https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz || { st AFAIL; exit 1; }
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '$RUNNER_TEMP/age.tgz | sha256sum -c - >/dev/null || { st AFAIL; exit 1; }
+          tar -xzf $RUNNER_TEMP/age.tgz -C $RUNNER_TEMP || { st AFAIL; exit 1; }
+          F=packages/bluetools-readlog-${{ github.run_id }}.age
+          $RUNNER_TEMP/age/age -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o $F $OUT || { st AFAIL; exit 1; }
+          [ -s $F ] || { st AFAIL; exit 1; }
+          st A1
+          python3 - "$F" > $RUNNER_TEMP/body.json 2>/dev/null <<'PY' || { st BFAIL; exit 1; }
+          import base64,json,sys
+          print(json.dumps({"message":"Encrypted fixed-run log markers","content":base64.b64encode(open(sys.argv[1],'rb').read()).decode(),"branch":"main"}))
+          PY
+          python3 -c "import json;json.load(open('$RUNNER_TEMP/body.json'))" 2>/dev/null || { st BFAIL; exit 1; }
+          st B1
+          if gh api -X PUT "repos/${{ github.repository }}/contents/$F" --input $RUNNER_TEMP/body.json </dev/null >$RUNNER_TEMP/put.json 2>$RUNNER_TEMP/put.err; then
+            LOCAL=$(git hash-object $F)
+            GOT=$(gh api "repos/${{ github.repository }}/contents/$F?ref=main" --jq .sha </dev/null 2>/dev/null || true)
+            if [ "$GOT" = "$LOCAL" ]; then st P201GET; else st P201GETMISMATCH; fi
+          else
+            C=$(grep -oE 'HTTP [0-9]{3}' $RUNNER_TEMP/put.err | head -1 | tr -d ' ')
+            st "PFAIL${C:-NA}"
+          fi
+      - name: Stage marker as public artifact NAME only (fixed enum)
+        if: always()
+        run: |
+          mkdir -p /tmp/m; echo "$RL_STAGE" > /tmp/m/stage.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: rl-${{ env.RL_STAGE }}
+          path: /tmp/m/stage.txt
+          retention-days: 1

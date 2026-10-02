@@ -25,7 +25,7 @@ jobs:
       - name: P1 install age (hash pinned)
         shell: bash
         run: |
-          set -u
+          set -u; set +e
           umask 077
           d="$RUNNER_TEMP"; mkdir -p "$d/x" "$d/exp"
           curl --max-time 90 -fsSL -o "$d/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz; rc=$?
@@ -38,7 +38,7 @@ jobs:
           LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
         shell: bash
         run: |
-          set -u
+          set -u; set +e
           umask 077
           d="$RUNNER_TEMP"; S="$d/state"; : > "$S"
           AID=$(gh api "repos/$GH_REPO/actions/runs/$TARGET_RUN/artifacts" --jq ".artifacts[] | select(.name==\"audio-job-encrypted-$TARGET_RUN\") | .id" 2>/dev/null | head -1)
@@ -53,20 +53,22 @@ jobs:
       - name: P3 Speech key occurrence count (count only)
         shell: bash
         run: |
-          set -u
+          set -u; set +e
           d="$RUNNER_TEMP"; S="$d/state"
           if ! grep -q '^untar_rc=0$' "$S"; then echo "kc=none" >> "$S"; echo "::notice::P3 skipped (no extracted files)"; exit 0; fi
-          rid=$(az resource list --resource-type Microsoft.CognitiveServices/accounts --query "[?kind=='SpeechServices' && sku.name=='F0'].id" -o tsv 2>/dev/null)
-          nm=$(az resource show --ids "$rid" --query name -o tsv 2>/dev/null); rg=$(printf '%s' "$rid" | sed -E 's#.*/resourceGroups/([^/]+)/.*#\1#')
-          key=$(az cognitiveservices account keys list -g "$rg" -n "$nm" --query key1 -o tsv 2>/dev/null) || key=""
+          rid=$(az resource list --resource-type Microsoft.CognitiveServices/accounts --query "[?kind=='SpeechServices' && sku.name=='F0'].id" -o tsv 2>/dev/null); r1=$?
+          nm=$(az resource show --ids "$rid" --query name -o tsv 2>/dev/null); r2=$?; rg=$(printf '%s' "$rid" | sed -E 's#.*/resourceGroups/([^/]+)/.*#\1#')
+          key=$(az cognitiveservices account keys list -g "$rg" -n "$nm" --query key1 -o tsv 2>/dev/null); r3=$?
+          echo "::notice::P3 az_list_rc=$r1 az_show_rc=$r2 az_keys_rc=$r3 rid_nonempty=$([ -n "$rid" ] && echo y || echo n)"
+          [ "$r3" = 0 ] || key=""
           if [ -z "$key" ]; then echo "kc=unavailable" >> "$S"; echo "::notice::P3 kc=unavailable"; exit 0; fi
           echo "::add-mask::$key"
-          KC=$(grep -rcaF -- "$key" "$d/r" 2>/dev/null | awk -F: '{s+=$NF} END{print s+0}')
+          KC=$( { grep -rcaF -- "$key" "$d/r" 2>/dev/null || true; } | awk -F: '{s+=$NF} END{print s+0}')
           echo "kc=$KC" >> "$S"; echo "::notice::P3 key_occurrences=$KC"
       - name: P4 summary and gated audio export (encrypted)
         shell: bash
         run: |
-          set -u
+          set -u; set +e
           umask 077
           d="$RUNNER_TEMP"; S="$d/state"; OUT="$d/out.txt"; cp "$S" "$OUT"
           KC=$(sed -n 's/^kc=//p' "$S" | head -1)
@@ -101,7 +103,7 @@ jobs:
         if: ${{ always() }}
         shell: bash
         run: |
-          set -u
+          set -u; set +e
           d="$RUNNER_TEMP"
           [ -s "$d/exp/summary.age" ] || { echo "::notice::P6 no summary"; exit 0; }
           jq -n --rawfile c "$d/exp/summary.age" '{message:"Encrypted audio read-out",content:($c|@base64),branch:"main"}' > "$d/put.json"; rc=$?

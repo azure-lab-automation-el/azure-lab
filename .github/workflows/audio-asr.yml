@@ -63,6 +63,7 @@ jobs:
           umask 077
           d="$RUNNER_TEMP"
           grep -qx 'gate=ok' "$d/a2.state" 2>/dev/null || { echo "::notice::A3 skipped (A2 gate)"; exit 1; }
+          sudo apt-get -qq update >/dev/null 2>&1; sudo DEBIAN_FRONTEND=noninteractive apt-get -qq install -y --no-install-recommends ffmpeg >/dev/null 2>&1; echo "::notice::A3 ffmpeg_install_rc=$? have_ffmpeg=$(command -v ffmpeg >/dev/null && echo yes || echo no)"
           ffmpeg -nostdin -loglevel error -y -i "$d/r/rec/joined/joined.wav" -ar 16000 -ac 1 -c:a pcm_s16le "$d/in16.wav"; a=$?
           "$d/wsrc/build/bin/whisper-cli" -m "$d/model.bin" -l he -t 4 -f "$d/in16.wav" -ojf -ml 1 -sow -of "$d/asr_words" >"$d/asr.log" 2>&1; b=$?
           "$d/wsrc/build/bin/whisper-cli" -m "$d/model.bin" -l he -t 4 -f "$d/in16.wav" -oj -of "$d/asr_full" >"$d/asr2.log" 2>&1; c=$?

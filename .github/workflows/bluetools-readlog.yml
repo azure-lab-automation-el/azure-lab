@@ -19,21 +19,42 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          mkdir -p /tmp/m; st(){ echo "$1" > /tmp/m/stage.txt; }
+          # errexit stays on (runner default); expected nonzero substeps are handled explicitly with && / || true
+          mkdir -p /tmp/m; OKN=0; st(){ echo "$1" > /tmp/m/stage.txt; }
           st L0
           OUT=$RUNNER_TEMP/out.txt; : > $OUT
           for RUN in 36992747054 36992887453; do
             echo "== run $RUN" >> $OUT
-            if gh api "repos/${{ github.repository }}/actions/runs/$RUN/logs" > $RUNNER_TEMP/l.zip 2>/dev/null; then
-              unzip -p $RUNNER_TEMP/l.zip 2>/dev/null | sed 's/^[0-9TZ:.-]* //' > $RUNNER_TEMP/l.txt
-              grep -oE '^(PAT_CANNOT_READ_REPO|PAT_NO_PUSH|CHECK_ONLY_OK|PUBLISH_BLOB_MISMATCH|PUT_FAILED_CLASS_CHECK_STATE|DEST_EXISTS_STATE_CHECK_NO_OVERWRITE|HASH_MISMATCH|MEGA_UPLOAD_FAILED|MEGA_READBACK_FAILED|TAR_MEMBERS_UNEXPECTED|PUBLISH_VERIFIED)' $RUNNER_TEMP/l.txt | sort | uniq -c >> $OUT
-              grep -oE 'MEGA_BACKUP_VERIFIED sha256=[0-9a-f]{64} bytes=[0-9]+' $RUNNER_TEMP/l.txt >> $OUT
-              grep -oE 'HTTP [0-9]{3}' $RUNNER_TEMP/l.txt | sort | uniq -c >> $OUT
-              grep -oE 'Not Found|Resource not accessible by personal access token|Validation Failed|Repository is empty|This repository is empty|Bad credentials|Must have admin rights|workflow scope|sha. wasn.t supplied' $RUNNER_TEMP/l.txt | sort | uniq -c >> $OUT
-              grep -oE '"push": ?(true|false)' $RUNNER_TEMP/l.txt >> $OUT
-            else echo LOGS_READ_FAILED >> $OUT; fi
+            gh api "repos/${{ github.repository }}/actions/runs/$RUN" --jq '"run_status=" + .status + " run_conclusion=" + (.conclusion // "none")' >> $OUT 2>/dev/null && : || echo run_meta_read_failed >> $OUT
+            gh api "repos/${{ github.repository }}/actions/runs/$RUN/logs" > $RUNNER_TEMP/l.zip 2>/dev/null && GRC=0 || GRC=$?; st "L0G${GRC}"
+            ZB=$(wc -c < $RUNNER_TEMP/l.zip | tr -d ' ')
+            echo "download_rc=$GRC zip_bytes=$ZB" >> $OUT
+            if [ "$GRC" = 0 ] && [ "$ZB" -gt 0 ]; then
+              unzip -tqq $RUNNER_TEMP/l.zip >/dev/null 2>&1 && ZT=0 || ZT=$?
+              FC=$(unzip -Z1 $RUNNER_TEMP/l.zip 2>/dev/null | wc -l | tr -d ' ') || true; [ -n "$FC" ] || FC=0
+              echo "zip_test_rc=$ZT file_count=$FC" >> $OUT
+              if [ "$ZT" = 0 ] && [ "$FC" -gt 0 ]; then
+                unzip -p $RUNNER_TEMP/l.zip > $RUNNER_TEMP/raw.txt 2>/dev/null && XR=0 || XR=$?
+                sed 's/^[0-9TZ:.-]* //' $RUNNER_TEMP/raw.txt > $RUNNER_TEMP/l.txt && SR=0 || SR=$?
+                EB=$(wc -c < $RUNNER_TEMP/l.txt | tr -d ' ')
+                echo "extract_rc=$XR sed_rc=$SR text_bytes=$EB" >> $OUT
+                st "L0U${EB}"
+                if [ "$XR" = 0 ] && [ "$SR" = 0 ] && [ "$EB" -gt 0 ]; then
+                  OKN=$((OKN+1)); echo READ_OK_INTEGRITY_OK >> $OUT
+                  L=$(wc -l < $OUT | tr -d ' ')
+                  grep -oE '^(PAT_CANNOT_READ_REPO|PAT_NO_PUSH|CHECK_ONLY_OK|PUBLISH_BLOB_MISMATCH|PUT_FAILED_CLASS_CHECK_STATE|DEST_EXISTS_STATE_CHECK_NO_OVERWRITE|HASH_MISMATCH|MEGA_UPLOAD_FAILED|MEGA_READBACK_FAILED|TAR_MEMBERS_UNEXPECTED|PUBLISH_VERIFIED)' $RUNNER_TEMP/l.txt | sort | uniq -c >> $OUT || true
+                  grep -oE '^MEGA_BACKUP_VERIFIED sha256=[0-9a-f]{64} bytes=[0-9]+' $RUNNER_TEMP/l.txt >> $OUT || true
+                  grep -oE 'HTTP [0-9]{3}' $RUNNER_TEMP/l.txt | sort | uniq -c >> $OUT || true
+                  grep -oE 'Not Found|Resource not accessible by personal access token|Validation Failed|Repository is empty|This repository is empty|Bad credentials|Must have admin rights|workflow scope|sha. wasn.t supplied' $RUNNER_TEMP/l.txt | sort | uniq -c >> $OUT || true
+                  grep -oE '"push": ?(true|false)' $RUNNER_TEMP/l.txt >> $OUT || true
+                  M=$(( $(wc -l < $OUT | tr -d ' ') - L ))
+                  if [ "$M" = 0 ]; then echo "marker_lines=0 NO_MATCH" >> $OUT; else echo "marker_lines=$M" >> $OUT; fi
+                else echo READ_FAILED_EXTRACT >> $OUT; fi
+              else echo READ_FAILED_ZIP_INTEGRITY >> $OUT; fi
+            else echo READ_FAILED_DOWNLOAD >> $OUT; fi
+            st L0D
           done
-          [ -s $OUT ] || { st LFAIL; exit 1; }
+          [ "$OKN" -ge 1 ] || { st LFAIL_NOREAD; exit 1; }
           st L1
           curl --max-time 90 -fsSL -o $RUNNER_TEMP/age.tgz https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz || { st AFAIL; exit 1; }
           echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '$RUNNER_TEMP/age.tgz | sha256sum -c - >/dev/null || { st AFAIL; exit 1; }
@@ -42,7 +63,7 @@ jobs:
           AGEBIN=$RUNNER_TEMP/age/age
           [ -x "$AGEBIN" ] && X=1 || X=0
           [ -d packages ] && D=1 || D=0
-          $AGEBIN -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o $F $OUT 2>/dev/null; RC=$?
+          $AGEBIN -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o $F $OUT 2>/dev/null && RC=0 || RC=$?
           [ "$RC" = 0 ] && [ -s $F ] || { st "AFAIL_RC${RC}_X${X}_D${D}_O$(wc -c < $OUT | tr -d ' ')"; exit 1; }
           st A1
           python3 - "$F" > $RUNNER_TEMP/body.json 2>/dev/null <<'PY' || { st BFAIL; exit 1; }
@@ -56,7 +77,7 @@ jobs:
             GOT=$(gh api "repos/${{ github.repository }}/contents/$F?ref=main" --jq .sha </dev/null 2>/dev/null || true)
             if [ "$GOT" = "$LOCAL" ]; then st P201GET; else st P201GETMISMATCH; fi
           else
-            C=$(grep -oE 'HTTP [0-9]{3}' $RUNNER_TEMP/put.err | head -1 | tr -d ' ')
+            C=$(grep -oE 'HTTP [0-9]{3}' $RUNNER_TEMP/put.err | head -1 | tr -d ' ') || true
             st "PFAIL${C:-NA}"
           fi
       - name: Stage marker as public artifact NAME only (fixed enum)

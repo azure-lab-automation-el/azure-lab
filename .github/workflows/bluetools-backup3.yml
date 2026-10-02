@@ -1,0 +1,46 @@
+name: Blue-tools source v3 MEGA backup (verify before login)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+jobs:
+  backup:
+    if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/bluetools-backup3'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Decrypt, verify, upload unencrypted tar, read back and compare
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          trap 'rm -f "$RUNNER_TEMP/k" "$RUNNER_TEMP/src.tgz" "$RUNNER_TEMP/back.tgz"' EXIT
+          curl --max-time 90 -fsSL -o "$RUNNER_TEMP/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$RUNNER_TEMP/age.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/age.tgz" -C "$RUNNER_TEMP"
+          printf '%s' "$LAB_AGE_KEY" > "$RUNNER_TEMP/k"
+          "$RUNNER_TEMP/age/age" -d -i "$RUNNER_TEMP/k" -o "$RUNNER_TEMP/src.tgz" publish/files/login_job-v3-lab.tgz.age
+          rm -f "$RUNNER_TEMP/k"
+          unset LAB_AGE_KEY
+          echo 'e21437b86f1728e6bab53fe6ff7a5ee11d3eec68932051834f303d4864ad4497  '"$RUNNER_TEMP/src.tgz" | sha256sum -c - >/dev/null
+          tar -tzf "$RUNNER_TEMP/src.tgz" > "$RUNNER_TEMP/list.txt"; [ "$(sort "$RUNNER_TEMP/list.txt" | tr '\n' ' ')" = 'bootstrap.yml login-workflow.yml login_job.mjs package-lock.json package.json ' ] || { echo TAR_MEMBERS_UNEXPECTED; exit 7; }; echo "members: $(tr '\n' ' ' < "$RUNNER_TEMP/list.txt")"
+          curl --max-time 90 -fsSL -o "$RUNNER_TEMP/rc.zip" https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          echo '417e3da236f3a12d292da4e7287d67b1df558b8c2b280d092e563958ed724be7  '"$RUNNER_TEMP/rc.zip" | sha256sum -c -
+          unzip -qj "$RUNNER_TEMP/rc.zip" '*/rclone' -d "$RUNNER_TEMP"
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$("$RUNNER_TEMP/rclone" obscure "$MEGA_PASSWORD")"
+          D='mega:Automation/source'
+          "$RUNNER_TEMP/rclone" copyto "$RUNNER_TEMP/src.tgz" "$D/bluetools-source-v3-e21437b86f1728e6bab53fe6ff7a5ee11d3eec68932051834f303d4864ad4497.tar.gz" >/dev/null 2>&1 || { echo MEGA_UPLOAD_FAILED; exit 8; }
+          "$RUNNER_TEMP/rclone" copyto "$D/bluetools-source-v3-e21437b86f1728e6bab53fe6ff7a5ee11d3eec68932051834f303d4864ad4497.tar.gz" "$RUNNER_TEMP/back.tgz" >/dev/null 2>&1 || { echo MEGA_READBACK_FAILED; exit 9; }
+          echo 'e21437b86f1728e6bab53fe6ff7a5ee11d3eec68932051834f303d4864ad4497  '"$RUNNER_TEMP/back.tgz" | sha256sum -c - >/dev/null
+          echo "MEGA_BACKUP_VERIFIED sha256=e21437b86f1728e6bab53fe6ff7a5ee11d3eec68932051834f303d4864ad4497 bytes=$(wc -c < "$RUNNER_TEMP/back.tgz")"
+          echo "::notice title=login_backup::MEGA_BACKUP_VERIFIED sha256=e21437b86f1728e6bab53fe6ff7a5ee11d3eec68932051834f303d4864ad4497 bytes=$(wc -c < "$RUNNER_TEMP/back.tgz")"

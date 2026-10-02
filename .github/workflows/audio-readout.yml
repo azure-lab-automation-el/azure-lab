@@ -1,0 +1,89 @@
+name: Audio job read-out (fixed run, encrypted to review key)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: write
+  actions: read
+  id-token: write
+jobs:
+  readout:
+    if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/audio-readout'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.run_id }}
+      TARGET_RUN: '37003267191'
+      EXPDIR: ${{ runner.temp }}/exp
+    steps:
+      - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Download the fixed run's encrypted artifact, decrypt, summarize, re-encrypt to review key only
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          umask 077
+          d="$RUNNER_TEMP"; mkdir -p "$d/x" "$d/o"
+          curl --max-time 90 -fsSL -o "$d/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$d/age.tgz" | sha256sum -c - >/dev/null
+          tar -xzf "$d/age.tgz" -C "$d"
+          OUT="$d/out.txt"; : > "$OUT"
+          AID=$(gh api "repos/$GH_REPO/actions/runs/$TARGET_RUN/artifacts" --jq ".artifacts[] | select(.name==\"audio-job-encrypted-$TARGET_RUN\") | .id" 2>/dev/null | head -1)
+          echo "artifact_id_found=$([ -n "$AID" ] && echo yes || echo no)" >> "$OUT"
+          if [ -n "$AID" ]; then
+            gh api "repos/$GH_REPO/actions/artifacts/$AID/zip" > "$d/a.zip" 2>/dev/null && echo zip_download=ok >> "$OUT" || echo zip_download=failed >> "$OUT"
+            unzip -qo "$d/a.zip" -d "$d/x" 2>/dev/null && echo unzip=ok >> "$OUT" || echo unzip=failed >> "$OUT"
+            printf '%s' "$LAB_AGE_KEY" > "$d/k"
+            if "$d/age/age" -d -i "$d/k" -o "$d/r.tgz" "$d/x/result.tgz.age" 2>/dev/null; then
+              echo decrypt=ok >> "$OUT"
+              rm -f "$d/k"
+              UNTAR=failed; mkdir -p "$d/r" && tar -xzf "$d/r.tgz" -C "$d/r" && UNTAR=ok; echo "untar=$UNTAR" >> "$OUT"
+              echo "== files (path bytes sha256)" >> "$OUT"
+              (cd "$d/r" && find . -type f -print0 | sort -z | xargs -0 -r sha256sum | awk '{print $2, $1}' | while read p h; do echo "$p $(stat -c %s "$p") $h"; done) >> "$OUT"
+              rid=$(az resource list --resource-type Microsoft.CognitiveServices/accounts --query "[?kind=='SpeechServices' && sku.name=='F0'].id" -o tsv 2>/dev/null)
+              nm=$(az resource show --ids "$rid" --query name -o tsv 2>/dev/null); rg=$(printf '%s' "$rid" | sed -E 's#.*/resourceGroups/([^/]+)/.*#\1#')
+              key=$(az cognitiveservices account keys list -g "$rg" -n "$nm" --query key1 -o tsv 2>/dev/null) || key=""
+              KC=unknown
+              if [ -n "$key" ]; then
+                echo "::add-mask::$key"
+                KC=$(grep -rcaF -- "$key" "$d/r" 2>/dev/null | awk -F: '{s+=$NF} END{print s+0}')
+                echo "key_occurrences_in_extracted_files=$KC" >> "$OUT"
+              else echo "key_occurrences_in_extracted_files=KEY_UNAVAILABLE" >> "$OUT"; fi
+              unset key
+              if [ "$KC" = 0 ]; then
+                for f in out/report.json out/FAILED.json; do [ -f "$d/r/$f" ] && { echo "== $f"; head -c 6000 "$d/r/$f"; echo; } >> "$OUT"; done
+                echo "== job.log enum lines" >> "$OUT"
+                grep -E '^(JOB_|SCRUB_|COMMENT_|RESOURCE_|KEY_|PLAN_|PRESPEND_)' "$d/r/job.log" >> "$OUT" 2>/dev/null || true
+                echo "== job.log tail (last 40 lines)" >> "$OUT"
+                tail -n 40 "$d/r/job.log" >> "$OUT" 2>/dev/null || true
+                if [ "$UNTAR" = ok ] && [ -d "$d/r/out" ]; then
+                  mkdir -p "$d/exp"
+                  tar -czf "$d/audio.tgz" -C "$d/r" out
+                  echo "audio_out_tgz bytes=$(stat -c %s "$d/audio.tgz") sha256=$(sha256sum "$d/audio.tgz" | cut -d' ' -f1)" >> "$OUT"
+                  "$d/age/age" -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$d/exp/audio.age" "$d/audio.tgz" && echo audio_out_artifact=prepared >> "$OUT" || echo audio_out_artifact=failed >> "$OUT"
+                else echo audio_out_artifact=skipped >> "$OUT"; fi
+              else
+                echo "raw_sections=withheld (key count not 0)" >> "$OUT"; echo audio_out_artifact=skipped >> "$OUT"
+              fi
+            else
+              echo decrypt=failed >> "$OUT"; rm -f "$d/k"
+            fi
+          fi
+          "$d/age/age" -a -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$d/res.age" "$OUT"
+          jq -n --rawfile c "$d/res.age" '{message:"Encrypted audio read-out",content:($c|@base64),branch:"main"}' > "$d/put.json"
+          gh api -X PUT "repos/$GH_REPO/contents/packages/audio-readout-$RUN_ID.age" --input "$d/put.json" >/dev/null
+      - name: Short-retention encrypted audio artifact (lab + review key)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: audio-out-encrypted-${{ github.run_id }}
+          path: ${{ runner.temp }}/exp/audio.age
+          retention-days: 2
+          if-no-files-found: ignore

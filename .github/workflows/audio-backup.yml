@@ -1,0 +1,46 @@
+name: Audio packet MEGA backup (verify before spend)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+jobs:
+  backup:
+    if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/audio-backup'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Decrypt, verify, upload unencrypted tar, read back and compare
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          d="$RUNNER_TEMP"
+          trap 'rm -f "$d/k" "$d/src.tgz" "$d/back.tgz"' EXIT
+          curl --max-time 90 -fsSL -o "$d/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$d/age.tgz" | sha256sum -c -
+          tar -xzf "$d/age.tgz" -C "$d"
+          printf '%s' "$LAB_AGE_KEY" > "$d/k"
+          "$d/age/age" -d -i "$d/k" -o "$d/src.tgz" packages/audio-packet-v13.tgz.age
+          rm -f "$d/k"
+          H=ae94639852356b44cf440b72ad27eb26cafe51d5daf0ba545e7d2edb8ae0e101
+          echo "$H  $d/src.tgz" | sha256sum -c - >/dev/null
+          curl --max-time 90 -fsSL -o "$d/rc.zip" https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip
+          echo '417e3da236f3a12d292da4e7287d67b1df558b8c2b280d092e563958ed724be7  '"$d/rc.zip" | sha256sum -c -
+          unzip -qj "$d/rc.zip" '*/rclone' -d "$d"
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$("$d/rclone" obscure "$MEGA_PASSWORD")"
+          D='mega:JFrog/Delpo-audio/source'
+          "$d/rclone" copyto "$d/src.tgz" "$D/audio-packet-v13-$H.tgz" >/dev/null 2>&1 || { echo "::notice title=audio_backup::MEGA_UPLOAD_FAILED"; exit 8; }
+          "$d/rclone" copyto "$D/audio-packet-v13-$H.tgz" "$d/back.tgz" >/dev/null 2>&1 || { echo "::notice title=audio_backup::MEGA_READBACK_FAILED"; exit 9; }
+          echo "$H  $d/back.tgz" | sha256sum -c - >/dev/null
+          M="MEGA_BACKUP_VERIFIED sha256=$H bytes=$(wc -c < "$d/back.tgz")"
+          echo "$M"; echo "::notice title=audio_backup::$M"

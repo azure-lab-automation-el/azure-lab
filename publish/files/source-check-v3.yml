@@ -1,0 +1,52 @@
+name: Source decrypt check (no login secrets)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Decrypt with the source key, verify hash and members only
+        env:
+          BLUE_TOOLS_SOURCE_KEY: ${{ secrets.BLUE_TOOLS_SOURCE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          d="$RUNNER_TEMP"
+          trap 'rm -f "$d/k" "$d/s.tgz"' EXIT
+          curl --max-time 90 -fsSL -o "$d/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$d/age.tgz" | sha256sum -c - >/dev/null
+          tar -xzf "$d/age.tgz" -C "$d"
+          printf '%s' "$BLUE_TOOLS_SOURCE_KEY" > "$d/k"
+          if "$d/age/age" -d -i "$d/k" -o "$d/s.tgz" src/login_job-v3.tgz.age 2>/dev/null; then R=PASS; else R=FAIL; fi
+          rm -f "$d/k"
+          if [ "$R" = PASS ]; then
+            if echo 'e21437b86f1728e6bab53fe6ff7a5ee11d3eec68932051834f303d4864ad4497  '"$d/s.tgz" | sha256sum -c - >/dev/null 2>&1; then H=HASH_OK; else H=HASH_MISMATCH; fi
+            M=$(tar -tzf "$d/s.tgz" | sort | tr '\n' ' ')
+            [ "$M" = 'bootstrap.yml login-workflow.yml login_job.mjs package-lock.json package.json ' ] && T=MEMBERS_OK || T=MEMBERS_UNEXPECTED
+          else H=NA; T=NA; fi
+          if [ "$R $H $T" = "PASS HASH_OK MEMBERS_OK" ]; then mkdir -p "$d/smoke"; tar -xzf "$d/s.tgz" -C "$d/smoke"; fi
+          rm -f "$d/s.tgz"
+          echo "SOURCE_CHECK=$R $H $T"
+          echo "::notice title=source_check::SOURCE_CHECK=$R $H $T"
+          [ "$R $H $T" = 'PASS HASH_OK MEMBERS_OK' ] || exit 1
+      - name: No-login Chromium sandbox smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'rm -rf "$RUNNER_TEMP/smoke" "$RUNNER_TEMP/k" "$RUNNER_TEMP/s.tgz"' EXIT
+          cd "$RUNNER_TEMP/smoke"
+          npm ci --ignore-scripts
+          npx --no-install playwright install --with-deps chromium
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          env -i PATH="$PATH" HOME="$HOME" node --input-type=module <<'JSSMOKE'
+          import {chromium} from 'playwright';
+          const b=await chromium.launch({headless:true,chromiumSandbox:true});
+          try {const p=await b.newPage();await p.goto('about:blank');if(p.url()!=='about:blank')throw Error('SMOKE_URL_MISMATCH');console.log('SANDBOX_SMOKE=PASS');}finally{await b.close();}
+          JSSMOKE

@@ -10,8 +10,6 @@ jobs:
     if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/bluetools-readlog'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    env:
-      RL_STAGE: INIT
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -21,7 +19,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
-          st(){ echo "RL_STAGE=$1" >> "$GITHUB_ENV"; }
+          mkdir -p /tmp/m; st(){ echo "$1" > /tmp/m/stage.txt; }
           st L0
           OUT=$RUNNER_TEMP/out.txt; : > $OUT
           for RUN in 36992747054 36992887453; do
@@ -41,8 +39,11 @@ jobs:
           echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '$RUNNER_TEMP/age.tgz | sha256sum -c - >/dev/null || { st AFAIL; exit 1; }
           tar -xzf $RUNNER_TEMP/age.tgz -C $RUNNER_TEMP || { st AFAIL; exit 1; }
           F=packages/bluetools-readlog-${{ github.run_id }}.age
-          $RUNNER_TEMP/age/age -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o $F $OUT || { st AFAIL; exit 1; }
-          [ -s $F ] || { st AFAIL; exit 1; }
+          AGEBIN=$RUNNER_TEMP/age/age
+          [ -x "$AGEBIN" ] && X=1 || X=0
+          [ -d packages ] && D=1 || D=0
+          $AGEBIN -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o $F $OUT 2>/dev/null; RC=$?
+          [ "$RC" = 0 ] && [ -s $F ] || { st "AFAIL_RC${RC}_X${X}_D${D}_O$(wc -c < $OUT | tr -d ' ')"; exit 1; }
           st A1
           python3 - "$F" > $RUNNER_TEMP/body.json 2>/dev/null <<'PY' || { st BFAIL; exit 1; }
           import base64,json,sys
@@ -59,12 +60,14 @@ jobs:
             st "PFAIL${C:-NA}"
           fi
       - name: Stage marker as public artifact NAME only (fixed enum)
+        id: stg
         if: always()
         run: |
-          mkdir -p /tmp/m; echo "$RL_STAGE" > /tmp/m/stage.txt
+          S=$(cat /tmp/m/stage.txt 2>/dev/null | tr -cd 'A-Za-z0-9_' | head -c 40); [ -n "$S" ] || S=NOSTAGE
+          echo "name=rl2-$S" >> "$GITHUB_OUTPUT"; mkdir -p /tmp/m; echo "$S" > /tmp/m/stage.txt
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
-          name: rl-${{ env.RL_STAGE }}
+          name: ${{ steps.stg.outputs.name }}
           path: /tmp/m/stage.txt
           retention-days: 1

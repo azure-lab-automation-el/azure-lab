@@ -1,0 +1,75 @@
+name: Audio recovered output, private MEGA neutral folder (fixed run, no Azure)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  export:
+    if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/audio-export'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SRC_RUN: '37007547673'
+      REC_TGZ_SHA256: 3d3e5c1c16ae356f4874daa9717f2d516d5ce0b0ae83c1543933c8ece6ff0638
+      JOINED_WAV_SHA256: cc7db51d7fb93434e2fcc0fd4ededdd9c8f66ad9df70033025b7b79b1e31e708
+    steps:
+      - name: X1 install pinned age and rclone
+        shell: bash
+        run: |
+          set -u; set +e
+          d="$RUNNER_TEMP"; mkdir -p "$d/x" "$d/r"
+          curl --max-time 90 -fsSL -o "$d/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz; a=$?
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$d/age.tgz" | sha256sum -c - >/dev/null; b=$?
+          tar -xzf "$d/age.tgz" -C "$d"; c=$?
+          curl --max-time 90 -fsSL -o "$d/rc.zip" https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip; e=$?
+          echo '417e3da236f3a12d292da4e7287d67b1df558b8c2b280d092e563958ed724be7  '"$d/rc.zip" | sha256sum -c - >/dev/null; f=$?
+          unzip -qj "$d/rc.zip" '*/rclone' -d "$d"; g=$?
+          if [ "$a$b$c$e$f$g" = 000000 ]; then echo gate=ok > "$d/x.state"; else echo gate=fail > "$d/x.state"; fi
+          echo "::notice::X1 $(cat "$d/x.state") age_dl=$a age_sha=$b age_untar=$c rc_dl=$e rc_sha=$f rc_unzip=$g"
+      - name: X2 fetch recover artifact, decrypt, verify hashes
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        shell: bash
+        run: |
+          set -u; set +e
+          umask 077
+          d="$RUNNER_TEMP"
+          grep -qx 'gate=ok' "$d/x.state" 2>/dev/null || { echo "::notice::X2 skipped (X1 gate)"; exit 0; }
+          AID=$(gh api "repos/$GH_REPO/actions/runs/$SRC_RUN/artifacts" --jq ".artifacts[] | select(.name==\"audio-recover-encrypted-$SRC_RUN\") | .id" 2>/dev/null | head -1)
+          gh api "repos/$GH_REPO/actions/artifacts/$AID/zip" > "$d/a.zip" 2>/dev/null; a=$?
+          unzip -qo "$d/a.zip" -d "$d/x" 2>/dev/null; b=$?
+          printf '%s' "$LAB_AGE_KEY" > "$d/k"
+          "$d/age/age" -d -i "$d/k" -o "$d/rec.tgz" "$d/x/recovered.age" 2>/dev/null; c=$?
+          rm -f "$d/k"
+          echo "$REC_TGZ_SHA256  $d/rec.tgz" | sha256sum -c - >/dev/null 2>&1; e=$?
+          tar -xzf "$d/rec.tgz" -C "$d/r" 2>/dev/null; f=$?
+          echo "$JOINED_WAV_SHA256  $d/r/rec/joined/joined.wav" | sha256sum -c - >/dev/null 2>&1; g=$?
+          python3 -B -c "
+          import wave,sys
+          w=wave.open(sys.argv[1]);print('wav',w.getnchannels(),w.getsampwidth(),w.getframerate(),w.getnframes())" "$d/r/rec/joined/joined.wav" | sed 's/^          //' > "$d/wav.txt" 2>/dev/null; h=$?
+          if [ "$a$b$c$e$f$g$h" = 0000000 ] && [ -n "$AID" ]; then echo gate=ok > "$d/x2.state"; else echo gate=fail > "$d/x2.state"; fi
+          echo "::notice::X2 $(cat "$d/x2.state") art_found=$([ -n "$AID" ] && echo y || echo n) zip=$a unzip=$b dec=$c rec_sha=$e untar=$f wav_sha=$g wav_open=$h $(cat "$d/wav.txt" 2>/dev/null | head -c 60)"
+      - name: X3 upload recovered tree (plaintext, private MEGA, neutral folder) with readback
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        shell: bash
+        run: |
+          set -u; set +e
+          umask 077
+          d="$RUNNER_TEMP"
+          grep -qx 'gate=ok' "$d/x2.state" 2>/dev/null || { echo "::notice::X3 skipped (X2 gate)"; exit 0; }
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$("$d/rclone" obscure "$MEGA_PASSWORD")"
+          D="mega:Automation/audio/recover-$SRC_RUN"
+          "$d/rclone" copyto "$d/rec.tgz" "$D/rec-$REC_TGZ_SHA256.tgz" >/dev/null 2>&1; a=$?
+          "$d/rclone" copyto "$d/r/rec/joined/joined.wav" "$D/joined-$JOINED_WAV_SHA256.wav" >/dev/null 2>&1; b=$?
+          "$d/rclone" copyto "$D/rec-$REC_TGZ_SHA256.tgz" "$d/back.tgz" >/dev/null 2>&1; c=$?
+          "$d/rclone" copyto "$D/joined-$JOINED_WAV_SHA256.wav" "$d/back.wav" >/dev/null 2>&1; e=$?
+          echo "$REC_TGZ_SHA256  $d/back.tgz" | sha256sum -c - >/dev/null 2>&1; f=$?
+          echo "$JOINED_WAV_SHA256  $d/back.wav" | sha256sum -c - >/dev/null 2>&1; g=$?
+          echo "::notice::X3 up_tgz=$a up_wav=$b dl_tgz=$c dl_wav=$e tgz_readback_sha=$f wav_readback_sha=$g bytes_tgz=$(stat -c %s "$d/back.tgz" 2>/dev/null || echo 0) bytes_wav=$(stat -c %s "$d/back.wav" 2>/dev/null || echo 0)"

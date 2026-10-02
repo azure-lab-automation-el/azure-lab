@@ -1,0 +1,131 @@
+name: Audio lab technical inspection (open-source ASR + signal stats, no external service)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  inspect:
+    if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/audio-asr'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.run_id }}
+      SRC_RUN: '37007547673'
+      BUNDLE_SHA256: 6f76bcd7f4b38cc1d17b159537c865d03953c3f7d639d6dd8292ecc905291e5f
+      REC_TGZ_SHA256: 3d3e5c1c16ae356f4874daa9717f2d516d5ce0b0ae83c1543933c8ece6ff0638
+      JOINED_WAV_SHA256: cc7db51d7fb93434e2fcc0fd4ededdd9c8f66ad9df70033025b7b79b1e31e708
+      WHISPER_TGZ_SHA256: 57e280cee375ab02425b806ad5146b99f6eb9357e3c2b31357c8a6af2e2e44ae
+      MODEL_SHA256: 64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2
+    steps:
+      - name: A1 age install, committed bundle fetch, decrypt, hash checks
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        shell: bash
+        run: |
+          set -u; set +e
+          umask 077
+          d="$RUNNER_TEMP"; mkdir -p "$d/r" "$d/exp"
+          curl --max-time 90 -fsSL -o "$d/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz; a=$?
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$d/age.tgz" | sha256sum -c - >/dev/null; b=$?
+          tar -xzf "$d/age.tgz" -C "$d"; c=$?
+          gh api -H 'Accept: application/vnd.github.raw' "repos/$GH_REPO/contents/packages/audio-bundle-$SRC_RUN.age" > "$d/b.age" 2>/dev/null; e=$?
+          echo "$BUNDLE_SHA256  $d/b.age" | sha256sum -c - >/dev/null 2>&1; f=$?
+          printf '%s' "$LAB_AGE_KEY" > "$d/k"
+          "$d/age/age" -d -i "$d/k" -o "$d/rec.tgz" "$d/b.age" 2>/dev/null; g=$?
+          rm -f "$d/k"
+          echo "$REC_TGZ_SHA256  $d/rec.tgz" | sha256sum -c - >/dev/null 2>&1; h=$?
+          tar -xzf "$d/rec.tgz" -C "$d/r" 2>/dev/null; i=$?
+          echo "$JOINED_WAV_SHA256  $d/r/rec/joined/joined.wav" | sha256sum -c - >/dev/null 2>&1; j=$?
+          if [ "$a$b$c$e$f$g$h$i$j" = 000000000 ]; then echo gate=ok > "$d/a1.state"; else echo gate=fail > "$d/a1.state"; fi
+          echo "::notice::A1 $(cat "$d/a1.state") age_dl=$a age_sha=$b age_untar=$c bundle_dl=$e bundle_sha=$f dec=$g rec_sha=$h untar=$i wav_sha=$j"
+      - name: A2 build whisper.cpp v1.9.4 (pinned source tarball) and fetch pinned model
+        shell: bash
+        run: |
+          set -u; set +e
+          d="$RUNNER_TEMP"
+          grep -qx 'gate=ok' "$d/a1.state" 2>/dev/null || { echo "::notice::A2 skipped (A1 gate)"; exit 1; }
+          curl --max-time 120 -fsSL -o "$d/w.tgz" https://github.com/ggml-org/whisper.cpp/archive/refs/tags/v1.9.4.tar.gz; a=$?
+          echo "$WHISPER_TGZ_SHA256  $d/w.tgz" | sha256sum -c - >/dev/null 2>&1; b=$?
+          mkdir -p "$d/wsrc" && tar -xzf "$d/w.tgz" -C "$d/wsrc" --strip-components=1; c=$?
+          (cd "$d/wsrc" && cmake -B build -DCMAKE_BUILD_TYPE=Release -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_EXAMPLES=ON >/dev/null 2>&1 && cmake --build build -j4 --target whisper-cli >/dev/null 2>&1); e=$?
+          curl --max-time 900 -fsSL -o "$d/model.bin" https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin; f=$?
+          echo "$MODEL_SHA256  $d/model.bin" | sha256sum -c - >/dev/null 2>&1; g=$?
+          if [ "$a$b$c$e$f$g" = 000000 ] && [ -x "$d/wsrc/build/bin/whisper-cli" ]; then echo gate=ok > "$d/a2.state"; else echo gate=fail > "$d/a2.state"; fi
+          echo "::notice::A2 $(cat "$d/a2.state") src_dl=$a src_sha=$b src_untar=$c build=$e model_dl=$f model_sha=$g model_bytes=$(stat -c %s "$d/model.bin" 2>/dev/null || echo 0)"
+      - name: A3 run ASR (local, Hebrew) and signal stats
+        shell: bash
+        run: |
+          set -u; set +e
+          umask 077
+          d="$RUNNER_TEMP"
+          grep -qx 'gate=ok' "$d/a2.state" 2>/dev/null || { echo "::notice::A3 skipped (A2 gate)"; exit 1; }
+          ffmpeg -nostdin -loglevel error -y -i "$d/r/rec/joined/joined.wav" -ar 16000 -ac 1 -c:a pcm_s16le "$d/in16.wav"; a=$?
+          "$d/wsrc/build/bin/whisper-cli" -m "$d/model.bin" -l he -t 4 -f "$d/in16.wav" -ojf -ml 1 -sow -of "$d/asr_words" >"$d/asr.log" 2>&1; b=$?
+          "$d/wsrc/build/bin/whisper-cli" -m "$d/model.bin" -l he -t 4 -f "$d/in16.wav" -oj -of "$d/asr_full" >"$d/asr2.log" 2>&1; c=$?
+          cat > "$d/stats.py" <<'PYEOF'
+          import json,os,re,sys,wave,array,math,unicodedata,pathlib
+          W=pathlib.Path(os.environ['RUNNER_TEMP'])
+          res={}
+          e=json.loads((W/'r'/'rec'/'rail4-audio'/'jfrog'/'scene-07'/'entry.json').read_text())
+          src=e['identity']['exact_text']
+          def norm(t):
+              t=''.join(ch for ch in unicodedata.normalize('NFC',t) if not (0x591<=ord(ch)<=0x5c7))
+              t=re.sub(r'[^\w\s]','',t); return re.sub(r'\s+',' ',t).strip()
+          def lev(a,b):
+              p=list(range(len(b)+1))
+              for i,x in enumerate(a,1):
+                  c=[i]
+                  for j,y in enumerate(b,1): c.append(min(p[j]+1,c[j-1]+1,p[j-1]+(x!=y)))
+                  p=c
+              return p[-1]
+          full=json.loads((W/'asr_full.json').read_text())
+          hyp=' '.join(s['text'].strip() for s in full.get('transcription',[]))
+          ns,nh=norm(src),norm(hyp)
+          res['src_chars']=len(ns); res['asr_chars']=len(nh)
+          res['cer']=round(lev(ns,nh)/max(1,len(ns)),4)
+          sw,hw=ns.split(),nh.split()
+          res['src_words']=len(sw); res['asr_words']=len(hw); res['wer']=round(lev(sw,hw)/max(1,len(sw)),4)
+          res['asr_text']=hyp; res['src_text_len']=len(src)
+          words=json.loads((W/'asr_words.json').read_text()).get('transcription',[])
+          res['asr_word_timings']=[(w['text'],w['offsets']['from'],w['offsets']['to']) for w in words]
+          w=wave.open(str(W/'r'/'rec'/'joined'/'joined.wav'))
+          n=w.getnframes(); a=array.array('h'); a.frombytes(w.readframes(n))
+          res['frames']=n; res['seconds']=round(n/24000,3)
+          pk=max(abs(x) for x in a); res['peak']=pk; res['peak_dbfs']=round(20*math.log10(max(1,pk)/32768),2)
+          res['clipped_samples']=sum(1 for x in a if x>=32767 or x<=-32768)
+          res['rms_dbfs']=round(20*math.log10(max(1e-9,math.sqrt(sum(x*x for x in a)/n))/32768),2)
+          win=240; thr=32768*10**(-45/20); sil=[]
+          for i in range(0,n-win,win): sil.append(max(abs(x) for x in a[i:i+win])<thr)
+          lead=0
+          while lead<len(sil) and sil[lead]: lead+=1
+          trail=0
+          while trail<len(sil) and sil[len(sil)-1-trail]: trail+=1
+          run=0;longest=0
+          for s in sil[lead:len(sil)-trail]:
+              run=run+1 if s else 0; longest=max(longest,run)
+          res['leading_silence_s']=round(lead*win/24000,3); res['trailing_silence_s']=round(trail*win/24000,3); res['longest_internal_silence_s']=round(longest*win/24000,3)
+          res['silence_threshold_dbfs']=-45
+          (W/'asr_result.json').write_text(json.dumps(res,ensure_ascii=False,indent=1))
+          print('A3 cer=%s wer=%s src_words=%d asr_words=%d peak_dbfs=%s clipped=%d lead_s=%s trail_s=%s longest_internal_s=%s'%(res['cer'],res['wer'],res['src_words'],res['asr_words'],res['peak_dbfs'],res['clipped_samples'],res['leading_silence_s'],res['trailing_silence_s'],res['longest_internal_silence_s']))
+          PYEOF
+          sed -i 's/^          //' "$d/stats.py"
+          python3 -B "$d/stats.py" > "$d/stats.out" 2>"$d/stats.err"; e=$?
+          line=$(head -n 1 "$d/stats.out")
+          if printf '%s' "$line" | grep -Eq '^A3 cer=[0-9.]+ wer=[0-9.]+ src_words=[0-9]+ asr_words=[0-9]+ peak_dbfs=-?[0-9.]+ clipped=[0-9]+ lead_s=[0-9.]+ trail_s=[0-9.]+ longest_internal_s=[0-9.]+$'; then echo "::notice::$line"; else echo "::notice::A3 stats_output_not_parsed"; fi
+          echo "::notice::A3 ffmpeg_rc=$a asr_words_rc=$b asr_full_rc=$c stats_rc=$e"
+          [ -s "$d/asr_result.json" ] && "$d/age/age" -a -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$d/exp/asr.age" "$d/asr_result.json"; [ "$a$b$c$e" = 0000 ] || exit 1
+      - name: A4 encrypted result marker (review key only)
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -u; set +e
+          d="$RUNNER_TEMP"
+          [ -s "$d/exp/asr.age" ] || { echo "::notice::A4 no result"; exit 1; }
+          jq -n --rawfile c "$d/exp/asr.age" '{message:"Encrypted audio inspection",content:($c|@base64),branch:"main"}' > "$d/put.json"; a=$?
+          gh api -X PUT "repos/$GH_REPO/contents/packages/audio-asr-$RUN_ID.age" --input "$d/put.json" >/dev/null 2>&1; b=$?
+          echo "::notice::A4 jq_rc=$a put_rc=$b"
+          [ "$a$b" = 00 ] || exit 1

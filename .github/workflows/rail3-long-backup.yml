@@ -1,0 +1,71 @@
+name: Rail3 long capture source, private MEGA plaintext backup (no Azure)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+jobs:
+  backup:
+    if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/rail3-long-backup'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    concurrency: {group: rail3-long-backup, cancel-in-progress: false}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      COMMENT_ID: ${{ github.event.comment.id }}
+      CIPHER_SHA256: 3483a79db58f49299397df69d143006464d6c83aa233f50ebf26bf0aa2185f58
+      SRC_TGZ_SHA256: a2a4152d74b652ee575754593151823bebd7973b15df371e266964a45e2328be
+    steps:
+      - name: B1 pinned age and rclone
+        shell: bash
+        run: |
+          set -u; set +e
+          d="$RUNNER_TEMP"
+          curl --max-time 90 -fsSL -o "$d/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz; a=$?
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$d/age.tgz" | sha256sum -c - >/dev/null; b=$?
+          tar -xzf "$d/age.tgz" -C "$d"; c=$?
+          curl --max-time 90 -fsSL -o "$d/rc.zip" https://downloads.rclone.org/v1.71.1/rclone-v1.71.1-linux-amd64.zip; e=$?
+          echo '417e3da236f3a12d292da4e7287d67b1df558b8c2b280d092e563958ed724be7  '"$d/rc.zip" | sha256sum -c - >/dev/null; f=$?
+          unzip -qj "$d/rc.zip" '*/rclone' -d "$d"; g=$?
+          [ "$a$b$c$e$f$g" = 000000 ] && echo gate=ok > "$d/b1.state" || echo gate=fail > "$d/b1.state"
+          echo "::notice::B1 $(cat "$d/b1.state") age_dl=$a age_sha=$b untar=$c rc_dl=$e rc_sha=$f unzip=$g"
+          grep -qx 'gate=ok' "$d/b1.state"
+      - name: B2 committed cipher fetch, hash check, decrypt, hash check
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        shell: bash
+        run: |
+          set -u; set +e
+          umask 077
+          d="$RUNNER_TEMP"
+          gh api -H "Accept: application/vnd.github.raw" "repos/$GH_REPO/contents/packages/rail3-long-source-v1.age" > "$d/src.age" 2>/dev/null; a=$?
+          b=0
+          echo "$CIPHER_SHA256  $d/src.age" | sha256sum -c - >/dev/null 2>&1; c=$?
+          printf '%s' "$LAB_AGE_KEY" > "$d/k"
+          "$d/age/age" -d -i "$d/k" -o "$d/src.tgz" "$d/src.age" 2>/dev/null; e=$?
+          rm -f "$d/k"
+          echo "$SRC_TGZ_SHA256  $d/src.tgz" | sha256sum -c - >/dev/null 2>&1; f=$?
+          tar -tzf "$d/src.tgz" >/dev/null 2>&1; g=$?
+          [ "$a$b$c$e$f$g" = 000000 ] && echo gate=ok > "$d/b2.state" || echo gate=fail > "$d/b2.state"
+          echo "::notice::B2 $(cat "$d/b2.state") fetch=$a cipher_sha=$c dec=$e tgz_sha=$f tar_list=$g"
+          grep -qx 'gate=ok' "$d/b2.state"
+      - name: B3 upload plaintext to private MEGA neutral folder, download, byte compare
+        env:
+          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
+          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+        shell: bash
+        run: |
+          set -u; set +e
+          umask 077
+          d="$RUNNER_TEMP"
+          echo "::add-mask::$MEGA_EMAIL"; echo "::add-mask::$MEGA_PASSWORD"
+          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
+          export RCLONE_CONFIG_MEGA_PASS="$("$d/rclone" obscure "$MEGA_PASSWORD")"
+          D="mega:Automation/capture/rail3-long-source-v1"
+          "$d/rclone" copyto --immutable "$d/src.tgz" "$D/source-$SRC_TGZ_SHA256.tgz" >/dev/null 2>&1; a=$?
+          "$d/rclone" copyto "$D/source-$SRC_TGZ_SHA256.tgz" "$d/back.tgz" >/dev/null 2>&1; b=$?
+          cmp -s "$d/src.tgz" "$d/back.tgz"; c=$?
+          echo "$SRC_TGZ_SHA256  $d/back.tgz" | sha256sum -c - >/dev/null 2>&1; e=$?
+          echo "::notice::B3 upload_rc=$a download_rc=$b cmp_rc=$c readback_sha_rc=$e bytes=$(stat -c %s "$d/back.tgz" 2>/dev/null || echo 0)"
+          [ "$a$b$c$e" = 0000 ]

@@ -1,0 +1,137 @@
+name: Audio cache-only recover (fixed run, no synthesis, no Azure)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  recover:
+    if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/audio-recover'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.run_id }}
+      TARGET_RUN: '37003267191'
+      PACKET_SHA256: ae94639852356b44cf440b72ad27eb26cafe51d5daf0ba545e7d2edb8ae0e101
+    steps:
+      - name: R1 age install, packet decrypt and verify, artifact decrypt and untar
+        env:
+          LAB_AGE_KEY: ${{ secrets.LAB_AGE_KEY }}
+        shell: bash
+        run: |
+          set -u; set +e
+          umask 077
+          d="$RUNNER_TEMP"; mkdir -p "$d/x" "$d/exp" "$d/w" "$d/r"
+          curl --max-time 90 -fsSL -o "$d/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz; a=$?
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$d/age.tgz" | sha256sum -c - >/dev/null; b=$?
+          tar -xzf "$d/age.tgz" -C "$d"; c=$?
+          printf '%s' "$LAB_AGE_KEY" > "$d/k"
+          gh api -H 'Accept: application/vnd.github.raw' "repos/$GH_REPO/contents/packages/audio-packet-v13.tgz.age" > "$d/p.age"; e=$?
+          "$d/age/age" -d -i "$d/k" -o "$d/p.tgz" "$d/p.age"; f=$?
+          echo "$PACKET_SHA256  $d/p.tgz" | sha256sum -c - >/dev/null; g=$?
+          tar -xzf "$d/p.tgz" -C "$d/w"; h=$?
+          AID=$(gh api "repos/$GH_REPO/actions/runs/$TARGET_RUN/artifacts" --jq ".artifacts[] | select(.name==\"audio-job-encrypted-$TARGET_RUN\") | .id" 2>/dev/null | head -1)
+          gh api "repos/$GH_REPO/actions/artifacts/$AID/zip" > "$d/a.zip" 2>/dev/null; i=$?
+          unzip -qo "$d/a.zip" -d "$d/x" 2>/dev/null; j=$?
+          "$d/age/age" -d -i "$d/k" -o "$d/r.tgz" "$d/x/result.tgz.age" 2>/dev/null; k=$?
+          rm -f "$d/k"
+          tar -xzf "$d/r.tgz" -C "$d/r"; l=$?
+          if [ "$a$b$c$e$f$g$h$i$j$k$l" = 00000000000 ] && [ -n "$AID" ]; then echo gate=ok > "$d/r1.state"; else echo gate=fail > "$d/r1.state"; fi
+          echo "::notice::R1 gate=$(cat "$d/r1.state") age_dl=$a sha=$b untar=$c packet_dl=$e packet_dec=$f packet_sha=$g packet_untar=$h art_found=$([ -n "$AID" ] && echo y || echo n) zip=$i unzip=$j art_dec=$k art_untar=$l"
+      - name: R2 cache-only join and validate (stdlib only, no network, no SDK)
+        shell: bash
+        run: |
+          set -u; set +e
+          umask 077
+          d="$RUNNER_TEMP"
+          if ! grep -qx 'gate=ok' "$d/r1.state" 2>/dev/null; then echo "::notice::R2 skipped (R1 gate not ok)"; exit 0; fi
+          echo "$PACKET_SHA256  $d/p.tgz" | sha256sum -c - >/dev/null 2>&1 || { echo "::notice::R2 skipped (packet sha recheck failed)"; exit 0; }
+          cat > "$d/rec.py" <<'PYEOF'
+          import sys,os,json,hashlib,pathlib,traceback,collections
+          W=pathlib.Path(os.environ['RUNNER_TEMP'])
+          sys.path.insert(0,str(W/'w'/'pk'))
+          res={}
+          inp=json.loads((W/'w'/'pk'/'input.json').read_text())
+          seg=[s for s in inp['segments'] if s['track']=='jfrog' and s['segment']=='07'][0]
+          text=seg['text']; res['text_sha_ok']=hashlib.sha256(text.encode()).hexdigest()==seg['text_sha256']; res['text_chars']=len(text)
+          cache=W/'r'/'out'/'scenes'/'jfrog-07'/'cache'
+          dirs=sorted([p for p in cache.iterdir() if (p/'entry.json').exists()],key=lambda p:json.loads((p/'entry.json').read_text())['source_start'])
+          res['entries']=len(dirs)
+          import sentence_join as SJ
+          def where(e):
+              fr=[f for f in traceback.extract_tb(e.__traceback__) if 'sentence_join' in f.filename]
+              return [(f.lineno,(f.line or '')[:200]) for f in fr]
+          per=[]
+          for p in dirs:
+              m=json.loads((p/'entry.json').read_text())
+              info={'start':m['source_start'],'end':m['source_end'],'frames':m['frames'],'seconds':round(m['frames']/24000,3),'events':len(m['events'])}
+              info['types']=dict(collections.Counter(e['boundary_type'] for e in m['events']))
+              info['zero_or_neg_duration']=sum(1 for e in m['events'] if e['duration_ticks']<=0)
+              lim=m['frames']/24000+.1
+              info['over_bound']=sum(1 for e in m['events'] if e['start_ticks']<0 or (e['start_ticks']+e['duration_ticks'])/1e7>lim)
+              info['bad_events']=[(i,e['boundary_type'],round(e['start_ticks']/1e7,4),round((e['start_ticks']+e['duration_ticks'])/1e7,4),e['duration_ticks']) for i,e in enumerate(m['events']) if not (0<=e['start_ticks']/1e7<(e['start_ticks']+e['duration_ticks'])/1e7<=lim)][:12]
+              info['order_ok']=all(a['start_ticks']<=b['start_ticks'] for a,b in zip(m['events'],m['events'][1:]))
+              info['exact_text_ok']=m['identity']['exact_text']==text[m['source_start']:m['source_end']]
+              info['max_end_minus_audio_s']=round(max(((e['start_ticks']+e['duration_ticks'])/1e7 for e in m['events']),default=0)-m['frames']/24000,4)
+              try: SJ.verify_entry(p); info['verify']='ok'
+              except BaseException as e: info['verify']='FAILED '+type(e).__name__; info['where']=where(e)
+              per.append(info)
+          res['per_entry']=per
+          out=W/'rec'
+          try:
+              r=SJ.join(dirs,text,out/'joined'); res['join']='ok'; res['joined_seconds']=r['seconds']; res['joined_sha256']=r['audio_sha256']; res['joined_events']=len(r['events'])
+          except BaseException as e:
+              res['join']='FAILED '+type(e).__name__+': '+str(e)[:200]; res['join_where']=where(e)
+          if res.get('join')=='ok':
+              try:
+                  import natural_port as NP
+                  d2=NP.to_rail4(out,'jfrog','07',text,out/'rail4-audio') if False else None
+                  # to_rail4 expects scene_dir/joined; use out as scene dir
+                  d2=NP.to_rail4(out,'jfrog','07',text,out/'rail4-audio'); res['rail4']='ok'
+              except BaseException as e:
+                  res['rail4']='FAILED '+type(e).__name__+': '+str(e)[:200]; res['rail4_where']=[(f.lineno,(f.line or '')[:200]) for f in traceback.extract_tb(e.__traceback__) if 'natural_port' in f.filename]
+          (W/'rec_result.json').write_text(json.dumps(res,ensure_ascii=False,indent=1))
+          def st(v):
+              if v is None: return 'n/a'
+              return 'ok' if v=='ok' else 'FAILED:'+v.split(' ')[1].rstrip(':') if v.startswith('FAILED ') else 'unknown'
+          res['join_status']=st(res.get('join')); res['rail4_status']=st(res.get('rail4'))
+          (W/'rec_result.json').write_text(json.dumps(res,ensure_ascii=False,indent=1))
+          print('R2 join=%s rail4=%s'%(res['join_status'],res['rail4_status']))
+          PYEOF
+          sed -i 's/^          //' "$d/rec.py"
+          python3 -B "$d/rec.py" > "$d/rec.out" 2>"$d/rec.err"; rc=$?
+          line=$(head -n 1 "$d/rec.out")
+          if printf '%s' "$line" | grep -Eq '^R2 join=(ok|FAILED:[A-Za-z]+) rail4=(ok|FAILED:[A-Za-z]+|n/a)$'; then echo "::notice::$line py_rc=$rc"; else echo "::notice::R2 py_rc=$rc output_not_parsed"; fi
+      - name: R3 encrypt summary (review key) and recovered files (lab+review key)
+        shell: bash
+        run: |
+          set -u; set +e
+          umask 077
+          d="$RUNNER_TEMP"
+          [ -s "$d/rec_result.json" ] && "$d/age/age" -a -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$d/exp/summary.age" "$d/rec_result.json"; a=$?
+          if [ -d "$d/rec" ] && [ -f "$d/rec/joined/joined.wav" ]; then
+            tar -czf "$d/rec.tgz" -C "$d" rec; b=$?
+            "$d/age/age" -a -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$d/exp/recovered.age" "$d/rec.tgz"; c=$?
+            echo "::notice::R3 summary_age=$a tar=$b age=$c tgz_bytes=$(stat -c %s "$d/rec.tgz") tgz_sha256=$(sha256sum "$d/rec.tgz" | cut -d' ' -f1)"
+          else echo "::notice::R3 summary_age=$a recovered=none"; fi
+      - name: R4 short-retention encrypted artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: audio-recover-encrypted-${{ github.run_id }}
+          path: ${{ runner.temp }}/exp/
+          retention-days: 2
+          if-no-files-found: ignore
+      - name: R5 encrypted diagnostic marker (review key only)
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -u; set +e
+          d="$RUNNER_TEMP"
+          [ -s "$d/exp/summary.age" ] || { echo "::notice::R5 no summary"; exit 0; }
+          jq -n --rawfile c "$d/exp/summary.age" '{message:"Encrypted audio recover",content:($c|@base64),branch:"main"}' > "$d/put.json"; a=$?
+          gh api -X PUT "repos/$GH_REPO/contents/packages/audio-recover-$RUN_ID.age" --input "$d/put.json" >/dev/null 2>&1; b=$?
+          echo "::notice::R5 jq_rc=$a put_rc=$b"

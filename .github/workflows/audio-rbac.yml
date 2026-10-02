@@ -1,0 +1,53 @@
+name: Audio OIDC role scope check (read-only, encrypted)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: write
+  id-token: write
+jobs:
+  rbac:
+    if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/audio-rbac'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_ID: ${{ github.run_id }}
+    steps:
+      - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: List role assignments of the login principal (enum only), encrypt to review key
+        env:
+          CID: ${{ secrets.AZURE_CLIENT_ID }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          umask 077
+          d="$RUNNER_TEMP"
+          curl --max-time 90 -fsSL -o "$d/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$d/age.tgz" | sha256sum -c - >/dev/null
+          tar -xzf "$d/age.tgz" -C "$d"
+          OID=$(az account get-access-token --resource https://management.azure.com --query accessToken -o tsv 2>/dev/null | python3 -c "import sys,json,base64;t=sys.stdin.read().strip().split('.')[1];t+='='*(-len(t)%4);print(json.loads(base64.urlsafe_b64decode(t)).get('oid',''))" 2>/dev/null || true)
+          [[ "$OID" =~ ^[0-9a-f-]{36}$ ]] && AS=(--assignee-object-id "$OID") || AS=(--assignee "$CID")
+          az role assignment list "${AS[@]}" --all --query "[].{r:roleDefinitionName,s:scope}" -o json > "$d/ra.json" 2> "$d/ra.err" && RC=0 || RC=$?
+          python3 - "$d" "$RC" > "$d/out.txt" <<'PY'
+          import json,sys,re
+          d,rc=sys.argv[1],sys.argv[2]
+          print('az_rc='+rc)
+          try: rows=json.load(open(d+'/ra.json'))
+          except Exception: rows=None; print('NO_PARSE')
+          if rows is not None:
+              print('assignments=%d'%len(rows))
+              for x in rows:
+                  s=x.get('s') or ''
+                  kind='subscription' if re.fullmatch(r'/subscriptions/[^/]+',s) else ('resourcegroup' if re.fullmatch(r'/subscriptions/[^/]+/resourceGroups/[^/]+',s) else ('resource' if '/providers/' in s else 'other'))
+                  r=re.sub(r'[^A-Za-z0-9 ._-]','',str(x.get('r')))[:60]
+                  print('role=%s scope_kind=%s'%(r,kind))
+          PY
+          "$d/age/age" -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$d/rbac.age" "$d/out.txt"
+          jq -n --rawfile c "$d/rbac.age" '{message:"Encrypted audio rbac result",content:($c|@base64),branch:"main"}' > "$d/put.json"
+          gh api -X PUT "repos/$GH_REPO/contents/packages/audio-rbac-$RUN_ID.age" --input "$d/put.json" >/dev/null

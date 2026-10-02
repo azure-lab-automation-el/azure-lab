@@ -1,0 +1,44 @@
+name: Publish to blue-tools (lab, scoped)
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        default: check
+        options: [check, publish]
+permissions:
+  contents: read
+jobs:
+  go:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Check PAT scope on blue-tools, then publish the one pinned file
+        env:
+          GH_TOKEN: ${{ secrets.LAB_WORKFLOW_PAT }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          R=azure-lab-automation-el/blue-tools
+          SRC=publish/files/bootstrap.yml
+          DST=.github/workflows/bootstrap.yml
+          SHA=6d6fa1793cf6ac68af899fa5353d9d3e6a1a2c487a9b8b828935d1fb69400905
+          # metadata only (names, booleans); error class is printed, token never is
+          if ! META=$(gh api "repos/$R" --jq '{full_name,private,push:.permissions.push}' 2>/tmp/e); then echo "PAT_READ_ERROR: $(head -c 80 /tmp/e | tr -d '\r' | sed 's/[A-Za-z0-9_]\{30,\}/[x]/g')"; exit 3; fi
+          echo "$META"
+          [ "$(gh api "repos/$R" --jq .permissions.push </dev/null)" = "true" ] || { echo PAT_NO_PUSH; exit 4; }
+          [ "$MODE" = "publish" ] || { echo CHECK_ONLY_OK; exit 0; }
+          echo "$SHA  $SRC" | sha256sum -c - >/dev/null || { echo "HASH_MISMATCH $SRC"; exit 5; }
+          python3 - "$SRC" > /tmp/body.json <<'PY'
+          import base64,json,sys
+          print(json.dumps({"message":"Add bootstrap loader","content":base64.b64encode(open(sys.argv[1],'rb').read()).decode()}))
+          PY
+          gh api -X PUT "repos/$R/contents/$DST" --input /tmp/body.json </dev/null > /tmp/put.json
+          BLOB=$(python3 -c "import json;print(json.load(open('/tmp/put.json'))['content']['sha'])")
+          LOCAL=$(git hash-object "$SRC")
+          [ "$BLOB" = "$LOCAL" ] && echo "PUBLISH_VERIFIED $DST blob=$BLOB sha256=$SHA" || { echo "PUBLISH_BLOB_MISMATCH"; exit 6; }

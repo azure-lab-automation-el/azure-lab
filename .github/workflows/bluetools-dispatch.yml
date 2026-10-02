@@ -1,0 +1,35 @@
+name: Dispatch blue-tools bootstrap (fixed target)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+concurrency:
+  group: bluetools-dispatch
+  cancel-in-progress: false
+jobs:
+  go:
+    if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && github.event.comment.body == '/bluetools-dispatch-bootstrap'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: One dispatch of the fixed bootstrap workflow, then list the new run
+        env:
+          GH_TOKEN: ${{ secrets.LAB_WORKFLOW_PAT }}
+        run: |
+          set -uo pipefail
+          R=azure-lab-automation-el/blue-tools
+          W=bootstrap.yml
+          EXP=e651a4454ac8625b3ce7c6fdf807b00eb1a1e2e6
+          GOT=$(gh api "repos/$R/contents/.github/workflows/$W?ref=main" --jq .sha </dev/null 2>/tmp/e) || { echo "BOOTSTRAP_FILE_MISSING $(head -c 60 /tmp/e | sed 's/[A-Za-z0-9_]\{30,\}/[x]/g')"; exit 3; }
+          [ "$GOT" = "$EXP" ] || { echo "BOOTSTRAP_BLOB_MISMATCH"; exit 5; }
+          HEAD=$(gh api "repos/$R/commits/main" --jq .sha </dev/null)
+          echo "head=$HEAD"
+          T0=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          if gh api -X POST "repos/$R/actions/workflows/$W/dispatches" -f ref=main </dev/null >/dev/null 2>/tmp/e; then echo DISPATCH_ACCEPTED; else echo "DISPATCH_REFUSED $(head -c 80 /tmp/e | sed 's/[A-Za-z0-9_]\{30,\}/[x]/g')"; exit 4; fi
+          for i in 1 2 3 4 5 6 7 8; do
+            sleep 8
+            RUN=$(gh api "repos/$R/actions/workflows/$W/runs?event=workflow_dispatch&branch=main&per_page=10" --jq "[.workflow_runs[]|select(.created_at>=\"$T0\" and .path==\".github/workflows/$W\" and .event==\"workflow_dispatch\" and .actor.login==\"azure-lab-automation-el\")]|first|select(.!=null)|{id,head_sha,status,conclusion,html_url}" </dev/null 2>/dev/null || true)
+            [ -n "$RUN" ] && { echo "$RUN"; echo "HEAD_MATCH=$([ "$(echo "$RUN" | python3 -c 'import json,sys;print(json.load(sys.stdin)["head_sha"])')" = "$HEAD" ] && echo yes || echo no)"; exit 0; }
+          done
+          echo "NO_RUN_YET (not success; read later, no second POST)"

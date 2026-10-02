@@ -48,6 +48,6 @@ jobs:
                   r=re.sub(r'[^A-Za-z0-9 ._-]','',str(x.get('r')))[:60]
                   print('role=%s scope_kind=%s'%(r,kind))
           PY
-          "$d/age/age" -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$d/rbac.age" "$d/out.txt"
+          "$d/age/age" -a -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -o "$d/rbac.age" "$d/out.txt"
           jq -n --rawfile c "$d/rbac.age" '{message:"Encrypted audio rbac result",content:($c|@base64),branch:"main"}' > "$d/put.json"
           gh api -X PUT "repos/$GH_REPO/contents/packages/audio-rbac-$RUN_ID.age" --input "$d/put.json" >/dev/null

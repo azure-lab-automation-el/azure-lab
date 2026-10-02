@@ -1,0 +1,64 @@
+name: Publish to blue-tools (lab, scoped)
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+jobs:
+  go:
+    if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && (github.event.comment.body == '/bluetools-check-src3' || github.event.comment.body == '/bluetools-publish-src3')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Check PAT scope on blue-tools, then publish two pinned files (no overwrite)
+        env:
+          GH_TOKEN: ${{ secrets.LAB_WORKFLOW_PAT }}
+          MODE: ${{ github.event.comment.body == '/bluetools-publish-src3' && 'publish' || 'check' }}
+        run: |
+          set -euo pipefail
+          R=azure-lab-automation-el/blue-tools
+          if ! META=$(gh api "repos/$R" --jq '{full_name,private,push:.permissions.push}' 2>/tmp/e); then echo "PAT_READ_ERROR: $(head -c 80 /tmp/e | tr -d '\r' | sed 's/[A-Za-z0-9_]\{30,\}/[x]/g')"; exit 3; fi
+          echo "$META"
+          [ "$(gh api "repos/$R" --jq .permissions.push </dev/null)" = "true" ] || { echo PAT_NO_PUSH; exit 4; }
+          [ "$MODE" = "publish" ] || { echo CHECK_ONLY_OK; exit 0; }
+          pub() {
+            SRC="$1"; DST="$2"; SHA="$3"; MSG="$4"
+            echo "$SHA  $SRC" | sha256sum -c - >/dev/null || { echo "HASH_MISMATCH $SRC"; exit 5; }
+            python3 - "$SRC" "$MSG" > /tmp/body.json <<'PY'
+          import base64,json,sys
+          print(json.dumps({"message":sys.argv[2],"content":base64.b64encode(open(sys.argv[1],'rb').read()).decode()}))
+          PY
+            LOCAL=$(git hash-object "$SRC")
+            if GOT=$(gh api "repos/$R/contents/$DST" --jq .sha </dev/null 2>/tmp/get.err); then
+              [ "$GOT" = "$LOCAL" ] || { echo "DEST_EXISTS_DIFFERENT_BLOB $DST"; exit 7; }
+              echo "ALREADY_PRESENT_SAME_BLOB $DST"; return
+            elif ! grep -q 'HTTP 404' /tmp/get.err; then echo "DEST_STATE_UNVERIFIABLE $DST"; exit 7; fi
+            if ! gh api -X PUT "repos/$R/contents/$DST" --input /tmp/body.json </dev/null > /tmp/put.json 2>/tmp/put.err; then
+              # PUT response may be lost after a successful write. Read state once; never blindly repeat PUT.
+              if GOT=$(gh api "repos/$R/contents/$DST" --jq .sha </dev/null 2>/dev/null) && [ "$GOT" = "$LOCAL" ]; then
+                echo "PUT_RESPONSE_FAILED_STATE_SAME_BLOB $DST"; return
+              fi
+              echo "PUT_FAILED_STATE_UNRESOLVED $DST"; exit 6
+            fi
+            BLOB=$(python3 -c "import json;print(json.load(open('/tmp/put.json'))['content']['sha'])")
+            LOCAL=$(git hash-object "$SRC")
+            GOT=$(gh api "repos/$R/contents/$DST" --jq .sha </dev/null)
+            [ "$BLOB" = "$LOCAL" ] && [ "$GOT" = "$LOCAL" ] && echo "PUBLISH_VERIFIED $DST blob=$BLOB sha256=$SHA" || { echo "PUBLISH_BLOB_MISMATCH $DST"; exit 6; }
+          }
+          # Check both destinations before writing: exact existing content is safe to resume, different content never overwritten.
+          precheck() {
+            SRC="$1"; DST="$2"; LOCAL=$(git hash-object "$SRC")
+            if GOT=$(gh api "repos/$R/contents/$DST" --jq .sha </dev/null 2>/tmp/get.err); then
+              [ "$GOT" = "$LOCAL" ] || { echo "DEST_EXISTS_DIFFERENT_BLOB $DST"; exit 7; }
+              echo "ALREADY_PRESENT_SAME_BLOB $DST"
+            elif ! grep -q 'HTTP 404' /tmp/get.err; then echo "DEST_STATE_UNVERIFIABLE $DST"; exit 7; fi
+          }
+          precheck publish/files/login_job-v3-bt.tgz.age src/login_job-v3.tgz.age
+          precheck publish/files/source-check-v3.yml .github/workflows/source-check-v3.yml
+          pub publish/files/login_job-v3-bt.tgz.age src/login_job-v3.tgz.age 54f9d3d1d1f08dff4d168c12a82ac252596c9897febc207d0e65f249164793c8 "Add encrypted login source"
+          pub publish/files/source-check-v3.yml .github/workflows/source-check-v3.yml fabfaf3d2f6f3b4d34bab25b9b02fe8482431e5afb55e307257e9e062fed2d87 "Add source decrypt check"
+          echo "::notice title=publish_src::PUBLISH_SRC_VERIFIED"

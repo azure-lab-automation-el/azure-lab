@@ -1,9 +1,9 @@
-name: Audio recovered output, private MEGA neutral folder (fixed run, no Azure)
+name: Audio recovered output, encrypted copy to repo for authorized retrieval (fixed run, no Azure)
 on:
   issue_comment:
     types: [created]
 permissions:
-  contents: read
+  contents: write
   actions: read
 jobs:
   export:
@@ -53,23 +53,14 @@ jobs:
           w=wave.open(sys.argv[1]);print('wav',w.getnchannels(),w.getsampwidth(),w.getframerate(),w.getnframes())" "$d/r/rec/joined/joined.wav" | sed 's/^          //' > "$d/wav.txt" 2>/dev/null; h=$?
           if [ "$a$b$c$e$f$g$h" = 0000000 ] && [ -n "$AID" ]; then echo gate=ok > "$d/x2.state"; else echo gate=fail > "$d/x2.state"; fi
           echo "::notice::X2 $(cat "$d/x2.state") art_found=$([ -n "$AID" ] && echo y || echo n) zip=$a unzip=$b dec=$c rec_sha=$e untar=$f wav_sha=$g wav_open=$h $(cat "$d/wav.txt" 2>/dev/null | head -c 60)"
-      - name: X3 upload recovered tree (plaintext, private MEGA, neutral folder) with readback
-        env:
-          MEGA_EMAIL: ${{ secrets.MEGA_EMAIL }}
-          MEGA_PASSWORD: ${{ secrets.MEGA_PASSWORD }}
+      - name: X3 encrypt recovered bundle (review + lab key) and commit the ciphertext for authorized retrieval
         shell: bash
         run: |
           set -u; set +e
           umask 077
           d="$RUNNER_TEMP"
           grep -qx 'gate=ok' "$d/x2.state" 2>/dev/null || { echo "::notice::X3 skipped (X2 gate)"; exit 0; }
-          export RCLONE_CONFIG_MEGA_TYPE=mega RCLONE_CONFIG_MEGA_USER="$MEGA_EMAIL"
-          export RCLONE_CONFIG_MEGA_PASS="$("$d/rclone" obscure "$MEGA_PASSWORD")"
-          D="mega:Automation/audio/recover-$SRC_RUN"
-          "$d/rclone" copyto "$d/rec.tgz" "$D/rec-$REC_TGZ_SHA256.tgz" >/dev/null 2>&1; a=$?
-          "$d/rclone" copyto "$d/r/rec/joined/joined.wav" "$D/joined-$JOINED_WAV_SHA256.wav" >/dev/null 2>&1; b=$?
-          "$d/rclone" copyto "$D/rec-$REC_TGZ_SHA256.tgz" "$d/back.tgz" >/dev/null 2>&1; c=$?
-          "$d/rclone" copyto "$D/joined-$JOINED_WAV_SHA256.wav" "$d/back.wav" >/dev/null 2>&1; e=$?
-          echo "$REC_TGZ_SHA256  $d/back.tgz" | sha256sum -c - >/dev/null 2>&1; f=$?
-          echo "$JOINED_WAV_SHA256  $d/back.wav" | sha256sum -c - >/dev/null 2>&1; g=$?
-          echo "::notice::X3 up_tgz=$a up_wav=$b dl_tgz=$c dl_wav=$e tgz_readback_sha=$f wav_readback_sha=$g bytes_tgz=$(stat -c %s "$d/back.tgz" 2>/dev/null || echo 0) bytes_wav=$(stat -c %s "$d/back.wav" 2>/dev/null || echo 0)"
+          "$d/age/age" -a -r age1ysazhy7z52sn38qla0vqxh0d4lephsyx3u8nucqyhh3vvdtd3aqqxfcmkt -r age1drdclm2yu6m2sg04dnalqvk020ecnetcs0ntu5qyusum993eu4xqf8zzzl -o "$d/wav.age" "$d/rec.tgz"; a=$?
+          jq -n --rawfile c "$d/wav.age" '{message:"Encrypted audio bundle",content:($c|@base64),branch:"main"}' > "$d/put.json"; b=$?
+          gh api -X PUT "repos/$GH_REPO/contents/packages/audio-bundle-$SRC_RUN.age" --input "$d/put.json" >/dev/null 2>&1; c=$?
+          echo "::notice::X3 age_rc=$a jq_rc=$b put_rc=$c age_bytes=$(stat -c %s "$d/wav.age" 2>/dev/null || echo 0) age_sha256=$(sha256sum "$d/wav.age" | cut -d' ' -f1)"

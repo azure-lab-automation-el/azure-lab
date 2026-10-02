@@ -1,16 +1,12 @@
 name: Publish to blue-tools (lab, scoped)
 on:
-  workflow_dispatch:
-    inputs:
-      mode:
-        type: choice
-        default: check
-        options: [check, publish]
+  issue_comment:
+    types: [created]
 permissions:
   contents: read
 jobs:
   go:
-    if: github.ref == 'refs/heads/main'
+    if: github.event.issue.number == 2 && github.event.issue.pull_request == null && github.event.comment.user.login == 'azure-lab-automation-el' && github.event.comment.user.id == 332180512 && github.event.comment.author_association == 'OWNER' && (github.event.comment.body == '/bluetools-check' || github.event.comment.body == '/bluetools-publish')
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
@@ -21,7 +17,7 @@ jobs:
       - name: Check PAT scope on blue-tools, then publish the one pinned file
         env:
           GH_TOKEN: ${{ secrets.LAB_WORKFLOW_PAT }}
-          MODE: ${{ inputs.mode }}
+          MODE: ${{ github.event.comment.body == '/bluetools-publish' && 'publish' || 'check' }}
         run: |
           set -euo pipefail
           R=azure-lab-automation-el/blue-tools
@@ -38,7 +34,9 @@ jobs:
           import base64,json,sys
           print(json.dumps({"message":"Add bootstrap loader","content":base64.b64encode(open(sys.argv[1],'rb').read()).decode()}))
           PY
-          gh api -X PUT "repos/$R/contents/$DST" --input /tmp/body.json </dev/null > /tmp/put.json
+          if gh api "repos/$R/contents/$DST" --jq .sha </dev/null >/dev/null 2>&1; then echo "DEST_EXISTS_STATE_CHECK_NO_OVERWRITE"; exit 7; fi
+          gh api -X PUT "repos/$R/contents/$DST" --input /tmp/body.json </dev/null > /tmp/put.json || { echo "PUT_FAILED_CLASS_CHECK_STATE"; exit 6; }
           BLOB=$(python3 -c "import json;print(json.load(open('/tmp/put.json'))['content']['sha'])")
           LOCAL=$(git hash-object "$SRC")
-          [ "$BLOB" = "$LOCAL" ] && echo "PUBLISH_VERIFIED $DST blob=$BLOB sha256=$SHA" || { echo "PUBLISH_BLOB_MISMATCH"; exit 6; }
+          GOT=$(gh api "repos/$R/contents/$DST" --jq .sha </dev/null)
+          [ "$BLOB" = "$LOCAL" ] && [ "$GOT" = "$LOCAL" ] && echo "PUBLISH_VERIFIED $DST blob=$BLOB sha256=$SHA" || { echo "PUBLISH_BLOB_MISMATCH"; exit 6; }

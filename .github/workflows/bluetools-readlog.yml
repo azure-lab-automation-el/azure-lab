@@ -1,4 +1,4 @@
-name: Read two fixed run logs (enum markers only, encrypted)
+name: Read one fixed blue-tools run log (recipient/enum only, encrypted)
 on:
   issue_comment:
     types: [created]
@@ -17,16 +17,17 @@ jobs:
       - name: Extract enum markers from two fixed runs, encrypt to the review key only
         env:
           GH_TOKEN: ${{ github.token }}
+          BT_TOKEN: ${{ secrets.LAB_WORKFLOW_PAT }}
         run: |
           set -uo pipefail
           # errexit stays on (runner default); expected nonzero substeps are handled explicitly with && / || true
           mkdir -p /tmp/m; OKN=0; st(){ echo "$1" > /tmp/m/stage.txt; }
           st L0
           OUT=$RUNNER_TEMP/out.txt; : > $OUT
-          for RUN in 36992747054 36992887453; do
+          for RUN in 36999537069; do
             echo "== run $RUN" >> $OUT
-            gh api "repos/${{ github.repository }}/actions/runs/$RUN" --jq '"run_status=" + .status + " run_conclusion=" + (.conclusion // "none")' >> $OUT 2>/dev/null && : || echo run_meta_read_failed >> $OUT
-            gh api "repos/${{ github.repository }}/actions/runs/$RUN/logs" > $RUNNER_TEMP/l.zip 2>/dev/null && GRC=0 || GRC=$?; st "L0G${GRC}"
+            GH_TOKEN="$BT_TOKEN" gh api "repos/azure-lab-automation-el/blue-tools/actions/runs/$RUN" --jq '"run_status=" + .status + " run_conclusion=" + (.conclusion // "none")' >> $OUT 2>/dev/null && : || echo run_meta_read_failed >> $OUT
+            GH_TOKEN="$BT_TOKEN" gh api "repos/azure-lab-automation-el/blue-tools/actions/runs/$RUN/logs" > $RUNNER_TEMP/l.zip 2>/dev/null && GRC=0 || GRC=$?; st "L0G${GRC}"
             ZB=$(wc -c < $RUNNER_TEMP/l.zip | tr -d ' ')
             echo "download_rc=$GRC zip_bytes=$ZB" >> $OUT
             if [ "$GRC" = 0 ] && [ "$ZB" -gt 0 ]; then
@@ -42,11 +43,8 @@ jobs:
                 if [ "$XR" = 0 ] && [ "$SR" = 0 ] && [ "$EB" -gt 0 ]; then
                   OKN=$((OKN+1)); echo READ_OK_INTEGRITY_OK >> $OUT
                   L=$(wc -l < $OUT | tr -d ' ')
-                  grep -oE '^(PAT_CANNOT_READ_REPO|PAT_NO_PUSH|CHECK_ONLY_OK|PUBLISH_BLOB_MISMATCH|PUT_FAILED_CLASS_CHECK_STATE|DEST_EXISTS_STATE_CHECK_NO_OVERWRITE|HASH_MISMATCH|MEGA_UPLOAD_FAILED|MEGA_READBACK_FAILED|TAR_MEMBERS_UNEXPECTED|PUBLISH_VERIFIED)' $RUNNER_TEMP/l.txt | sort | uniq -c >> $OUT || true
-                  grep -oE '^MEGA_BACKUP_VERIFIED sha256=[0-9a-f]{64} bytes=[0-9]+' $RUNNER_TEMP/l.txt >> $OUT || true
+                  grep -oE '^RECIPIENT=age1[0-9a-z]{58}$|^KEY_NOT_AGE_IDENTITY$' $RUNNER_TEMP/l.txt | sort | uniq -c >> $OUT || true
                   grep -oE 'HTTP [0-9]{3}' $RUNNER_TEMP/l.txt | sort | uniq -c >> $OUT || true
-                  grep -oE 'Not Found|Resource not accessible by personal access token|Validation Failed|Repository is empty|This repository is empty|Bad credentials|Must have admin rights|workflow scope|sha. wasn.t supplied' $RUNNER_TEMP/l.txt | sort | uniq -c >> $OUT || true
-                  grep -oE '"push": ?(true|false)' $RUNNER_TEMP/l.txt >> $OUT || true
                   M=$(( $(wc -l < $OUT | tr -d ' ') - L ))
                   if [ "$M" = 0 ]; then echo "marker_lines=0 NO_MATCH" >> $OUT; else echo "marker_lines=$M" >> $OUT; fi
                 else echo READ_FAILED_EXTRACT >> $OUT; fi
@@ -68,7 +66,7 @@ jobs:
           st A1
           python3 - "$F" > $RUNNER_TEMP/body.json 2>/dev/null <<'PY' || { st BFAIL; exit 1; }
           import base64,json,sys
-          print(json.dumps({"message":"Encrypted fixed-run log markers","content":base64.b64encode(open(sys.argv[1],'rb').read()).decode(),"branch":"main"}))
+          print(json.dumps({"message":"Encrypted blue-tools run log markers","content":base64.b64encode(open(sys.argv[1],'rb').read()).decode(),"branch":"main"}))
           PY
           python3 -c "import json;json.load(open('$RUNNER_TEMP/body.json'))" 2>/dev/null || { st BFAIL; exit 1; }
           st B1
@@ -85,7 +83,7 @@ jobs:
         if: always()
         run: |
           S=$(cat /tmp/m/stage.txt 2>/dev/null | tr -cd 'A-Za-z0-9_' | head -c 40); [ -n "$S" ] || S=NOSTAGE
-          echo "name=rl2-$S" >> "$GITHUB_OUTPUT"; mkdir -p /tmp/m; echo "$S" > /tmp/m/stage.txt
+          echo "name=rl3-$S" >> "$GITHUB_OUTPUT"; mkdir -p /tmp/m; echo "$S" > /tmp/m/stage.txt
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:

@@ -1,0 +1,83 @@
+name: Lab GitHub login read-only project check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Decrypt source (key check first)
+        env:
+          BLUE_TOOLS_SOURCE_KEY: ${{ secrets.BLUE_TOOLS_SOURCE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          OK=0
+          trap 'rm -f "$RUNNER_TEMP/k"; if [ "$OK" != 1 ]; then rm -rf "$RUNNER_TEMP/job" "$RUNNER_TEMP/s.tgz"; fi' EXIT
+          curl --max-time 90 -fsSL -o "$RUNNER_TEMP/age.tgz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+          echo 'cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  '"$RUNNER_TEMP/age.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/age.tgz" -C "$RUNNER_TEMP"
+          umask 077
+          printf '%s' "$BLUE_TOOLS_SOURCE_KEY" > "$RUNNER_TEMP/k"
+          if "$RUNNER_TEMP/age/age" -d -i "$RUNNER_TEMP/k" -o "$RUNNER_TEMP/s.tgz" src/login_job-v3.tgz.age; then echo "SOURCE_KEY_DECRYPT=PASS"; else echo "SOURCE_KEY_DECRYPT=FAIL"; rm -f "$RUNNER_TEMP/k"; exit 4; fi
+          rm -f "$RUNNER_TEMP/k"; unset BLUE_TOOLS_SOURCE_KEY
+          echo 'e21437b86f1728e6bab53fe6ff7a5ee11d3eec68932051834f303d4864ad4497  '"$RUNNER_TEMP/s.tgz" | sha256sum -c - >/dev/null
+          [ "$(tar -tzf "$RUNNER_TEMP/s.tgz" | sort | tr '\n' ' ')" = 'bootstrap.yml login-workflow.yml login_job.mjs package-lock.json package.json ' ] || exit 5
+          mkdir -p "$RUNNER_TEMP/job"; tar -xzf "$RUNNER_TEMP/s.tgz" -C "$RUNNER_TEMP/job"
+          # No screenshots, raw page text, or persistent browser state are exported in this route.
+          python3 - "$RUNNER_TEMP/job/login_job.mjs" <<'PYNOPIX'
+          import pathlib,sys
+          p=pathlib.Path(sys.argv[1]);s=p.read_text()
+          old="const shot = async (page, n) => { await page.screenshot({ path: `${OUT}/${n}.png` }); log('shot', { n }); };"
+          new="const shot = async (page, n) => { log('visual-evidence-disabled'); };"
+          assert s.count(old)==1 and s.count('const h0 = (await page.screenshot()).length;')==1
+          s=s.replace(old,new).replace('const h0 = (await page.screenshot()).length;','const h0 = 0;')
+          assert 'page.screenshot(' not in s
+          p.write_text(s)
+          PYNOPIX
+          node --check "$RUNNER_TEMP/job/login_job.mjs"
+          rm -f "$RUNNER_TEMP/s.tgz"; OK=1
+      - name: Install deps (no secrets in this step)
+        run: |
+          set -euo pipefail
+          OK=0
+          trap 'if [ "$OK" != 1 ]; then rm -rf "$RUNNER_TEMP/job"; fi' EXIT
+          cd "$RUNNER_TEMP/job"
+          test -f package-lock.json   # lockfile with integrity hashes must be in the encrypted source
+          npm ci --ignore-scripts
+          npx --no-install playwright install --with-deps chromium
+          # ephemeral runner only: allow unprivileged user namespaces so the Chromium sandbox stays ON
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          env -i PATH="$PATH" HOME="$HOME" xvfb-run -a node --input-type=module <<'JSSMOKE'
+          import {chromium} from 'playwright';
+          const b=await chromium.launch({headless:false,chromiumSandbox:true});
+          try {const p=await b.newPage();await p.goto('about:blank');if(p.url()!=='about:blank')throw Error('SMOKE_URL_MISMATCH');console.log('HEADED_SANDBOX_SMOKE=PASS');}finally{await b.close();}
+          JSSMOKE
+          OK=1
+      - name: Run (xvfb headed Chromium, sandbox on)
+        env:
+          GH_LAB_USERNAME: ${{ secrets.GH_LAB_USERNAME }}
+          GH_LAB_PASSWORD: ${{ secrets.GH_LAB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          trap 'rm -rf "$RUNNER_TEMP/job" "$RUNNER_TEMP/k" "$RUNNER_TEMP/s.tgz" ev.tgz' EXIT
+          cd "$RUNNER_TEMP/job"; mkdir -p out
+          # secrets are visible to this one node process only
+          env -i PATH="$PATH" HOME="$HOME" DISPLAY="" OUT_DIR="$PWD/out" GH_LAB_USERNAME="$GH_LAB_USERNAME" GH_LAB_PASSWORD="$GH_LAB_PASSWORD" xvfb-run -a node login_job.mjs > out/node.log 2>&1 && NRC=0 || NRC=$?
+          echo "NODE_EXIT=$NRC"
+          python3 - "$NRC" <<'PYENUM'
+          import json,sys,pathlib
+          allowed={'MISSING_SECRET_ENV','NEEDS_VERIFICATION','LOGIN_REJECTED_OR_CHALLENGE','STOP_NO_SETTINGS_LINK_OBSERVED','STOP_REAUTH_PAGE_NO_INPUT','STOP_SETTINGS_NOT_200_OR_NO_ACCESS_LINK','STOP_ACCESS_PAGE_SEMANTICS_NOT_MET','STOP_SCROLL_NOT_RESPONSIVE','ACCESS_PAGE_OBSERVED_READ_ONLY','LOGGED_IN_WRONG_ACCOUNT','ERROR','BROWSER_LAUNCH_FAILED'}
+          try:
+            r=json.loads(pathlib.Path('out/report.json').read_text());v=r['verdict'];v=v if v in allowed else 'UNKNOWN'
+          except Exception: r={};v='REPORT_MISSING_OR_INVALID'
+          passed=sys.argv[1]=='0' and v=='ACCESS_PAGE_OBSERVED_READ_ONLY'
+          print('LOGIN_ENUM='+v+' NODE_RC='+str(int(sys.argv[1]))+' ACCOUNT_MATCH='+str(r.get('signed_in_login_matches_lab') is True)+' VISUAL_EVIDENCE=DISABLED')
+          print('::notice title=login_enum::LOGIN_ENUM='+v+' ACCOUNT_MATCH='+str(r.get('signed_in_login_matches_lab') is True)+' VISUAL_EVIDENCE=DISABLED')
+          sys.exit(0 if passed else 1)
+          PYENUM

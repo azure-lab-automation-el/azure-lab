@@ -1,0 +1,18 @@
+# DRAFT, NOT DEPLOYED. Executor must confirm issue 2 is open and unlocked before the trigger comment. Zero-secret claim-shape probe: no tunnel, no cloudflared, no listener, no code, no checkout, no secrets.
+name: oidc-claims-probe
+on: {issue_comment: {types: [created]}}
+permissions: {id-token: write, issues: write}
+concurrency: {group: oidc-probe, cancel-in-progress: false}
+jobs:
+  p:
+    if: github.event.issue.number == 2 && !github.event.issue.pull_request && github.event.comment.author_association == 'OWNER' && github.event.comment.user.id == 332180512 && github.event.comment.body == '/oidc-probe'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: mint + post (audience is a fixed probe string, never a CTX)
+        env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
+        run: |
+          set -eu
+          AUD="relay-probe:${GITHUB_RUN_ID}"
+          J=$(curl -fsS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUD" | jq -er '.value // empty')
+          jq -n --arg b "/oidc-probe-result $J" '{body:$b}' | curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -d @- "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/2/comments" >/dev/null
